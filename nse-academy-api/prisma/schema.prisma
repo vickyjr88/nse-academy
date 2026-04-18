@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  passwordHash    String
+  name            String
+  investorProfile InvestorProfile?
+  subscription    Subscription?
+  progress        LessonProgress[]
+  createdAt       DateTime         @default(now())
+}
+
+model InvestorProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  type         String   // conservative | moderate | aggressive | dividend | growth
+  riskScore    Int      // 0-100
+  horizonYears Int
+  capitalRange String   // <100k | 100k-500k | 500k-2M | >2M
+  quizAnswers  Json
+  createdAt    DateTime @default(now())
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id])
+  tier             String    // free | premium
+  paystackSubId    String?
+  currentPeriodEnd DateTime?
+  status           String    // active | cancelled | past_due
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  lessonId    String    // Strapi lesson ID
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+}

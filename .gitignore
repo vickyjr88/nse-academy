@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+
+# Production
+build
+dist
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.sample
+
+# Strapi
+.cache
+.tmp
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Prisma
+/nse-academy-api/prisma/*.db
+/nse-academy-api/prisma/*.db-journal
+
+# Docker
+.docker
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.DS_Store
+*.pem
+.idea
+.vscode

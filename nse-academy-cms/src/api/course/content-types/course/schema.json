@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "courses",
+  "info": {
+    "singularName": "course",
+    "pluralName": "courses",
+    "displayName": "Course",
+    "description": "NSE Academy learning courses"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "description": { "type": "text" },
+    "investor_types": { "type": "json" },
+    "modules": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::course-module.course-module",
+      "mappedBy": "course"
+    }
+  }
+}

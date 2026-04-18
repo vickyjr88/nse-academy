@@ -1,0 +1,24 @@
+{
+  "kind": "collectionType",
+  "collectionName": "stock_profiles",
+  "info": {
+    "singularName": "stock-profile",
+    "pluralName": "stock-profiles",
+    "displayName": "StockProfile",
+    "description": "NSE listed company profiles"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "ticker": { "type": "string", "required": true, "unique": true },
+    "company_name": { "type": "string", "required": true },
+    "sector": { "type": "string" },
+    "description": { "type": "text" },
+    "dividend_yield": { "type": "decimal" },
+    "risk_level": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"],
+      "default": "medium"
+    },
+    "investor_types": { "type": "json" }
+  }
+}

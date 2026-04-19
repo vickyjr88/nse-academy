@@ -1,3 +1,4 @@
+import React from 'react';
 import { User } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
@@ -25,19 +26,13 @@ export default {
     });
 
     app.router.addRoute({
-      to: `/plugins/${PLUGIN_ID}`,
-      Component: async () => {
-        const { UsersList } = await import('./pages/UsersList');
-        return { default: UsersList };
-      },
+      path: `/plugins/${PLUGIN_ID}`,
+      Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
     });
 
     app.router.addRoute({
-      to: `/plugins/${PLUGIN_ID}/:id`,
-      Component: async () => {
-        const { UserDetail } = await import('./pages/UserDetail');
-        return { default: UserDetail };
-      },
+      path: `/plugins/${PLUGIN_ID}/:id`,
+      Component: React.lazy(() => import('./pages/UserDetail').then((m) => ({ default: m.UserDetail }))),
     });
   },
 

@@ -5,7 +5,8 @@ const scripts = [
   'seed-ebook.ts',
   'seed-trading-guide.ts',
   'seed-glossary.ts',
-  'seed-stocks.ts'
+  'seed-stocks.ts',
+  'seed-articles.ts',
 ];
 
 async function runAll() {

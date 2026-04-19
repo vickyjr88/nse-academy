@@ -1,3 +1,4 @@
+import React from 'react';
 import { ChartPie } from '@strapi/icons';
 
 const PLUGIN_ID = 'analytics-dashboard';
@@ -22,11 +23,8 @@ export default {
     });
 
     app.router.addRoute({
-      to: `/plugins/${PLUGIN_ID}`,
-      Component: async () => {
-        const { Dashboard } = await import('./pages/Dashboard');
-        return { default: Dashboard };
-      },
+      path: `/plugins/${PLUGIN_ID}`,
+      Component: React.lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))),
     });
   },
 

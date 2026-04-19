@@ -12,8 +12,8 @@ RUN npm install
 COPY . .
 
 # Set build-time environments (Next.js needs some for static generation)
-ARG NEXT_PUBLIC_API_URL=http://localhost:3011
-ARG NEXT_PUBLIC_CMS_URL=http://localhost:1337
+ARG NEXT_PUBLIC_API_URL=https://nseacademy-api.vitaldigitalmedia.net
+ARG NEXT_PUBLIC_CMS_URL=https://nseacademy-admin.vitaldigitalmedia.net
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_CMS_URL=$NEXT_PUBLIC_CMS_URL
 

@@ -40,6 +40,7 @@ NEXT_PUBLIC_CMS_URL=https://cms.nseacademy.vitaldigitalmedia.net
 CMS_INTERNAL_URL=http://cms:1337
 API_INTERNAL_URL=http://api:3011
 NEXTAUTH_URL=https://nseacademy.vitaldigitalmedia.net
+WEB_URL=https://nseacademy.vitaldigitalmedia.net
 
 # --- DATABASE ---
 POSTGRES_USER=postgres
@@ -50,6 +51,8 @@ DATABASE_URL=postgresql://postgres:generate_strong_password_here@postgres:5432/n
 # --- API SECRETS ---
 JWT_SECRET=generate_strong_jwt_secret_here
 NEXTAUTH_SECRET=generate_strong_auth_secret_here
+PAYSTACK_SECRET_KEY=sk_live_xxxxxxxxxxxx
+PAYSTACK_PUBLIC_KEY=pk_live_xxxxxxxxxxxx
 
 # --- CMS (STRAPI) SECRETS ---
 # Generate these using `openssl rand -base64 32`

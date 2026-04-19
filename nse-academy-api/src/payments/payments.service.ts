@@ -28,6 +28,11 @@ export class PaymentsService {
       throw new BadRequestException(`Invalid plan: ${plan}`);
     }
 
+    if (!this.paystackSecret) {
+      this.logger.error('PAYSTACK_SECRET_KEY is not configured');
+      throw new InternalServerErrorException('Payment system configuration missing');
+    }
+
     try {
       const response = await fetch('https://api.paystack.co/transaction/initialize', {
         method: 'POST',
@@ -48,11 +53,16 @@ export class PaymentsService {
 
       const json = await response.json();
       if (!json.status) {
+        this.logger.error(`Paystack initialization failed: ${json.message || 'Unknown error'}`);
         throw new Error(json.message || 'Paystack initialization failed');
       }
 
       return json.data; // { authorization_url, access_code, reference }
     } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error('Paystack init error:', error.message);
+        throw new InternalServerErrorException(`Payment system unavailable: ${error.message}`);
+      }
       this.logger.error('Paystack init error:', error);
       throw new InternalServerErrorException('Payment system unavailable');
     }

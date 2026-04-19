@@ -58,10 +58,10 @@ function formatDate(iso: string) {
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: { category?: string; page?: string };
+  searchParams: Promise<{ category?: string; page?: string }>;
 }) {
-  const category = searchParams.category;
-  const page = Number(searchParams.page ?? 1);
+  const { category, page: pageStr } = await searchParams;
+  const page = Number(pageStr ?? 1);
 
   const { articles, total, pageCount } = await getArticles({ category, page, limit: 12 });
 

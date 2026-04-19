@@ -7,19 +7,19 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import * as crypto from 'crypto';
 
 @ApiTags('payments')
-@Controller('payments')
+@Controller()
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post('initialize')
+  @Post('payments/initialize')
   @ApiOperation({ summary: 'Initialize a Paystack payment for a given plan (intermediary | premium)' })
   async initialize(@Req() req, @Body() body: { plan?: 'intermediary' | 'premium' }) {
     return this.paymentsService.initializeTransaction(req.user.id, req.user.email, body.plan ?? 'premium');
   }
 
-  @Post('webhook')
+  @Post(['payments/webhook', 'api/webhooks/paystack', 'webhooks/paystack'])
   @HttpCode(200)
   @ApiOperation({ summary: 'Paystack webhook listener' })
   async webhook(
@@ -40,7 +40,7 @@ export class PaymentsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('status')
+  @Get('payments/status')
   @ApiOperation({ summary: 'Get current subscription status' })
   async getStatus(@Req() req) {
     return this.paymentsService.getSubscriptionStatus(req.user.id);

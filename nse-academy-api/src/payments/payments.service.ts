@@ -38,7 +38,7 @@ export class PaymentsService {
         body: JSON.stringify({
           email,
           amount: PLAN_PRICES[plan],
-          callback_url: `${this.configService.get('WEB_URL', 'http://localhost:3010')}/dashboard/billing/verify`,
+          callback_url: `${this.configService.get('WEB_URL', 'http://localhost:3010')}/payment/callback`,
           metadata: {
             userId,
             plan,

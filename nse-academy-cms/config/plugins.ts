@@ -1,7 +1,7 @@
 import type { Core } from '@strapi/strapi';
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
-  'strapi-plugin-seo': {
+  'seo': {
     enabled: true,
   },
   'insights-strapi': {

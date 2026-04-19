@@ -4,11 +4,11 @@ import { ChartPie } from '@strapi/icons';
 const PLUGIN_ID = 'analytics-dashboard';
 
 export const NSE_API_URL: string =
-  (typeof process !== 'undefined' && process.env?.NSE_API_URL) ||
+  (typeof process !== 'undefined' && process.env?.STRAPI_ADMIN_NSE_API_URL) ||
   'https://nseacademy-api.vitaldigitalmedia.net';
 
 export const NSE_ADMIN_KEY: string =
-  (typeof process !== 'undefined' && process.env?.NSE_ADMIN_KEY) || '';
+  (typeof process !== 'undefined' && process.env?.STRAPI_ADMIN_NSE_KEY) || '';
 
 export default {
   register(app: any) {

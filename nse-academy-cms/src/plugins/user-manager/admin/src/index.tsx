@@ -5,11 +5,11 @@ const PLUGIN_ID = 'user-manager';
 
 // These are substituted at build time by Vite define or fall back to dev defaults
 const NSE_API_URL: string =
-  (typeof process !== 'undefined' && process.env?.NSE_API_URL) ||
+  (typeof process !== 'undefined' && process.env?.STRAPI_ADMIN_NSE_API_URL) ||
   'https://nseacademy-api.vitaldigitalmedia.net';
 
 const NSE_ADMIN_KEY: string =
-  (typeof process !== 'undefined' && process.env?.NSE_ADMIN_KEY) || '';
+  (typeof process !== 'undefined' && process.env?.STRAPI_ADMIN_NSE_KEY) || '';
 
 export { NSE_API_URL, NSE_ADMIN_KEY };
 

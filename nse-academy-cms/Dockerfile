@@ -17,6 +17,12 @@ COPY . .
 # Set environment to production for build
 ENV NODE_ENV=production
 
+# These must be passed as build args to be bundled into the Admin panel
+ARG STRAPI_ADMIN_NSE_API_URL
+ARG STRAPI_ADMIN_NSE_KEY
+ENV STRAPI_ADMIN_NSE_API_URL=$STRAPI_ADMIN_NSE_API_URL
+ENV STRAPI_ADMIN_NSE_KEY=$STRAPI_ADMIN_NSE_KEY
+
 # Build the Strapi admin panel and server
 RUN npm run build
 

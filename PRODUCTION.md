@@ -35,7 +35,7 @@ Create a `.env` file in the root directory on the VPS. This file will be consume
 NODE_ENV=production
 
 # --- DOMAINS & URLS ---
-NEXT_PUBLIC_API_URL=https://api.nseacademy.vitaldigitalmedia.net
+NEXT_PUBLIC_API_URL=https://nseacademy-api.vitaldigitalmedia.net
 NEXT_PUBLIC_CMS_URL=https://cms.nseacademy.vitaldigitalmedia.net
 CMS_INTERNAL_URL=http://cms:1337
 API_INTERNAL_URL=http://api:3011
@@ -53,6 +53,12 @@ JWT_SECRET=generate_strong_jwt_secret_here
 NEXTAUTH_SECRET=generate_strong_auth_secret_here
 PAYSTACK_SECRET_KEY=sk_live_xxxxxxxxxxxx
 PAYSTACK_PUBLIC_KEY=pk_live_xxxxxxxxxxxx
+ADMIN_API_KEY=generate_strong_secret_here
+
+# --- GOOGLE ANALYTICS ---
+GA_PROPERTY_ID=your-property-id
+GA_CLIENT_EMAIL=your-client-email
+GA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
 # --- CMS (STRAPI) SECRETS ---
 # Generate these using `openssl rand -base64 32`
@@ -62,6 +68,8 @@ STRAPI_ADMIN_JWT_SECRET=salt2
 STRAPI_JWT_SECRET=salt3
 STRAPI_TRANSFER_TOKEN_SALT=salt4
 STRAPI_ENCRYPTION_KEY=salt5
+NSE_API_URL=https://nseacademy-api.vitaldigitalmedia.net
+NSE_ADMIN_KEY=generate_strong_secret_here
 ```
 
 ---

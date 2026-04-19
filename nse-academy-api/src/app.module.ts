@@ -7,6 +7,7 @@ import { ProfilerModule } from './profiler/profiler.module';
 import { AdvisorModule } from './advisor/advisor.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReferralsModule } from './referrals/referrals.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ReferralsModule } from './referrals/referrals.module';
     AdvisorModule,
     PaymentsModule,
     ReferralsModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

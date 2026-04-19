@@ -31,6 +31,11 @@ services:
       PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
       CMS_URL: http://cms:1337
       CMS_API_TOKEN: ${CMS_API_TOKEN:-}
+      WEB_URL: ${WEB_URL:-http://localhost:3010}
+      GA_PROPERTY_ID: ${GA_PROPERTY_ID:-}
+      GA_CLIENT_EMAIL: ${GA_CLIENT_EMAIL:-}
+      GA_PRIVATE_KEY: ${GA_PRIVATE_KEY:-}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
       PORT: 3011
     depends_on:
       postgres:
@@ -56,6 +61,8 @@ services:
       JWT_SECRET: ${STRAPI_JWT_SECRET:-changeme}
       TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT:-changeme}
       ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:-changeme}
+      NSE_API_URL: ${NSE_API_URL:-http://api:3011}
+      NSE_ADMIN_KEY: ${NSE_ADMIN_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

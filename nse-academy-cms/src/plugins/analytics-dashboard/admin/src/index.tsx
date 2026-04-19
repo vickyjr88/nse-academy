@@ -1,4 +1,4 @@
-import { BarChart } from '@strapi/icons';
+import { ChartPie } from '@strapi/icons';
 
 const PLUGIN_ID = 'analytics-dashboard';
 
@@ -13,7 +13,7 @@ export default {
   register(app: any) {
     app.addMenuLink({
       to: `/plugins/${PLUGIN_ID}`,
-      icon: BarChart,
+      icon: ChartPie,
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.name`,
         defaultMessage: 'Analytics',

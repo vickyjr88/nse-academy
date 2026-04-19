@@ -19,11 +19,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
   },
   'user-manager': {
     enabled: true,
-    resolve: './src/plugins/user-manager',
   },
   'analytics-dashboard': {
     enabled: true,
-    resolve: './src/plugins/analytics-dashboard',
   },
 });
 

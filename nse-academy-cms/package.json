@@ -27,7 +27,9 @@
     "react-router-dom": "^6.0.0",
     "recharts": "^3.8.1",
     "strapi-google-analytics-dashboard": "^0.0.2",
-    "styled-components": "^6.0.0"
+    "styled-components": "^6.0.0",
+    "user-manager": "file:src/plugins/user-manager",
+    "analytics-dashboard": "file:src/plugins/analytics-dashboard"
   },
   "devDependencies": {
     "@types/node": "^20",

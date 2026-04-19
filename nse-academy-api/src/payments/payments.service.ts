@@ -112,6 +112,50 @@ export class PaymentsService {
     return { received: true };
   }
 
+  async verifyAndActivate(userId: string, reference: string) {
+    if (!reference) throw new BadRequestException('reference is required');
+
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${this.paystackSecret}` },
+    });
+    const json = await response.json();
+
+    if (!json.status || json.data?.status !== 'success') {
+      this.logger.warn(`Verify failed for ref ${reference}: ${json.message}`);
+      throw new BadRequestException(json.message || 'Payment not confirmed by Paystack');
+    }
+
+    const plan: SubscriptionPlan = json.data?.metadata?.plan || 'premium';
+    const metaUserId: string = json.data?.metadata?.userId;
+
+    // Guard against verifying someone else's reference
+    if (metaUserId && metaUserId !== userId) {
+      throw new BadRequestException('Reference does not belong to this user');
+    }
+
+    await this.prisma.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        tier: plan,
+        status: 'active',
+        paystackSubId: reference,
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+      update: {
+        tier: plan,
+        status: 'active',
+        paystackSubId: reference,
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify — ref ${reference}`);
+    await this.referrals.completeReferral(userId);
+
+    return { success: true, tier: plan };
+  }
+
   async getSubscriptionStatus(userId: string) {
     const sub = await this.prisma.subscription.findUnique({
       where: { userId },

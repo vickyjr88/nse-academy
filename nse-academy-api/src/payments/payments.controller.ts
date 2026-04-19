@@ -47,6 +47,15 @@ export class PaymentsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Post('payments/verify')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify Paystack reference and immediately activate subscription' })
+  async verify(@Req() req, @Body() body: { reference: string }) {
+    return this.paymentsService.verifyAndActivate(req.user.id, body.reference);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('payments/status')
   @ApiOperation({ summary: 'Get current subscription status' })
   async getStatus(@Req() req) {

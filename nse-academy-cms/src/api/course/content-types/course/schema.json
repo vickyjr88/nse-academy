@@ -12,6 +12,12 @@
     "title": { "type": "string", "required": true },
     "description": { "type": "text" },
     "investor_types": { "type": "json" },
+    "is_premium": { "type": "boolean", "default": true },
+    "tier": {
+      "type": "enumeration",
+      "enum": ["free", "intermediary", "premium"],
+      "default": "premium"
+    },
     "modules": {
       "type": "relation",
       "relation": "oneToMany",

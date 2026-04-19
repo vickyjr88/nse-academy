@@ -5,16 +5,25 @@
     "singularName": "article",
     "pluralName": "articles",
     "displayName": "Article",
-    "description": "NSE Academy articles and blog posts"
+    "description": "NSE Academy blog articles — news, analysis, roundups"
   },
   "options": { "draftAndPublish": true },
   "attributes": {
     "title": { "type": "string", "required": true },
     "slug": { "type": "uid", "targetField": "title", "required": true },
+    "excerpt": { "type": "text", "required": false },
     "body": { "type": "richtext", "required": true },
-    "category": { "type": "string" },
+    "category": {
+      "type": "enumeration",
+      "enum": ["NSE News", "Weekly Roundup", "Daily Update", "Market Analysis", "Stock Deep Dive", "IPO Watch", "Investor Education"],
+      "default": "NSE News"
+    },
+    "author_name": { "type": "string", "default": "NSE Academy" },
+    "read_time_minutes": { "type": "integer", "default": 5 },
+    "tags": { "type": "json" },
     "investor_types": { "type": "json" },
     "is_premium": { "type": "boolean", "default": false },
-    "cover_image": { "type": "media", "multiple": false, "required": false, "allowedTypes": ["images"] }
+    "cover_image": { "type": "media", "multiple": false, "required": false, "allowedTypes": ["images"] },
+    "og_image_url": { "type": "string", "required": false }
   }
 }

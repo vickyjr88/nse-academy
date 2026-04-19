@@ -8,14 +8,17 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  passwordHash    String
-  name            String
-  investorProfile InvestorProfile?
-  subscription    Subscription?
-  progress        LessonProgress[]
-  createdAt       DateTime         @default(now())
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String
+  name             String
+  referralCode     String           @unique @default(cuid())
+  investorProfile  InvestorProfile?
+  subscription     Subscription?
+  progress         LessonProgress[]
+  referralsMade    Referral[]       @relation("ReferralsMade")
+  referralReceived Referral?        @relation("ReferralReceived")
+  createdAt        DateTime         @default(now())
 }
 
 model InvestorProfile {
@@ -34,10 +37,11 @@ model Subscription {
   id               String    @id @default(cuid())
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id])
-  tier             String    // free | premium
+  tier             String    // free | intermediary | premium
   paystackSubId    String?
   currentPeriodEnd DateTime?
   status           String    // active | cancelled | past_due
+  freeMonths       Int       @default(0)
 }
 
 model LessonProgress {
@@ -47,4 +51,15 @@ model LessonProgress {
   lessonId    String    // Strapi lesson ID
   completed   Boolean   @default(false)
   completedAt DateTime?
+}
+
+model Referral {
+  id          String    @id @default(cuid())
+  referrerId  String
+  referrer    User      @relation("ReferralsMade", fields: [referrerId], references: [id])
+  referredId  String    @unique
+  referred    User      @relation("ReferralReceived", fields: [referredId], references: [id])
+  status      String    @default("pending") // pending | completed
+  rewardedAt  DateTime?
+  createdAt   DateTime  @default(now())
 }

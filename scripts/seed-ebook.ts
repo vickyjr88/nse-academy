@@ -202,6 +202,8 @@ async function main() {
       description:
         "A comprehensive guide to investing in Kenya's Nairobi Securities Exchange — from opening your first account to building a fully diversified portfolio.",
       investor_types: ["conservative", "moderate", "aggressive", "dividend", "growth"],
+      tier: "premium",
+      is_premium: true,
       publishedAt: new Date().toISOString(),
     },
   });
@@ -245,6 +247,7 @@ async function main() {
       const sectionText = sections[i];
       const title = deriveSectionTitle(sectionText, i);
       const isPremium = chapter.isFreeIntro ? false : true;
+      const tier = isPremium ? "premium" : "free";
 
       const lessonRes = await strapiPost("lessons", {
         data: {
@@ -252,6 +255,7 @@ async function main() {
           body_markdown: sectionText,
           duration_minutes: estimateDuration(sectionText),
           is_premium: isPremium,
+          tier,
           module: moduleId,
           publishedAt: new Date().toISOString(),
         },

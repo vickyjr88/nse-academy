@@ -11,9 +11,9 @@ export class PaymentsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('initialize')
-  @ApiOperation({ summary: 'Initialize a Paystack payment' })
-  async initialize(@Request() req) {
-    return this.paymentsService.initializeTransaction(req.user.id, req.user.email);
+  @ApiOperation({ summary: 'Initialize a Paystack payment for a given plan (intermediary | premium)' })
+  async initialize(@Request() req, @Body() body: { plan?: 'intermediary' | 'premium' }) {
+    return this.paymentsService.initializeTransaction(req.user.id, req.user.email, body.plan ?? 'premium');
   }
 
   @Post('webhook')

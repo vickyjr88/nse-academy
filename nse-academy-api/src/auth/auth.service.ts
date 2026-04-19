@@ -2,6 +2,7 @@ import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -10,6 +11,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private referrals: ReferralsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -20,6 +22,10 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { name: dto.name, email: dto.email, passwordHash },
     });
+
+    if (dto.referralCode) {
+      await this.referrals.recordPendingReferral(dto.referralCode, user.id);
+    }
 
     return this.signToken(user.id, user.email);
   }

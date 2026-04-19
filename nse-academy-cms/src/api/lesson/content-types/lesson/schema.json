@@ -12,7 +12,13 @@
     "title": { "type": "string", "required": true },
     "body_markdown": { "type": "richtext" },
     "duration_minutes": { "type": "integer", "default": 5 },
+    "order": { "type": "integer", "default": 0 },
     "is_premium": { "type": "boolean", "default": true },
+    "tier": {
+      "type": "enumeration",
+      "enum": ["free", "intermediary", "premium"],
+      "default": "premium"
+    },
     "module": {
       "type": "relation",
       "relation": "manyToOne",

@@ -1,4 +1,8 @@
-# NSE Academy
+# NSE Academy Platform
+
+The official learning and analysis platform for the Nairobi Securities Exchange (NSE).
+
+[Production Deployment Guide](./PRODUCTION.md) | [Local Setup](./README.md#local-development)
 
 > Personalized NSE investor education — discover your investor type, get a matched learning path, and build your Nairobi Stock Exchange portfolio with confidence.
 
@@ -126,30 +130,41 @@ See `.env.example` / `.env.local.example` in each sub-repo for required variable
 
 ---
 
+## Subscription Tiers
+
+| Tier | Price | Access |
+|------|-------|--------|
+| Free | KSh 0 | Investor profiler, first 3 modules, glossary |
+| Intermediary | KSh 100/mo | NSE Trading Guide course (7 chapters, 62 companies, brokers, strategies) |
+| Premium | KSh 500/mo | Full 13-chapter Investor's Guide + stock advisor + both ebook PDFs |
+
 ## Build Phases
 
 - [x] **Phase 1** — Foundation: API + CMS + Web scaffolded, auth, Docker
 - [x] **Phase 2** — Investor Profiler quiz engine + UI
 - [x] **Phase 3** — Content seeding from ebook (13 chapters → Strapi) + `/learn` + `/glossary` pages
-- [x] **Phase 4** — Stock Advisor + Paystack payments
+- [x] **Phase 4** — Stock Advisor + Paystack payments (3-tier: Free / Intermediary KSh 100 / Premium KSh 500)
 - [x] **Phase 5** — Polish + deploy to nseacademy.vitaldigitalmedia.net
 
 ---
 
-## Phase 3 — Seed Scripts
+## Seed Scripts
 
 ```bash
-# From project root — requires CMS_URL + CMS_API_TOKEN
-npm install   # installs ts-node + typescript
+# From project root — requires CMS_URL + CMS_API_TOKEN (from Strapi admin panel)
+npm install
 
-# Seed full ebook (1 Course + 14 Modules + ~100 Lessons)
+# Investor's Guide — 1 Course + 13 Modules + ~100 Lessons (Premium tier)
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-ebook.ts
 
-# Seed NSE Glossary (Ch 2, ~60 terms)
+# NSE Glossary — ~60 terms from Ch 2 of Investor's Guide
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-glossary.ts
 
-# Seed Company Profiles (Ch 13+, ~60 companies)
+# Company Stock Profiles — 62 NSE companies from Ch 13+
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-stocks.ts
+
+# Trading Guide — 7 chapters + lessons (Intermediary tier)
+CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-trading-guide.ts
 ```
 
 ### New pages (Phase 3)

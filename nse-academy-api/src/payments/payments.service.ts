@@ -43,7 +43,7 @@ export class PaymentsService {
         body: JSON.stringify({
           email,
           amount: PLAN_PRICES[plan],
-          callback_url: `${this.configService.get('WEB_URL', 'http://localhost:3010')}/payment/callback`,
+          callback_url: `${this.configService.get('WEB_URL', 'https://nseacademy-admin.vitaldigitalmedia.net')}/payment/callback`,
           metadata: {
             userId,
             plan,

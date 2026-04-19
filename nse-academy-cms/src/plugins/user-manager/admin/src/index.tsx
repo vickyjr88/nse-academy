@@ -16,7 +16,7 @@ export { NSE_API_URL, NSE_ADMIN_KEY };
 export default {
   register(app: any) {
     app.addMenuLink({
-      to: `/plugins/${PLUGIN_ID}`,
+      to: `plugins/${PLUGIN_ID}`,
       icon: User,
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.name`,
@@ -26,12 +26,12 @@ export default {
     });
 
     app.router.addRoute({
-      path: `/plugins/${PLUGIN_ID}`,
+      path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
     });
 
     app.router.addRoute({
-      path: `/plugins/${PLUGIN_ID}/:id`,
+      path: `plugins/${PLUGIN_ID}/:id`,
       Component: React.lazy(() => import('./pages/UserDetail').then((m) => ({ default: m.UserDetail }))),
     });
   },

@@ -13,7 +13,7 @@ export const NSE_ADMIN_KEY: string =
 export default {
   register(app: any) {
     app.addMenuLink({
-      to: `/plugins/${PLUGIN_ID}`,
+      to: `plugins/${PLUGIN_ID}`,
       icon: ChartPie,
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.name`,
@@ -23,7 +23,7 @@ export default {
     });
 
     app.router.addRoute({
-      path: `/plugins/${PLUGIN_ID}`,
+      path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))),
     });
   },

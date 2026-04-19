@@ -72,30 +72,41 @@ export class PaymentsService {
     const event = body.event;
     const data = body.data;
 
-    if (event === 'charge.success') {
-      const userId = data.metadata.userId;
-      const plan: SubscriptionPlan = data.metadata.plan || 'premium';
-      const reference = data.reference;
+    this.logger.log(`Received Paystack webhook event: ${event}`);
 
-      await this.prisma.subscription.upsert({
-        where: { userId },
-        create: {
-          userId,
-          tier: plan,
-          status: 'active',
-          paystackSubId: reference,
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        },
-        update: {
-          tier: plan,
-          status: 'active',
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        },
-      });
+    try {
+      if (event === 'charge.success') {
+        const userId = data.metadata.userId;
+        const plan: SubscriptionPlan = data.metadata.plan || 'premium';
+        const reference = data.reference;
 
-      this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
-      // Complete referral if this is the user's first paid subscription
-      await this.referrals.completeReferral(userId);
+        if (!userId) {
+          this.logger.error('No userId found in webhook metadata');
+          return { received: true };
+        }
+
+        await this.prisma.subscription.upsert({
+          where: { userId },
+          create: {
+            userId,
+            tier: plan,
+            status: 'active',
+            paystackSubId: reference,
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+          update: {
+            tier: plan,
+            status: 'active',
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        });
+
+        this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
+        // Complete referral if this is the user's first paid subscription
+        await this.referrals.completeReferral(userId);
+      }
+    } catch (err) {
+      this.logger.error(`Error processing webhook ${event}:`, err);
     }
 
     return { received: true };

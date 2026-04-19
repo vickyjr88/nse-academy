@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode, Headers, UnauthorizedException, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, HttpCode, Headers, UnauthorizedException, Req, Logger } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 @ApiTags('payments')
 @Controller()
 export class PaymentsController {
+  private readonly logger = new Logger(PaymentsController.name);
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @ApiBearerAuth()
@@ -27,11 +28,17 @@ export class PaymentsController {
     @Body() body: any,
     @Headers('x-paystack-signature') signature: string,
   ) {
-    const secret = process.env.PAYSTACK_SECRET_KEY ?? '';
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+      this.logger.error('PAYSTACK_SECRET_KEY not set, cannot verify webhook');
+      throw new UnauthorizedException('Webhook verification unavailable');
+    }
+
     const rawBody = (req as any).rawBody as Buffer | undefined;
     if (rawBody && signature) {
       const hash = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
       if (hash !== signature) {
+        this.logger.error('Invalid Paystack signature');
         throw new UnauthorizedException('Invalid webhook signature');
       }
     }

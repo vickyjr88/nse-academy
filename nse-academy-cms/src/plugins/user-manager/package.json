@@ -1,0 +1,10 @@
+{
+  "name": "user-manager",
+  "version": "1.0.0",
+  "description": "NSE Academy User Manager plugin",
+  "strapi": {
+    "name": "user-manager",
+    "description": "NSE Academy User Manager plugin",
+    "kind": "plugin"
+  }
+}

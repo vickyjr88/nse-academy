@@ -1,0 +1,10 @@
+{
+  "name": "analytics-dashboard",
+  "version": "1.0.0",
+  "description": "NSE Academy Analytics Dashboard plugin",
+  "strapi": {
+    "name": "analytics-dashboard",
+    "description": "NSE Academy Analytics Dashboard plugin",
+    "kind": "plugin"
+  }
+}

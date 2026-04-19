@@ -21,6 +21,10 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
     enabled: true,
     resolve: './src/plugins/user-manager',
   },
+  'analytics-dashboard': {
+    enabled: true,
+    resolve: './src/plugins/analytics-dashboard',
+  },
 });
 
 export default config;

@@ -11,6 +11,12 @@ import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
 export class AdminController {
   constructor(private admin: AdminService) {}
 
+  @Get('analytics')
+  @ApiOperation({ summary: 'Combined analytics overview' })
+  getAnalytics() {
+    return this.admin.getAnalytics();
+  }
+
   @Get('users')
   @ApiOperation({ summary: 'List all users (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })

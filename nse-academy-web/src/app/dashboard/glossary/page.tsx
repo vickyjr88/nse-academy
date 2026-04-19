@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import GlossaryClient, { type GlossaryTerm } from "./GlossaryClient";
+import PublicHeader from "@/components/PublicHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +40,14 @@ export default async function GlossaryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-emerald-700 text-lg">
-            NSE Academy
-          </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-gray-500">
-            <Link href="/learn" className="hover:text-gray-900 transition-colors">Courses</Link>
-            <Link href="/glossary" className="text-emerald-700 font-semibold">Glossary</Link>
-            <Link href="/dashboard" className="hover:text-gray-900 transition-colors">Dashboard</Link>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader
+        links={[
+          { label: "Courses", href: "/learn" },
+          { label: "Glossary", href: "/dashboard/glossary" },
+          { label: "Dashboard", href: "/dashboard" },
+        ]}
+        cta={{ label: "Dashboard", href: "/dashboard" }}
+      />
 
       <main className="max-w-4xl mx-auto px-6 py-10">
         {/* Heading */}

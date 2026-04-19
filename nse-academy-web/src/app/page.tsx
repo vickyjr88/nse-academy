@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles } from "@/lib/cms";
+import MobileNav from "@/components/MobileNav";
 
 export const revalidate = 300;
 
@@ -133,9 +134,12 @@ export default async function LandingPage() {
             <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
             <Link href="/auth/login" className="hover:text-gray-900">Log in</Link>
           </nav>
-          <Link href="/auth/register" className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
-            Get started
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/auth/register" className="hidden md:inline-flex text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
+              Get started
+            </Link>
+            <MobileNav />
+          </div>
         </div>
       </header>
 

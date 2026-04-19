@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CalculatorsClient from "./CalculatorsClient";
+import PublicHeader from "@/components/PublicHeader";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -92,22 +93,14 @@ export default function CalculatorsPage() {
 
       <div className="min-h-screen bg-gray-50">
         {/* Nav */}
-        <header className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-10">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <Link href="/" className="font-bold text-xl text-emerald-700">NSE Academy</Link>
-            <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-              <Link href="/blog" className="hover:text-gray-900">Blog</Link>
-              <Link href="/calculators" className="font-semibold text-emerald-700">Calculators</Link>
-              <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            </nav>
-            <div className="flex items-center gap-3">
-              <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block">Log in</Link>
-              <Link href="/auth/register" className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
-                Get started
-              </Link>
-            </div>
-          </div>
-        </header>
+        <PublicHeader
+          links={[
+            { label: "Blog", href: "/blog" },
+            { label: "Calculators", href: "/calculators" },
+            { label: "Pricing", href: "/pricing" },
+            { label: "Log in", href: "/auth/login" },
+          ]}
+        />
 
         {/* Hero */}
         <div className="bg-white border-b border-gray-100 py-12 px-4 sm:px-6 text-center">

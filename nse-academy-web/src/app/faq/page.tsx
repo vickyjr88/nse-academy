@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import FaqClient, { type FaqCategory } from "./FaqClient";
+import PublicHeader from "@/components/PublicHeader";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -371,22 +372,7 @@ export default function FaqPage() {
 
       <div className="min-h-screen bg-gray-50">
         {/* Nav */}
-        <header className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-10">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <Link href="/" className="font-bold text-xl text-emerald-700">NSE Academy</Link>
-            <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-              <Link href="/blog" className="hover:text-gray-900">Blog</Link>
-              <Link href="/calculators" className="hover:text-gray-900">Calculators</Link>
-              <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            </nav>
-            <div className="flex items-center gap-3">
-              <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block">Log in</Link>
-              <Link href="/auth/register" className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
-                Get started
-              </Link>
-            </div>
-          </div>
-        </header>
+        <PublicHeader />
 
         {/* Hero */}
         <div className="bg-white border-b border-gray-100 py-14 px-4 text-center">

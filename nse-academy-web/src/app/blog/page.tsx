@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles, CATEGORIES } from "@/lib/cms";
+import PublicHeader from "@/components/PublicHeader";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -73,19 +74,13 @@ export default async function BlogPage({
       {/* ----------------------------------------------------------------- */}
       {/* Nav */}
       {/* ----------------------------------------------------------------- */}
-      <header className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-emerald-700">NSE Academy</Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-            <Link href="/blog" className="font-semibold text-emerald-700">Blog</Link>
-            <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            <Link href="/auth/login" className="hover:text-gray-900">Log in</Link>
-          </nav>
-          <Link href="/auth/register" className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
-            Get started
-          </Link>
-        </div>
-      </header>
+      <PublicHeader
+        links={[
+          { label: "Blog", href: "/blog" },
+          { label: "Pricing", href: "/pricing" },
+          { label: "Log in", href: "/auth/login" },
+        ]}
+      />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         {/* ----------------------------------------------------------------- */}

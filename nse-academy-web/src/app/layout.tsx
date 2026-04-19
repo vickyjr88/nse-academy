@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'NSE Academy - Master the Nairobi Securities Exchange',
   description: 'Learn how to invest in the Nairobi Securities Exchange with professional courses, real-time analytics, and expert stock analysis.',
+  verification: {
+    google: 'ywb6KObH1WR7d_klm6hX6yvHhGFT4kUU-DmOdhlZb4E',
+  },
 };
 
 export default function RootLayout({

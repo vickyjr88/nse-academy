@@ -295,9 +295,15 @@ export default function LearnPage() {
 
   useEffect(() => {
     const cmsUrl = process.env.NEXT_PUBLIC_CMS_URL ?? "http://localhost:1337";
+    const token = process.env.CMS_API_TOKEN || "";
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     fetch(
       `${cmsUrl}/api/courses?populate[modules][populate]=lessons&sort=createdAt:asc`,
-      { cache: "no-store" } as RequestInit
+      { 
+        headers: authHeaders,
+        cache: "no-store" 
+      } as RequestInit
     )
       .then((r) => r.json())
       .then((json) => setCourses(json.data ?? []))

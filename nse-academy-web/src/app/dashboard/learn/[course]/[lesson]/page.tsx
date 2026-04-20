@@ -33,12 +33,20 @@ interface StrapiLesson {
 // ---------------------------------------------------------------------------
 
 const CMS_URL = process.env.CMS_INTERNAL_URL || process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:1337";
+const CMS_TOKEN = process.env.CMS_API_TOKEN || "";
+
+const headers: Record<string, string> = CMS_TOKEN
+  ? { Authorization: `Bearer ${CMS_TOKEN}` }
+  : {};
 
 async function fetchLesson(lessonId: string): Promise<StrapiLesson | null> {
   try {
     const res = await fetch(
       `${CMS_URL}/api/lessons/${lessonId}?populate[module][populate][course]=true&populate[module][populate][lessons]=true`,
-      { cache: "no-store" }
+      { 
+        headers: { ...headers }, 
+        cache: "no-store" 
+      }
     );
     if (!res.ok) return null;
     const json = await res.json();
@@ -55,7 +63,10 @@ async function fetchModuleLessons(
   try {
     const res = await fetch(
       `${CMS_URL}/api/lessons?filters[module][id][$eq]=${moduleId}&sort=id:asc&fields[0]=id&fields[1]=title`,
-      { cache: "no-store" }
+      { 
+        headers: { ...headers },
+        cache: "no-store" 
+      }
     );
     if (!res.ok) return [];
     const json = await res.json();

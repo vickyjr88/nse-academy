@@ -98,7 +98,7 @@ export default async function LessonPage({
   const moduleId = lesson.module?.id;
   const courseTitle = lesson.module?.course?.title ?? "Course";
   const moduleTitle = lesson.module?.title ?? "Module";
-  const coursePage = `/learn`;
+  const coursePage = `/dashboard/learn`;
 
   // All lessons in this module for prev/next navigation
   const moduleLessons = moduleId
@@ -112,8 +112,8 @@ export default async function LessonPage({
       ? moduleLessons[currentIdx + 1]
       : null;
 
-  const prevHref = prevLesson ? `/learn/${courseId}/${prevLesson.id}` : null;
-  const nextHref = nextLesson ? `/learn/${courseId}/${nextLesson.id}` : null;
+  const prevHref = prevLesson ? `/dashboard/learn/${courseId}/${prevLesson.id}` : null;
+  const nextHref = nextLesson ? `/dashboard/learn/${courseId}/${nextLesson.id}` : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,7 +200,7 @@ export default async function LessonPage({
               {moduleLessons.map((l, idx) => (
                 <li key={l.id}>
                   <Link
-                    href={`/learn/${courseId}/${l.id}`}
+                    href={`/dashboard/learn/${courseId}/${l.id}`}
                     className={`flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
                       l.id === lesson.id
                         ? "bg-emerald-50 text-emerald-900 font-semibold"

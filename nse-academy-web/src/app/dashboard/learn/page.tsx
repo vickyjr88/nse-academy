@@ -118,7 +118,7 @@ function LessonRow({
 
   return (
     <Link
-      href={`/learn/${courseId}/${lesson.id}`}
+      href={`/dashboard/learn/${courseId}/${lesson.id}`}
       className="flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group"
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -156,6 +156,7 @@ function ModuleCard({ mod, courseId, locked }: { mod: StrapiModule; courseId: nu
 }
 
 function CourseCard({ course, tier }: { course: StrapiCourse; tier: Tier }) {
+  const [showAll, setShowAll] = useState(false);
   const required = courseRequiredTier(course);
   const accessible = canAccessCourse(course, tier);
   const types: string[] = Array.isArray(course.investor_types) ? course.investor_types : [];
@@ -200,13 +201,16 @@ function CourseCard({ course, tier }: { course: StrapiCourse; tier: Tier }) {
         </div>
       ) : (
         <div className="px-6 py-4 space-y-3">
-          {modules.slice(0, 5).map((mod) => (
+          {(showAll ? modules : modules.slice(0, 5)).map((mod) => (
             <ModuleCard key={mod.id} mod={mod} courseId={course.id} locked={false} />
           ))}
           {modules.length > 5 && (
-            <p className="text-sm text-center text-emerald-700 font-medium py-2">
-              + {modules.length - 5} more modules
-            </p>
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="w-full text-sm text-center text-emerald-700 font-medium py-2 hover:bg-emerald-50 rounded-lg transition-colors"
+            >
+              {showAll ? "Show less" : `+ ${modules.length - 5} more modules`}
+            </button>
           )}
         </div>
       )}

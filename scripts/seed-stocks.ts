@@ -42,7 +42,7 @@ const EBOOK_PATH =
   process.env.EBOOK_PATH ||
   "/Users/vickyjr/.openclaw/workspace/assets/books/nse_complete_investors_guide_2026.txt";
 
-const CH13_START = 6433; // line 6433, 1-indexed
+const CH13_START = 3000; // Line 3000 to catch Banking, Telecom, etc. (headers start ~3088)
 
 // ---------------------------------------------------------------------------
 // HTTP
@@ -164,6 +164,24 @@ const VERDICT_TYPE_MAP: Record<string, string> = {
   "aggressive investor": "aggressive",
 };
 
+/**
+ * Map ebook tickers to standard NSE tickers if they differ
+ */
+const TICKER_MAP: Record<string, string> = {
+  "SCOM": "SCOM",
+  "SGL": "SGL",
+  "UCHM": "UCHM", // Uchumi
+  "ARMC": "ARM",  // ARM Cement
+  "KURV": "KURWITU",
+  "LBTI": "ILAM", // ILAM Fahari I-REIT
+  "MSC": "MUMIAS",
+  "KQ": "KQ",
+};
+
+function getCanonicalTicker(t: string): string {
+  return TICKER_MAP[t.toUpperCase()] || t.toUpperCase();
+}
+
 function deriveInvestorTypes(verdicts: Array<{ type: string; verdict: string }>): string[] {
   const types: string[] = [];
   for (const { type, verdict } of verdicts) {
@@ -238,8 +256,10 @@ function parseCompanyProfiles(lines: string[]): StockProfile[] {
     // Skip companies that are clearly delisted/suspended with no description
     if (!description && !company_name) continue;
 
+    const canonicalTicker = getCanonicalTicker(ticker);
+
     profiles.push({
-      ticker,
+      ticker: canonicalTicker,
       company_name,
       sector,
       description: description || `${company_name} is listed on the NSE under the ${sector} sector.`,
@@ -253,6 +273,141 @@ function parseCompanyProfiles(lines: string[]): StockProfile[] {
 }
 
 // ---------------------------------------------------------------------------
+// NSE counters not covered in the ebook (suspended, REITs, ETFs, newer listings)
+// ---------------------------------------------------------------------------
+
+const SUPPLEMENT_PROFILES: StockProfile[] = [
+  {
+    ticker: "NSE",
+    company_name: "Nairobi Securities Exchange Plc",
+    sector: "Investment Services",
+    description: "The Nairobi Securities Exchange (NSE) is Kenya's principal stock exchange, providing a regulated marketplace for the trading of equities, bonds, ETFs and other securities. Listed on its own exchange in 2014, it earns revenue from listing fees, trading commissions and data services.",
+    dividend_yield: 5.0,
+    risk_level: "medium",
+    investor_types: ["dividend", "moderate"],
+  },
+  {
+    ticker: "KURWITU",
+    company_name: "Kurwitu Ventures Ltd",
+    sector: "Investment",
+    description: "Kurwitu Ventures is a small Kenyan investment holding company listed on the NSE Growth Enterprise Market Segment (GEMS). It holds equity stakes in various unlisted Kenyan businesses, targeting capital appreciation over a long horizon.",
+    dividend_yield: 0,
+    risk_level: "high",
+    investor_types: ["aggressive", "growth"],
+  },
+  {
+    ticker: "ILAM",
+    company_name: "ILAM Fahari I-REIT",
+    sector: "Real Estate",
+    description: "ILAM Fahari I-REIT is Kenya's first listed Real Estate Investment Trust (I-REIT), managed by ICEA Lion Asset Management. It invests in income-generating commercial and retail real estate assets in Kenya, distributing at least 80% of net income to unit holders.",
+    dividend_yield: 6.5,
+    risk_level: "low",
+    investor_types: ["dividend", "conservative"],
+  },
+  {
+    ticker: "NSETF",
+    company_name: "NewGold Issuer Ltd (Gold ETF)",
+    sector: "Exchange Traded Fund",
+    description: "NewGold is a gold-backed Exchange Traded Fund (ETF) listed on the NSE. Each unit is backed by physical gold stored in secure vaults. It provides Kenyan investors with direct exposure to international gold prices, hedging against inflation and currency risk.",
+    dividend_yield: 0,
+    risk_level: "medium",
+    investor_types: ["conservative", "moderate"],
+  },
+  {
+    ticker: "MUMIAS",
+    company_name: "Mumias Sugar Company Ltd",
+    sector: "Manufacturing & Allied",
+    description: "Mumias Sugar Company is Kenya's largest sugar producer, currently under receivership. The company has been placed under a receiver/manager and trading in its shares is suspended on the NSE. It is included for completeness but carries extremely high risk.",
+    dividend_yield: 0,
+    risk_level: "high",
+    investor_types: [],
+  },
+  {
+    ticker: "ARM",
+    company_name: "ARM Cement Plc",
+    sector: "Construction & Allied",
+    description: "ARM Cement is a Kenya and Tanzania-based cement and fertilizer manufacturer. The company was placed under administration in 2018 and trading in its shares has been suspended. Included for completeness; not suitable for active investment.",
+    dividend_yield: 0,
+    risk_level: "high",
+    investor_types: [],
+  },
+  {
+    ticker: "KQ",
+    company_name: "Kenya Airways Plc",
+    sector: "Commercial & Services",
+    description: "Kenya Airways is Kenya's national carrier and one of Africa's leading airlines, operating routes across Africa, Europe, Asia and beyond. The airline has faced persistent losses and government bailouts. Currently a high-risk speculative holding with government as majority shareholder.",
+    dividend_yield: 0,
+    risk_level: "high",
+    investor_types: ["aggressive"],
+  },
+  {
+    ticker: "UCHUMI",
+    company_name: "Uchumi Supermarkets Ltd",
+    sector: "Commercial & Services",
+    description: "Uchumi Supermarkets is a Kenyan retail chain that has struggled with insolvency for several years. Trading is currently suspended. Included for completeness only; not suitable for investment at this time.",
+    dividend_yield: 0,
+    risk_level: "high",
+    investor_types: [],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Strapi helpers
+// ---------------------------------------------------------------------------
+
+function strapiGet(endpoint: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${CMS_URL}/api/${endpoint}`);
+    const options: http.RequestOptions = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === "https:" ? 443 : 80),
+      path: url.pathname + url.search,
+      method: "GET",
+      headers: { Authorization: `Bearer ${CMS_API_TOKEN}` },
+    };
+    const lib = url.protocol === "https:" ? https : http;
+    const req = lib.request(options, (res) => {
+      let body = "";
+      res.on("data", (chunk) => (body += chunk));
+      res.on("end", () => {
+        try { resolve(JSON.parse(body)); } catch { resolve(null); }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function strapiPut(endpoint: string, id: number, body: object): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${CMS_URL}/api/${endpoint}/${id}`);
+    const data = JSON.stringify(body);
+    const options: http.RequestOptions = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === "https:" ? 443 : 80),
+      path: url.pathname,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(data),
+        Authorization: `Bearer ${CMS_API_TOKEN}`,
+      },
+    };
+    const lib = url.protocol === "https:" ? https : http;
+    const req = lib.request(options, (res) => {
+      let body = "";
+      res.on("data", (chunk) => (body += chunk));
+      res.on("end", () => {
+        try { resolve(JSON.parse(body)); } catch { resolve(null); }
+      });
+    });
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -261,24 +416,45 @@ async function main() {
     console.error("ERROR: CMS_API_TOKEN is not set.");
     process.exit(1);
   }
-  if (!fs.existsSync(EBOOK_PATH)) {
-    console.error(`ERROR: Ebook not found at ${EBOOK_PATH}`);
-    process.exit(1);
+
+  // 1. Fetch all existing tickers from Strapi for idempotency
+  console.log("Fetching existing stock profiles from Strapi...");
+  const existingRes = await strapiGet("stock-profiles?pagination[limit]=200&fields[0]=ticker");
+  const existingMap: Record<string, number> = {};
+  for (const item of existingRes?.data ?? []) {
+    const t = (item.attributes?.ticker ?? item.ticker ?? "").toUpperCase();
+    if (t) existingMap[t] = item.id;
+  }
+  console.log(`Found ${Object.keys(existingMap).length} existing profiles.\n`);
+
+  // 2. Parse profiles from ebook if available
+  let ebookProfiles: StockProfile[] = [];
+  if (fs.existsSync(EBOOK_PATH)) {
+    const allLines = fs.readFileSync(EBOOK_PATH, "utf-8").split("\n");
+    const ch13Lines = allLines.slice(CH13_START - 1);
+    console.log(`Parsing company profiles from ebook line ${CH13_START} (${ch13Lines.length} lines)...`);
+    ebookProfiles = parseCompanyProfiles(ch13Lines);
+    console.log(`Parsed ${ebookProfiles.length} profiles from ebook.\n`);
+  } else {
+    console.warn(`Ebook not found at ${EBOOK_PATH} — skipping ebook parse, using supplement only.\n`);
   }
 
-  const allLines = fs.readFileSync(EBOOK_PATH, "utf-8").split("\n");
-  const ch13Lines = allLines.slice(CH13_START - 1);
-
-  console.log(`Parsing company profiles from line ${CH13_START} to EOF (${ch13Lines.length} lines)...`);
-  const profiles = parseCompanyProfiles(ch13Lines);
-  console.log(`Found ${profiles.length} company profiles.\n`);
+  // 3. Merge: ebook profiles first, then supplement any not already covered
+  const supplementTickers = new Set(ebookProfiles.map((p) => p.ticker.toUpperCase()));
+  const supplementToAdd = SUPPLEMENT_PROFILES.filter((p) => !supplementTickers.has(p.ticker.toUpperCase()));
+  const allProfiles = [...ebookProfiles, ...supplementToAdd];
+  console.log(`Total profiles to sync: ${allProfiles.length} (${ebookProfiles.length} ebook + ${supplementToAdd.length} supplement)\n`);
 
   let created = 0;
+  let updated = 0;
   let failed = 0;
 
-  for (const profile of profiles) {
-    process.stdout.write(`  ${profile.ticker} — ${profile.company_name.slice(0, 40)}... `);
-    const res = await strapiPost("stock-profiles", {
+  const UPSERT = process.env.UPSERT === "true";
+
+  for (const profile of allProfiles) {
+    const key = profile.ticker.toUpperCase();
+    const existingId = existingMap[key];
+    const payload = {
       data: {
         ticker: profile.ticker,
         company_name: profile.company_name,
@@ -288,18 +464,33 @@ async function main() {
         risk_level: profile.risk_level,
         investor_types: profile.investor_types,
       },
-    });
-    if (res?.data?.id) {
-      console.log(`ok (id=${res.data.id}, risk=${profile.risk_level}, types=[${profile.investor_types.join(",")}])`);
-      created++;
+    };
+
+    if (existingId) {
+      if (UPSERT) {
+        process.stdout.write(`  [UPDATE] ${profile.ticker} — ${profile.company_name.slice(0, 35)}... `);
+        const res = await strapiPut("stock-profiles", existingId, payload);
+        if (res?.data?.id) { console.log("ok"); updated++; }
+        else { console.log("FAILED"); failed++; }
+      } else {
+        console.log(`  [SKIP]   ${profile.ticker} — already exists (id=${existingId})`);
+      }
     } else {
-      console.log("FAILED");
-      failed++;
+      process.stdout.write(`  [CREATE] ${profile.ticker} — ${profile.company_name.slice(0, 35)}... `);
+      const res = await strapiPost("stock-profiles", payload);
+      if (res?.data?.id) {
+        console.log(`ok (id=${res.data.id}, risk=${profile.risk_level})`);
+        created++;
+      } else {
+        console.log("FAILED");
+        failed++;
+      }
     }
     await new Promise((r) => setTimeout(r, 80));
   }
 
-  console.log(`\nDone: ${created} created, ${failed} failed.`);
+  console.log(`\nDone: ${created} created, ${updated} updated, ${failed} failed.`);
+  console.log(`Tip: run with UPSERT=true to update existing profiles.`);
 }
 
 main().catch((err) => {

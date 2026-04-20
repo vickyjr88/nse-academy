@@ -36,6 +36,7 @@ services:
       GA_CLIENT_EMAIL: ${GA_CLIENT_EMAIL:-}
       GA_PRIVATE_KEY: ${GA_PRIVATE_KEY:-}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       PORT: 3011
     depends_on:
       postgres:

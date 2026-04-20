@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req, HttpCode } from '@nestjs/common';
 import { AdvisorService } from './advisor.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
@@ -29,5 +29,13 @@ export class AdvisorController {
   @ApiOperation({ summary: 'List all available NSE company tickers for the research tool' })
   async tickers() {
     return this.advisorService.getAllTickers();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('ai-advice')
+  @ApiOperation({ summary: 'AI-powered real-time analysis and personalised trade recommendation' })
+  @ApiQuery({ name: 'ticker', required: true })
+  async aiAdvice(@Req() req: any, @Query('ticker') ticker: string) {
+    return this.advisorService.getAiAdvice(req.user.id, ticker);
   }
 }

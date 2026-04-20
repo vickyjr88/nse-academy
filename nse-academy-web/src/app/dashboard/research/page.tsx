@@ -24,6 +24,18 @@ interface TypeAnalysis {
   reasons: string[];
 }
 
+interface AiAdvice {
+  situation: string;
+  keyMetrics: string[];
+  recommendation: "BUY" | "HOLD" | "AVOID";
+  recommendationRationale: string;
+  reasons: string[];
+  risks: string[];
+  outlook: string;
+  sources: string[];
+  disclaimer: string;
+}
+
 interface ResearchResult {
   company: {
     ticker: string;
@@ -83,6 +95,9 @@ export default function ResearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [aiAdvice, setAiAdvice] = useState<AiAdvice | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   // Auth + load ticker list
   useEffect(() => {
     const t = localStorage.getItem("access_token");
@@ -110,6 +125,7 @@ export default function ResearchPage() {
       setLoading(true);
       setError(null);
       setResult(null);
+      setAiAdvice(null);
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/advisor/research?ticker=${encodeURIComponent(ticker)}`,
@@ -126,6 +142,25 @@ export default function ResearchPage() {
     },
     [token]
   );
+
+  const fetchAiAdvice = async () => {
+    if (!token || !result) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/advisor/ai-advice?ticker=${encodeURIComponent(result.company.ticker)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "AI Analysis failed");
+      setAiAdvice(data);
+    } catch (err: any) {
+      console.error(err);
+      // Fallback or error handled in UI
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   function handleSelect(item: TickerItem) {
     setSelected(item);
@@ -295,7 +330,7 @@ export default function ResearchPage() {
           {/* Investor type analysis */}
           <div>
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Investor Type Fit Analysis
+              Detailed Investor Fit
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {result.investorTypeAnalysis.map((analysis) => {
@@ -333,6 +368,130 @@ export default function ResearchPage() {
               })}
             </div>
           </div>
+
+          {/* AI Advice Section */}
+          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10 blur-sm flex gap-2">
+              <span className="text-8xl">🤖</span>
+            </div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="bg-emerald-500 text-white p-2 rounded-lg text-xl">✨</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white">AI Powered Personalized Advice</h3>
+                  <p className="text-slate-400 text-xs">Real-time market analysis + Your Investor Profile</p>
+                </div>
+              </div>
+
+              {!aiAdvice && !aiLoading && (
+                <div className="py-2">
+                  <p className="text-slate-300 text-sm mb-6 max-w-lg">
+                    Get an instant AI-driven report on {result.company.ticker} featuring the latest market sentiment, fiscal reports, and a recommendation tailored to your specific profile.
+                  </p>
+                  <button
+                    onClick={fetchAiAdvice}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-8 py-4 rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
+                  >
+                    <span>🚀</span> Generate Real-time Analysis
+                  </button>
+                </div>
+              )}
+
+              {aiLoading && (
+                <div className="py-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
+                  <p className="text-emerald-400 font-bold animate-pulse">Scanning news & financial reports for {result.company.ticker}...</p>
+                  <p className="text-slate-500 text-xs mt-2 italic">This takes about 10-15 seconds</p>
+                </div>
+              )}
+
+              {aiAdvice && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  {/* Recommendation Card */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Market Situation</p>
+                        <p className="text-slate-200 leading-relaxed text-sm">{aiAdvice.situation}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <div className={`rounded-2xl p-6 border flex flex-col items-center justify-center h-full ${
+                        aiAdvice.recommendation === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/20' : 
+                        aiAdvice.recommendation === 'AVOID' ? 'bg-red-500/10 border-red-500/20' : 
+                        'bg-amber-500/10 border-amber-500/20'
+                      }`}>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Verdict</p>
+                        <p className={`text-4xl font-black mb-1 ${
+                          aiAdvice.recommendation === 'BUY' ? 'text-emerald-400' : 
+                          aiAdvice.recommendation === 'AVOID' ? 'text-red-400' : 
+                          'text-amber-400'
+                        }`}>{aiAdvice.recommendation}</p>
+                        <p className="text-[10px] text-center text-slate-400 italic">Personalized for you</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rationale */}
+                  <div className="bg-emerald-500/5 border-l-4 border-emerald-500 p-6 rounded-r-2xl">
+                    <p className="text-emerald-400 text-sm font-bold mb-1">Personalized Rationale:</p>
+                    <p className="text-white text-base italic">"{aiAdvice.recommendationRationale}"</p>
+                  </div>
+
+                  {/* Reasons & Risks */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="text-emerald-400 font-bold flex items-center gap-2">
+                        <span>📈</span> Drivers for {aiAdvice.recommendation}
+                      </h4>
+                      <ul className="space-y-3">
+                        {aiAdvice.reasons.map((r, i) => (
+                          <li key={i} className="flex gap-3 text-sm text-slate-300">
+                            <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="space-y-4">
+                      <h4 className="text-red-400 font-bold flex items-center gap-2">
+                        <span>⚠️</span> Immediate Risks
+                      </h4>
+                      <ul className="space-y-3">
+                        {aiAdvice.risks.map((r, i) => (
+                          <li key={i} className="flex gap-3 text-sm text-slate-300">
+                            <span className="text-red-500 font-bold shrink-0">!</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Outlook */}
+                  <div className="pt-6 border-t border-slate-800">
+                    <h4 className="text-blue-400 font-bold mb-3 flex items-center gap-2">
+                      <span>🔮</span> 6-12 Month Outlook
+                    </h4>
+                    <p className="text-slate-300 text-sm leading-relaxed">{aiAdvice.outlook}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
+                    <div className="flex flex-wrap gap-2">
+                      {aiAdvice.sources.map((s, i) => (
+                        <span key={i} className="text-[10px] bg-slate-800 text-slate-500 px-2 py-1 rounded border border-slate-700">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-600 max-w-xs">{aiAdvice.disclaimer}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
 
           {/* CTA if no profile */}
           {!result.userProfile && (

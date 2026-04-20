@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export type InvestorType = 'conservative' | 'moderate' | 'aggressive' | 'dividend' | 'growth';
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -37,9 +38,9 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
 
   switch (type) {
     case 'conservative': {
-      if (risk === 'low') { score += 30; reasons.push('Low risk — suitable for capital preservation'); }
-      else if (risk === 'medium') { score += 10; reasons.push('Medium risk — slightly above conservative comfort zone'); }
-      else { score -= 20; reasons.push('High risk — not ideal for capital preservation goals'); }
+      if (risk === 'low') { score += 30; reasons.push('Low risk profile — ideal for your capital preservation goals'); }
+      else if (risk === 'medium') { score += 10; reasons.push('Medium risk — slightly above your preferred conservative threshold'); }
+      else { score -= 20; reasons.push('High risk — volatile price action may conflict with your safety-first approach'); }
 
       if (dy >= 5) { score += 20; reasons.push(`Strong dividend yield (~${dy}%) provides reliable income`); }
       else if (dy >= 3) { score += 10; reasons.push(`Moderate dividend (~${dy}%) adds steady income`); }
@@ -52,9 +53,9 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
     }
 
     case 'moderate': {
-      if (risk === 'medium') { score += 30; reasons.push('Medium risk matches the balanced moderate profile'); }
-      else if (risk === 'low') { score += 20; reasons.push('Low risk — safe anchor for a balanced portfolio'); }
-      else { score += 5; reasons.push('High risk — use as a small growth allocation only'); }
+      if (risk === 'medium') { score += 30; reasons.push('Balanced risk-reward ratio aligns with your moderate appetite'); }
+      else if (risk === 'low') { score += 20; reasons.push('Low risk — provides a stable foundation for your diversified portfolio'); }
+      else { score += 5; reasons.push('High risk — restrict this to a small portion of your growth allocation'); }
 
       if (dy >= 3) { score += 15; reasons.push(`Dividend (~${dy}%) provides income while you wait for growth`); }
 
@@ -63,9 +64,9 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
     }
 
     case 'aggressive': {
-      if (risk === 'high') { score += 35; reasons.push('High risk matches aggressive growth appetite'); }
-      else if (risk === 'medium') { score += 20; reasons.push('Medium risk — decent upside with manageable volatility'); }
-      else { score += 5; reasons.push('Low risk — too conservative for an aggressive portfolio core'); }
+      if (risk === 'high') { score += 35; reasons.push('High volatility potential matches your aggressive risk appetite'); }
+      else if (risk === 'medium') { score += 20; reasons.push('Medium risk — offers strong upside with manageable day-to-day fluctuation'); }
+      else { score += 5; reasons.push('Low risk — likely too slow-moving for your aggressive return targets'); }
 
       if (dy < 3) { score += 5; reasons.push('Low dividend payout suggests earnings are reinvested for growth'); }
       reasons.push('Aggressive investors seek maximum capital appreciation over income');
@@ -240,9 +241,87 @@ export class AdvisorService {
     }));
   }
 
+  async getAiAdvice(userId: string, ticker: string) {
+    const [profile, stocks] = await Promise.all([
+      this.prisma.investorProfile.findUnique({ where: { userId } }),
+      this.fetchStocksFromStrapi(),
+    ]);
+
+    const stock: StockProfile | undefined = stocks.find(
+      (s: StockProfile) => s.ticker?.toUpperCase() === ticker.toUpperCase(),
+    );
+    if (!stock) throw new NotFoundException(`Ticker "${ticker}" not found`);
+
+    const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!geminiKey) throw new InternalServerErrorException('AI service not configured');
+
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      tools: [{ googleSearch: {} } as any],
+    });
+
+    const profileContext = profile
+      ? `The investor is a ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score: ${profile.riskScore}/100. Investment horizon: ${profile.horizonYears} years. Capital range: ${profile.capitalRange}.`
+      : 'The investor has not completed a profile yet — provide general analysis.';
+
+    const prompt = `You are a senior NSE (Nairobi Securities Exchange) investment analyst providing real-time personalised advice to a Kenyan retail investor.
+
+COMPANY: ${stock.company_name} (${stock.ticker}) — ${stock.sector} sector
+INVESTOR PROFILE: ${profileContext}
+
+Use Google Search to find the latest available information about ${stock.company_name} (${stock.ticker}) on the NSE, including:
+1. Current market sentiment and latest news from 2024-2025.
+2. Recent earnings reports or half-year results.
+3. Market price action over the last few months.
+4. Corporate actions (dividends declared, bonuses, etc.).
+5. Potential threats or opportunities in their specific industry in Kenya.
+
+Based on this real-time data and the investor's profile, provide a JSON response with exactly this structure:
+{
+  "situation": "2-3 sentence summary of what is happening with this company in the Kenyan market right now",
+  "keyMetrics": ["Latest Price: KSh XX.XX", "52-Week Range: ...", "P/E Ratio: ...", "any other relevant metrics found"],
+  "recommendation": "BUY" or "HOLD" or "AVOID",
+  "recommendationRationale": "A direct, personalized sentence explaining why this fits (or doesn't fit) a ${profile ? TYPE_LABELS[profile.type as InvestorType] : 'retail'} investor with a ${profile ? profile.riskScore : 'standard'}/100 risk score.",
+  "reasons": ["Specific reason based on latest news", "Specific reason based on fundamentals", "Specific reason based on technicals"],
+  "risks": ["Immediate risk 1", "Immediate risk 2", "Immediate risk 3"],
+  "outlook": "A forward-looking paragraph on the 6-12 month expectation for this stock.",
+  "sources": ["List the specific news outlets or reports you found information from"]
+}
+
+Return ONLY the JSON object. Do not include markdown code blocks.`;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+      return {
+        ticker: stock.ticker,
+        company_name: stock.company_name,
+        ...(parsed ?? {
+          situation: text.slice(0, 400),
+          keyMetrics: [],
+          recommendation: 'HOLD',
+          recommendationRationale: 'Insufficient data for a personalised recommendation.',
+          reasons: ['Limited current data available'],
+          risks: ['Market conditions may change rapidly'],
+          outlook: 'Consult a licensed CMA-registered investment advisor for specific advice.',
+          sources: [],
+        }),
+        disclaimer: 'AI-generated analysis for educational purposes only. Not financial advice. Verify with a CMA-registered broker.',
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      console.error('Gemini AI advice error:', err);
+      throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
+    }
+  }
+
   private async fetchStocksFromStrapi() {
     try {
-      const response = await fetch(`${this.cmsUrl}/api/stock-profiles?pagination[limit]=100`, {
+      const response = await fetch(`${this.cmsUrl}/api/stock-profiles?pagination[limit]=200`, {
         headers: { Authorization: `Bearer ${this.cmsToken}` },
       });
 

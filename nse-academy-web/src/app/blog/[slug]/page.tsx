@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       ? article.cover_image.url
       : article.cover_image?.url
       ? `${process.env.NEXT_PUBLIC_CMS_URL}${article.cover_image.url}`
-      : `${siteUrl}/og-default.png`);
+      : `${siteUrl}/opengraph-image`);
 
   const description = article.excerpt ?? article.body.slice(0, 160).replace(/[#*\n]/g, " ").trim();
 

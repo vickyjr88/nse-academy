@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://nseacademy.vitaldigitalmedia.net'),
   title: 'NSE Academy - Master the Nairobi Securities Exchange',
   description: 'Learn how to invest in the Nairobi Securities Exchange with professional courses, real-time analytics, and expert stock analysis.',
   verification: {

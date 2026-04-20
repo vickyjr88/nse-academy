@@ -56,6 +56,7 @@ const rootEnv = loadRootEnv();
 const CMS_URL = process.env.CMS_URL || rootEnv.CMS_URL || "http://localhost:1337";
 const CMS_API_TOKEN = process.env.CMS_API_TOKEN || rootEnv.CMS_API_TOKEN || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || rootEnv.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || rootEnv.GEMINI_MODEL || "gemini-1.5-flash-latest";
 const TARGET = parseInt(process.env.TARGET || "600", 10);
 const DELAY_MS = parseInt(process.env.DELAY_MS || "1200", 10);
 const DRY_RUN = process.env.DRY_RUN === "true";
@@ -391,7 +392,7 @@ function estimateReadTime(text: string): number {
 // ---------------------------------------------------------------------------
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
 async function generateArticle(prompt: string): Promise<string> {
   const result = await model.generateContent(prompt);

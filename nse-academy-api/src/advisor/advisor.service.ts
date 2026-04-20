@@ -253,13 +253,14 @@ export class AdvisorService {
     if (!stock) throw new NotFoundException(`Ticker "${ticker}" not found`);
 
     const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const geminiModel = this.configService.get<string>('GEMINI_MODEL', 'gemini-1.5-flash-latest');
     if (!geminiKey) throw new InternalServerErrorException('AI service not configured');
 
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      tools: [{ googleSearch: {} } as any],
-    });
+    const model = genAI.getGenerativeModel(
+      { model: geminiModel, tools: [{ googleSearch: {} } as any] },
+      { apiVersion: 'v1beta' },
+    );
 
     const profileContext = profile
       ? `The investor is a ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score: ${profile.riskScore}/100. Investment horizon: ${profile.horizonYears} years. Capital range: ${profile.capitalRange}.`

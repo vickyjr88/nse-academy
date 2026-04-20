@@ -10,6 +10,7 @@ function RegisterForm() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
@@ -35,7 +36,7 @@ function RegisterForm() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, ...(referralCode ? { referralCode } : {}) }),
+        body: JSON.stringify({ name, email, password, ...(phone ? { phone } : {}), ...(referralCode ? { referralCode } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");
@@ -94,6 +95,18 @@ function RegisterForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 placeholder="jane@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile number <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.trim())}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="+254 7XX XXX XXX"
               />
             </div>
             <div>

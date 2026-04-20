@@ -20,7 +20,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
-      data: { name: dto.name, email: dto.email, passwordHash },
+      data: { name: dto.name, email: dto.email, passwordHash, ...(dto.phone ? { phone: dto.phone } : {}) },
     });
 
     if (dto.referralCode) {

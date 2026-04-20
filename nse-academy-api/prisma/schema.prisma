@@ -12,6 +12,7 @@ model User {
   email            String           @unique
   passwordHash     String
   name             String
+  phone            String?
   referralCode     String           @unique @default(cuid())
   investorProfile  InvestorProfile?
   subscription     Subscription?

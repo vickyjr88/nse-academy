@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import PublicHeader from "@/components/PublicHeader";
+import PublicFooter from "@/components/PublicFooter";
 import { getArticleBySlug, getAllArticleSlugs, getArticles } from "@/lib/cms";
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,34 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <span className="text-gray-600 truncate max-w-xs">{article.title}</span>
             </nav>
 
+            {/* Sponsored disclosure banner */}
+            {article.is_sponsored && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
+                <div className="flex items-center gap-3">
+                  {article.sponsor_logo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={article.sponsor_logo_url} alt={article.sponsor_name ?? "Sponsor"} className="h-8 w-auto object-contain" />
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Sponsored Content</p>
+                    {article.sponsor_name && (
+                      <p className="text-sm text-gray-700">Presented by <span className="font-semibold">{article.sponsor_name}</span></p>
+                    )}
+                  </div>
+                </div>
+                {article.sponsor_url && (
+                  <a
+                    href={article.sponsor_url}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    className="shrink-0 text-xs font-semibold bg-amber-600 text-white px-4 py-2 rounded-xl hover:bg-amber-700 transition-colors"
+                  >
+                    {article.sponsor_cta ?? "Learn more"} →
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Category */}
             <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-4 ${CATEGORY_COLORS[article.category] ?? "bg-gray-100 text-gray-600"}`}>
               {article.category}
@@ -225,6 +254,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 {article.body}
               </ReactMarkdown>
             </article>
+
+            {/* Sponsor closing CTA */}
+            {article.is_sponsored && article.sponsor_url && (
+              <div className="mt-12 bg-amber-50 border border-amber-200 rounded-3xl p-8 text-center">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">Sponsored by {article.sponsor_name}</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">{article.sponsor_cta ?? "Learn more from our sponsor"}</h2>
+                <a
+                  href={article.sponsor_url}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="inline-block bg-amber-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-700 transition-colors text-sm"
+                >
+                  Visit {article.sponsor_name} →
+                </a>
+              </div>
+            )}
 
             {/* CTA */}
             <div className="mt-12 bg-emerald-50 border border-emerald-100 rounded-3xl p-8 text-center">
@@ -279,16 +324,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           )}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-100 py-8">
-          <div className="max-w-6xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
-            <span>© 2026 NSE Academy — Empowering Kenyan Investors</span>
-            <div className="flex gap-4">
-              <Link href="/blog/rss.xml" className="hover:text-gray-600">RSS Feed</Link>
-              <Link href="/pricing" className="hover:text-gray-600">Pricing</Link>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
       </div>
     </>
   );

@@ -24,6 +24,11 @@
     "investor_types": { "type": "json" },
     "is_premium": { "type": "boolean", "default": false },
     "cover_image": { "type": "media", "multiple": false, "required": false, "allowedTypes": ["images"] },
-    "og_image_url": { "type": "string", "required": false }
+    "og_image_url": { "type": "string", "required": false },
+    "is_sponsored": { "type": "boolean", "default": false },
+    "sponsor_name": { "type": "string", "required": false },
+    "sponsor_logo_url": { "type": "string", "required": false },
+    "sponsor_url": { "type": "string", "required": false },
+    "sponsor_cta": { "type": "string", "required": false }
   }
 }

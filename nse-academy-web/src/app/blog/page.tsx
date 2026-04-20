@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles, CATEGORIES } from "@/lib/cms";
 import PublicHeader from "@/components/PublicHeader";
+import PublicFooter from "@/components/PublicFooter";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -166,7 +167,7 @@ export default async function BlogPage({
         {rest.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {rest.map((article) => (
-              <Link key={article.id} href={`/blog/${article.slug}`} className="group flex flex-col">
+              <Link key={article.id} href={`/blog/${article.slug}`} className={`group flex flex-col ${article.is_sponsored ? "ring-1 ring-amber-200 rounded-2xl" : ""}`}>
                 {article.cover_image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -190,9 +191,16 @@ export default async function BlogPage({
                 )}
 
                 <div className="flex-1 flex flex-col">
-                  <span className={`self-start text-xs font-bold px-2.5 py-1 rounded-full mb-2 ${CATEGORY_COLORS[article.category] ?? "bg-gray-100 text-gray-600"}`}>
-                    {article.category}
-                  </span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLORS[article.category] ?? "bg-gray-100 text-gray-600"}`}>
+                      {article.category}
+                    </span>
+                    {article.is_sponsored && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                        Sponsored
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2">
                     {article.title}
                   </h3>
@@ -200,7 +208,11 @@ export default async function BlogPage({
                     <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-1">{article.excerpt}</p>
                   )}
                   <div className="flex items-center gap-2 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-50">
-                    <time dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
+                    {article.is_sponsored && article.sponsor_name ? (
+                      <span className="text-amber-600 font-medium">{article.sponsor_name}</span>
+                    ) : (
+                      <time dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
+                    )}
                     <span>·</span>
                     <span>{article.read_time_minutes} min read</span>
                   </div>
@@ -244,19 +256,7 @@ export default async function BlogPage({
         )}
       </main>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Footer */}
-      {/* ----------------------------------------------------------------- */}
-      <footer className="border-t border-gray-100 py-8 mt-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
-          <span>© 2026 NSE Academy — Empowering Kenyan Investors</span>
-          <div className="flex gap-4">
-            <Link href="/blog/rss.xml" className="hover:text-gray-600">RSS Feed</Link>
-            <Link href="/pricing" className="hover:text-gray-600">Pricing</Link>
-            <Link href="/auth/register" className="hover:text-gray-600">Sign Up Free</Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

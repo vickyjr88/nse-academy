@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CalculatorsClient from "./CalculatorsClient";
 import PublicHeader from "@/components/PublicHeader";
+import PublicFooter from "@/components/PublicFooter";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -133,17 +134,7 @@ export default function CalculatorsPage() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-100 bg-white py-8">
-          <div className="max-w-6xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
-            <span>© 2026 NSE Academy — Empowering Kenyan Investors</span>
-            <div className="flex gap-4">
-              <Link href="/blog" className="hover:text-gray-600">Blog</Link>
-              <Link href="/glossary" className="hover:text-gray-600">Glossary</Link>
-              <Link href="/pricing" className="hover:text-gray-600">Pricing</Link>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
       </div>
     </>
   );

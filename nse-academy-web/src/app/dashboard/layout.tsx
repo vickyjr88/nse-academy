@@ -18,12 +18,14 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: "🏠" },
   { label: "My Profile", href: "/dashboard/profile", icon: "🎯" },
   { label: "Learn", href: "/dashboard/learn", icon: "📚" },
+  { label: "Open Broker Account", href: "/dashboard/brokers", icon: "🏦" },
   { label: "Stock Advisor", href: "/dashboard/stocks", icon: "📈" },
   { label: "Research", href: "/dashboard/research", icon: "🔬" },
   { label: "Glossary", href: "/dashboard/glossary", icon: "💡" },
   { label: "Refer Friends", href: "/dashboard/referrals", icon: "🎁" },
   { label: "Account", href: "/dashboard/account", icon: "⚙️" },
   { label: "Subscription", href: "/dashboard/billing", icon: "💳" },
+  { label: "Corporate", href: "/dashboard/corporate", icon: "🏢" },
 ];
 
 interface User {

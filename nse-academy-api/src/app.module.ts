@@ -8,6 +8,9 @@ import { AdvisorModule } from './advisor/advisor.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { AdminModule } from './admin/admin.module';
+import { EbookModule } from './ebook/ebook.module';
+import { CorporateModule } from './corporate/corporate.module';
+import { ContactModule } from './contact/contact.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { AdminModule } from './admin/admin.module';
     PaymentsModule,
     ReferralsModule,
     AdminModule,
+    EbookModule,
+    CorporateModule,
+    ContactModule,
   ],
 })
 export class AppModule {}

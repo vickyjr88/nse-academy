@@ -21,6 +21,11 @@ export interface Article {
   cover_image: { url: string; alternativeText: string | null } | null;
   publishedAt: string;
   createdAt: string;
+  is_sponsored: boolean;
+  sponsor_name: string | null;
+  sponsor_logo_url: string | null;
+  sponsor_url: string | null;
+  sponsor_cta: string | null;
 }
 
 function mapArticle(raw: any): Article {
@@ -43,6 +48,11 @@ function mapArticle(raw: any): Article {
       : null,
     publishedAt: a.publishedAt ?? a.createdAt,
     createdAt: a.createdAt,
+    is_sponsored: a.is_sponsored ?? false,
+    sponsor_name: a.sponsor_name ?? null,
+    sponsor_logo_url: a.sponsor_logo_url ?? null,
+    sponsor_url: a.sponsor_url ?? null,
+    sponsor_cta: a.sponsor_cta ?? null,
   };
 }
 

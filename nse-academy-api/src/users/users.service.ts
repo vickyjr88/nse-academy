@@ -8,11 +8,22 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { investorProfile: true, subscription: true },
+      include: {
+        investorProfile: true,
+        subscription: true,
+        orgMembership: { include: { org: { include: { license: true } } } },
+      },
     });
     if (!user) throw new NotFoundException('User not found');
     const { passwordHash: _, ...safe } = user;
-    return safe;
+    const orgLicense = safe.orgMembership?.org?.license;
+    const corporateActive =
+      orgLicense?.status === 'active' &&
+      orgLicense.currentPeriodEnd > new Date();
+    const effectiveTier = corporateActive
+      ? 'premium'
+      : safe.subscription?.tier ?? 'free';
+    return { ...safe, effectiveTier };
   }
 
   async getProgress(userId: string) {

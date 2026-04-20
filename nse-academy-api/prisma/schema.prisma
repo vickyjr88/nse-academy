@@ -15,10 +15,21 @@ model User {
   referralCode     String           @unique @default(cuid())
   investorProfile  InvestorProfile?
   subscription     Subscription?
+  ebookPurchase    EbookPurchase?
   progress         LessonProgress[]
   referralsMade    Referral[]       @relation("ReferralsMade")
   referralReceived Referral?        @relation("ReferralReceived")
+  orgMembership    OrgMember?
   createdAt        DateTime         @default(now())
+}
+
+model EbookPurchase {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  reference   String   // Paystack reference
+  amountKes   Int      // amount in KES
+  purchasedAt DateTime @default(now())
 }
 
 model InvestorProfile {
@@ -62,4 +73,53 @@ model Referral {
   status      String    @default("pending") // pending | completed
   rewardedAt  DateTime?
   createdAt   DateTime  @default(now())
+}
+
+model Organization {
+  id          String            @id @default(cuid())
+  name        String
+  type        String            @default("company")
+  email       String            @unique
+  adminUserId String            @unique
+  licenseKey  String            @unique @default(cuid())
+  createdAt   DateTime          @default(now())
+  license     CorporateLicense?
+  members     OrgMember[]
+}
+
+model CorporateLicense {
+  id                String       @id @default(cuid())
+  orgId             String       @unique
+  org               Organization @relation(fields: [orgId], references: [id])
+  tier              String       @default("premium")
+  seats             Int
+  seatsUsed         Int          @default(0)
+  status            String       @default("active")
+  currentPeriodEnd  DateTime
+  paystackReference String
+  amountKes         Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model OrgMember {
+  id             String       @id @default(cuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id])
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id])
+  role           String       @default("member")
+  inviteToken    String?      @unique
+  inviteAccepted Boolean      @default(false)
+  joinedAt       DateTime     @default(now())
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String   @default("new")
+  createdAt DateTime @default(now())
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import PublicFooter from "@/components/PublicFooter";
 
 export const metadata: Metadata = {
   title: "Pricing — NSE Academy",
@@ -56,6 +57,20 @@ const pricingTiers = [
     highlighted: true,
     badge: null,
   },
+];
+
+const corporatePlans = [
+  { name: "Starter", seats: 5, price: "KSh 1,500", period: "/month", tagline: "Perfect for small teams", plan: "starter" },
+  { name: "Team", seats: 15, price: "KSh 3,500", period: "/month", tagline: "Ideal for departments", plan: "team", badge: "Most Popular" },
+  { name: "SACCO", seats: 50, price: "KSh 10,000", period: "/month", tagline: "Built for SACCOs & large orgs", plan: "sacco" },
+];
+
+const corporateFeatures = [
+  "All Premium features",
+  "Admin dashboard",
+  "Member management & invites",
+  "Priority support",
+  "Custom onboarding call",
 ];
 
 export default function PricingPage() {
@@ -132,24 +147,55 @@ export default function PricingPage() {
             ))}
           </div>
 
-          <div className="mt-16 bg-white border border-gray-100 rounded-3xl p-10 text-center">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Corporate & Institutional</h2>
-            <p className="text-gray-500 mb-6">
-              Need team-wide access for your group or investment club?
-            </p>
-            <Link href="mailto:support@nse-academy.com" className="text-emerald-700 font-bold hover:underline">
-              Contact Sales →
-            </Link>
+          <div className="mt-20">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">For Companies & SACCOs</h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Give your whole team access to NSE Academy. Seat-based pricing with a dedicated admin dashboard.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {corporatePlans.map((plan) => (
+                <div
+                  key={plan.plan}
+                  className="relative rounded-2xl p-8 border border-indigo-200 bg-white"
+                >
+                  {plan.badge && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      {plan.badge}
+                    </span>
+                  )}
+                  <div className="text-3xl mb-3">🏢</div>
+                  <h3 className="font-bold text-xl mb-1 text-gray-900">{plan.name}</h3>
+                  <p className="text-sm text-indigo-700 mb-3">{plan.tagline}</p>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
+                    <span className="text-gray-400">{plan.period}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">{plan.seats} seats included</p>
+                  <ul className="space-y-3 mb-8">
+                    {corporateFeatures.map((feat) => (
+                      <li key={feat} className="flex items-start gap-3 text-sm">
+                        <span className="text-indigo-600">✓</span>
+                        <span className="text-gray-600">{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/auth/register/corporate?plan=${plan.plan}`}
+                    className="block text-center font-bold py-3.5 rounded-xl bg-indigo-700 text-white hover:bg-indigo-800 transition-all"
+                  >
+                    Get Started →
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Simple Footer */}
-      <footer className="py-8 border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 text-center text-xs text-gray-400">
-          © 2026 NSE Academy — Empowering Kenyan Investors
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

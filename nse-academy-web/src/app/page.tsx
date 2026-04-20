@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles } from "@/lib/cms";
 import MobileNav from "@/components/MobileNav";
+import PublicFooter from "@/components/PublicFooter";
 
 export const revalidate = 300;
 
@@ -302,20 +303,55 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
-          <span>© 2026 NSE Academy — Infinity Digital Works</span>
-          <div className="flex gap-6">
-            <Link href="/blog" className="hover:text-gray-600">Blog</Link>
-            <Link href="/calculators" className="hover:text-gray-600">Calculators</Link>
-            <Link href="/pricing" className="hover:text-gray-600">Pricing</Link>
-            <Link href="/glossary" className="hover:text-gray-600">Glossary</Link>
-            <Link href="/faq" className="hover:text-gray-600">FAQ</Link>
-            <Link href="/blog/rss.xml" className="hover:text-gray-600">RSS</Link>
+      {/* Broker Referral */}
+      <section className="py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center gap-8 shadow-xl">
+            <div className="flex-1 text-white">
+              <div className="inline-flex items-center gap-2 bg-emerald-600/50 text-emerald-100 text-xs font-semibold px-3 py-1 rounded-full mb-4">
+                🏦 Partner Broker
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+                Ready to start investing?<br />Open your NSE account today.
+              </h2>
+              <p className="text-emerald-100 mb-6 max-w-lg">
+                Partner with <strong>AIB AXYS Africa</strong> — a CMA-regulated stockbroker trusted since 1995.
+                Open a CDS account 100% online in under 10 minutes and start buying NSE shares.
+              </p>
+              <ul className="space-y-2 mb-8">
+                {["CMA regulated & trusted since 1995", "100% online account opening — no paperwork", "Trade equities, bonds & ETFs from your phone", "Competitive brokerage rates"].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-emerald-100">
+                    <span className="text-emerald-300 shrink-0">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href="https://aibaxys.kenyaonlinetrading.com/ActiveTrader/#!/new-trading-account?ReferralCode=REF39870"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 bg-white text-emerald-800 font-bold px-6 py-3.5 rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-md"
+                >
+                  Open Account with AIB AXYS →
+                </a>
+                <div className="flex items-center gap-2 text-emerald-200 text-sm bg-emerald-800/40 px-4 py-3.5 rounded-xl">
+                  <span className="text-emerald-300 text-xs font-medium">Referral code:</span>
+                  <span className="font-mono font-bold tracking-widest">REF39870</span>
+                </div>
+              </div>
+            </div>
+            <div className="hidden md:flex flex-col items-center justify-center bg-white/10 rounded-2xl p-8 min-w-[200px] text-center">
+              <div className="text-6xl mb-3">📈</div>
+              <p className="text-white font-bold text-lg">Start investing</p>
+              <p className="text-emerald-200 text-sm mt-1">with as little as</p>
+              <p className="text-white font-extrabold text-3xl mt-1">KSh 500</p>
+              <p className="text-emerald-300 text-xs mt-2">minimum investment</p>
+            </div>
           </div>
         </div>
-      </footer>
+      </section>
+
+      <PublicFooter />
     </div>
   );
 }

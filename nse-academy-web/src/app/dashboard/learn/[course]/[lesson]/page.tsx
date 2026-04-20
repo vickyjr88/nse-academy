@@ -40,18 +40,21 @@ const headers: Record<string, string> = CMS_TOKEN
   : {};
 
 async function fetchLesson(lessonId: string): Promise<StrapiLesson | null> {
+  console.log(`[Server] Fetching lesson ${lessonId} from ${CMS_URL}`);
   try {
     const res = await fetch(
-      `${CMS_URL}/api/lessons/${lessonId}?populate[module][populate][course]=true&populate[module][populate][lessons]=true`,
+      `${CMS_URL}/api/lessons?filters[id][$eq]=${lessonId}&populate[module][populate][course]=true&populate[module][populate][lessons]=true`,
       { 
         headers: { ...headers }, 
         cache: "no-store" 
       }
     );
+    console.log(`[Server] CMS responded with status: ${res.status}`);
     if (!res.ok) return null;
     const json = await res.json();
-    return json.data ?? null;
-  } catch {
+    return (json.data && json.data[0]) ?? null;
+  } catch (err) {
+    console.error(`[Server] Fetch error:`, err);
     return null;
   }
 }
@@ -102,9 +105,13 @@ export default async function LessonPage({
   params: Promise<{ course: string; lesson: string }>;
 }) {
   const { course: courseId, lesson: lessonId } = await params;
+  console.log(`[Server] Rendering LessonPage for course ${courseId}, lesson ${lessonId}`);
 
   const lesson = await fetchLesson(lessonId);
-  if (!lesson) notFound();
+  if (!lesson) {
+    console.log(`[Server] Lesson not found, triggering notFound()`);
+    notFound();
+  }
 
   const moduleId = lesson.module?.id;
   const courseTitle = lesson.module?.course?.title ?? "Course";

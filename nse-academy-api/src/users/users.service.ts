@@ -26,6 +26,15 @@ export class UsersService {
     return { ...safe, effectiveTier };
   }
 
+  async updateMe(id: string, dto: { name?: string; phone?: string }) {
+    const data: Record<string, string | null> = {};
+    if (dto.name?.trim()) data.name = dto.name.trim();
+    if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
+    const updated = await this.prisma.user.update({ where: { id }, data });
+    const { passwordHash: _, ...safe } = updated;
+    return safe;
+  }
+
   async getProgress(userId: string) {
     return this.prisma.lessonProgress.findMany({ where: { userId } });
   }

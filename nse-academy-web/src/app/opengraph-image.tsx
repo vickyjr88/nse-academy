@@ -52,6 +52,8 @@ export default function Image() {
       {/* Headline */}
       <div
         style={{
+          display: "flex",
+          flexWrap: "wrap",
           color: "white",
           fontSize: 58,
           fontWeight: 800,
@@ -60,7 +62,7 @@ export default function Image() {
           maxWidth: 780,
         }}
       >
-        Discover your investor type.{" "}
+        <span>Discover your investor type.&nbsp;</span>
         <span style={{ color: "#6ee7b7" }}>Build your NSE portfolio.</span>
       </div>
 

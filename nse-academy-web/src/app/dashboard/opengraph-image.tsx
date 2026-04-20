@@ -57,8 +57,18 @@ export default function Image() {
           <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 17, fontWeight: 600, letterSpacing: 1 }}>NSE ACADEMY</span>
         </div>
 
-        <div style={{ color: "white", fontSize: 56, fontWeight: 800, lineHeight: 1.1, marginBottom: 20 }}>
-          Your personalised<br />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            color: "white",
+            fontSize: 56,
+            fontWeight: 800,
+            lineHeight: 1.1,
+            marginBottom: 20,
+          }}
+        >
+          <span>Your personalised</span>
           <span style={{ color: "#6ee7b7" }}>NSE investor dashboard</span>
         </div>
         <div style={{ color: "#a7f3d0", fontSize: 22, lineHeight: 1.5, maxWidth: 480 }}>

@@ -55,7 +55,7 @@ export default function Image() {
           <div style={{ color: "#0f172a", fontSize: 36, fontWeight: 800 }}>KSh 0</div>
           {["Investor profiler", "3 starter modules", "NSE glossary"].map((f) => (
             <div key={f} style={{ display: "flex", gap: 8, color: "#475569", fontSize: 14 }}>
-              <span style={{ color: "#047857", fontWeight: 700 }}>✓</span> {f}
+              <span style={{ color: "#047857", fontWeight: 700 }}>✓</span><span>{f}</span>
             </div>
           ))}
         </div>
@@ -97,7 +97,7 @@ export default function Image() {
           </div>
           {["Full trading guide", "62 companies", "Stockbroker guide"].map((f) => (
             <div key={f} style={{ display: "flex", gap: 8, color: "#475569", fontSize: 14 }}>
-              <span style={{ color: "#047857", fontWeight: 700 }}>✓</span> {f}
+              <span style={{ color: "#047857", fontWeight: 700 }}>✓</span><span>{f}</span>
             </div>
           ))}
         </div>
@@ -121,7 +121,7 @@ export default function Image() {
           </div>
           {["Full Investor's Guide", "Stock advisor", "Company research"].map((f) => (
             <div key={f} style={{ display: "flex", gap: 8, color: "#d1fae5", fontSize: 14 }}>
-              <span style={{ color: "#6ee7b7", fontWeight: 700 }}>✓</span> {f}
+              <span style={{ color: "#6ee7b7", fontWeight: 700 }}>✓</span><span>{f}</span>
             </div>
           ))}
         </div>

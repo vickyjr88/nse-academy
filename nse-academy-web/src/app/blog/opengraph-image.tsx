@@ -48,8 +48,8 @@ export default function Image() {
         </div>
 
         {/* Title */}
-        <div style={{ color: "white", fontSize: 62, fontWeight: 800, lineHeight: 1.05, marginBottom: 20 }}>
-          NSE Academy{" "}
+        <div style={{ display: "flex", color: "white", fontSize: 62, fontWeight: 800, lineHeight: 1.05, marginBottom: 20 }}>
+          <span>NSE Academy&nbsp;</span>
           <span
             style={{
               background: "linear-gradient(90deg, #34d399, #059669)",

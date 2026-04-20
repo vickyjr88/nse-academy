@@ -80,13 +80,14 @@ services:
     ports:
       - '3010:3010'
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3011
-      NEXT_PUBLIC_CMS_URL: http://localhost:1337
+      NEXT_PUBLIC_API_URL: https://nseacademy-api.vitaldigitalmedia.net
+      NEXT_PUBLIC_CMS_URL: https://nseacademy-admin.vitaldigitalmedia.net
+      CMS_API_TOKEN: ${CMS_API_TOKEN}
       CMS_INTERNAL_URL: http://cms:1337
       API_INTERNAL_URL: http://api:3011
       NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-changeme}
-      NEXTAUTH_URL: http://localhost:3010
+      NEXTAUTH_URL: https://nseacademy.vitaldigitalmedia.net
     depends_on:
       - api
       - cms

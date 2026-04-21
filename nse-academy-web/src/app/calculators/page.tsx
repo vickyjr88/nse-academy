@@ -94,14 +94,7 @@ export default function CalculatorsPage() {
 
       <div className="min-h-screen bg-gray-50">
         {/* Nav */}
-        <PublicHeader
-          links={[
-            { label: "Blog", href: "/blog" },
-            { label: "Calculators", href: "/calculators" },
-            { label: "Pricing", href: "/pricing" },
-            { label: "Log in", href: "/auth/login" },
-          ]}
-        />
+        <PublicHeader />
 
         {/* Hero */}
         <div className="bg-white border-b border-gray-100 py-12 px-4 sm:px-6 text-center">

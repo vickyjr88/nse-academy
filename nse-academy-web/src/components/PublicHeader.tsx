@@ -13,6 +13,7 @@ const DEFAULT_LINKS = [
   { label: "Companies", href: "/companies" },
   { label: "Calculators", href: "/calculators" },
   { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
   { label: "Log in", href: "/auth/login" },
 ];

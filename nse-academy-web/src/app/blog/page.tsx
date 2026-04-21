@@ -75,13 +75,7 @@ export default async function BlogPage({
       {/* ----------------------------------------------------------------- */}
       {/* Nav */}
       {/* ----------------------------------------------------------------- */}
-      <PublicHeader
-        links={[
-          { label: "Blog", href: "/blog" },
-          { label: "Pricing", href: "/pricing" },
-          { label: "Log in", href: "/auth/login" },
-        ]}
-      />
+      <PublicHeader />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         {/* ----------------------------------------------------------------- */}

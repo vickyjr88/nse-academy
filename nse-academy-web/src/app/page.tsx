@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles } from "@/lib/cms";
-import MobileNav from "@/components/MobileNav";
+import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export const revalidate = 300;
@@ -125,24 +125,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <header className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-emerald-700">NSE Academy</Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-            <Link href="/blog" className="hover:text-gray-900">Blog</Link>
-            <Link href="/calculators" className="hover:text-gray-900">Calculators</Link>
-            <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            <Link href="/auth/login" className="hover:text-gray-900">Log in</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Link href="/auth/register" className="hidden md:inline-flex text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
-              Get started
-            </Link>
-            <MobileNav />
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 text-center">

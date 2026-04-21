@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export const metadata: Metadata = {
@@ -76,18 +77,7 @@ const corporateFeatures = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 h-16 shrink-0">
-        <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-emerald-700">
-            NSE Academy
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/auth/login" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Log in</Link>
-            <Link href="/auth/register" className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors">Register</Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <main className="flex-1 py-16 px-6">

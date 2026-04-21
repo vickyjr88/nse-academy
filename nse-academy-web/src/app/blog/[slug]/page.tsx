@@ -153,13 +153,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       <div className="min-h-screen bg-white">
         {/* Nav */}
-        <PublicHeader
-          links={[
-            { label: "Blog", href: "/blog" },
-            { label: "Pricing", href: "/pricing" },
-            { label: "Log in", href: "/auth/login" },
-          ]}
-        />
+        <PublicHeader />
 
         <main>
           {/* Cover image */}

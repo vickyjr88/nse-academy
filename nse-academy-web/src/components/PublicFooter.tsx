@@ -7,6 +7,7 @@ export default function PublicFooter() {
         <span>© 2026 NSE Academy — Infinity Digital Works</span>
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
           <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
+          <Link href="/companies" className="hover:text-gray-600 transition-colors">Companies</Link>
           <Link href="/calculators" className="hover:text-gray-600 transition-colors">Calculators</Link>
           <Link href="/pricing" className="hover:text-gray-600 transition-colors">Pricing</Link>
           <Link href="/dashboard/glossary" className="hover:text-gray-600 transition-colors">Glossary</Link>

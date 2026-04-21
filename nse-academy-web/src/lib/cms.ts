@@ -140,3 +140,78 @@ export const CATEGORIES = [
 ] as const;
 
 export type Category = typeof CATEGORIES[number];
+
+export interface StockProfile {
+  id: number;
+  ticker: string;
+  company_name: string;
+  sector: string;
+  description: string;
+  dividend_yield: number | null;
+  risk_level: "low" | "medium" | "high";
+  investor_types: string[] | null;
+}
+
+function mapStockProfile(raw: any): StockProfile {
+  const a = raw.attributes ?? raw;
+  return {
+    id: raw.id,
+    ticker: a.ticker,
+    company_name: a.company_name,
+    sector: a.sector,
+    description: a.description ?? "",
+    dividend_yield: a.dividend_yield ?? null,
+    risk_level: a.risk_level ?? "medium",
+    investor_types: a.investor_types ?? [],
+  };
+}
+
+export async function getStockProfiles(params?: { limit?: number; page?: number }): Promise<{ profiles: StockProfile[]; total: number; pageCount: number }> {
+  const qs = new URLSearchParams({
+    "pagination[page]": String(params?.page ?? 1),
+    "pagination[pageSize]": String(params?.limit ?? 100),
+    "sort[0]": "ticker:asc",
+  });
+
+  try {
+    const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
+      headers,
+      next: { revalidate: 3600 },
+    });
+
+    if (!res.ok) return { profiles: [], total: 0, pageCount: 0 };
+
+    const json = await res.json();
+    const profiles = (json.data ?? []).map(mapStockProfile);
+    return {
+      profiles,
+      total: json.meta?.pagination?.total ?? 0,
+      pageCount: json.meta?.pagination?.pageCount ?? 1,
+    };
+  } catch (error) {
+    console.warn("CMS Fetch (getStockProfiles) failed:", error);
+    return { profiles: [], total: 0, pageCount: 0 };
+  }
+}
+
+export async function getStockProfileByTicker(ticker: string): Promise<StockProfile | null> {
+  const qs = new URLSearchParams({
+    "filters[ticker][$eq]": ticker,
+  });
+
+  try {
+    const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
+      headers,
+      next: { revalidate: 3600 },
+    });
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const item = json.data?.[0];
+    return item ? mapStockProfile(item) : null;
+  } catch (error) {
+    console.warn(`CMS Fetch (getStockProfileByTicker: ${ticker}) failed:`, error);
+    return null;
+  }
+}

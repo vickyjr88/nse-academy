@@ -49,8 +49,8 @@ services:
       context: ./nse-academy-cms
       dockerfile: Dockerfile
       args:
-        STRAPI_ADMIN_NSE_API_URL: https://nseacademy-api.vitaldigitalmedia.net
-        STRAPI_ADMIN_NSE_KEY: ${NSE_ADMIN_KEY}
+        STRAPI_ADMIN_NSE_API_URL: ${NSE_API_URL:-http://localhost:3011}
+        STRAPI_ADMIN_NSE_KEY: ${ADMIN_API_KEY:-}
     restart: unless-stopped
     ports:
       - '1337:1337'
@@ -67,8 +67,8 @@ services:
       JWT_SECRET: ${STRAPI_JWT_SECRET:-changeme}
       TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT:-changeme}
       ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:-changeme}
-      STRAPI_ADMIN_NSE_API_URL: https://nseacademy-api.vitaldigitalmedia.net
-      STRAPI_ADMIN_NSE_KEY: ${NSE_ADMIN_KEY}
+      STRAPI_ADMIN_NSE_API_URL: ${NSE_API_URL:-http://localhost:3011}
+      STRAPI_ADMIN_NSE_KEY: ${ADMIN_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

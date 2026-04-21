@@ -9,6 +9,7 @@ import {
   Tr,
   Th,
   Td,
+  Button,
 } from '@strapi/design-system';
 import {
   LineChart,
@@ -126,6 +127,27 @@ export function Dashboard() {
   const [lessonTitles, setLessonTitles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncMarketData = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${NSE_API_URL}/market-data/sync`, {
+        method: 'POST',
+        headers: { 'x-admin-key': NSE_ADMIN_KEY },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Sync triggered successfully! ' + data.message);
+      } else {
+        alert('Failed to trigger sync: ' + (data.message || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error triggering sync: ' + e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -199,8 +221,15 @@ export function Dashboard() {
 
   return (
     <Box padding={8}>
-      <Box paddingBottom={6}>
+      <Box paddingBottom={6} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="alpha">Analytics Dashboard</Typography>
+        <Button 
+          variant="secondary" 
+          loading={syncing} 
+          onClick={handleSyncMarketData}
+        >
+          🔄 Sync Market Data
+        </Button>
       </Box>
 
       {/* Overview Cards */}

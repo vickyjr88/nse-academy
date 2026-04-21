@@ -10,6 +10,7 @@ interface Props {
 
 const DEFAULT_LINKS = [
   { label: "Blog", href: "/blog" },
+  { label: "Companies", href: "/companies" },
   { label: "Calculators", href: "/calculators" },
   { label: "Pricing", href: "/pricing" },
   { label: "Contact", href: "/contact" },

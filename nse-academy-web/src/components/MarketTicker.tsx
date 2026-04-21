@@ -63,14 +63,14 @@ export default function MarketTicker() {
   return (
     <div className="h-10 bg-emerald-950 flex items-center overflow-hidden border-b border-emerald-900/50 relative">
       <div className="absolute left-0 z-10 w-16 h-full bg-gradient-to-r from-emerald-950 to-transparent pointer-events-none" />
-      
+
       {/* Ticker Flex Container */}
       <div className="flex animate-ticker whitespace-nowrap will-change-transform">
         {/* Render the array twice to create a seamless loop */}
         {[...stocks, ...stocks].map((stock, i) => {
           const isPositive = stock.change.startsWith("+");
           const isNegative = stock.change.startsWith("-");
-          
+
           return (
             <div
               key={`${stock.ticker}-${i}`}
@@ -83,13 +83,12 @@ export default function MarketTicker() {
                 {stock.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
               <span
-                className={`text-xs ml-2 ${
-                  isPositive
+                className={`text-xs ml-2 ${isPositive
                     ? "text-green-400"
                     : isNegative
-                    ? "text-red-400"
-                    : "text-gray-400"
-                }`}
+                      ? "text-red-400"
+                      : "text-gray-400"
+                  }`}
               >
                 {isPositive ? "▲" : isNegative ? "▼" : "—"} {stock.change}
               </span>
@@ -99,7 +98,7 @@ export default function MarketTicker() {
       </div>
 
       <div className="absolute right-0 z-10 w-16 h-full bg-gradient-to-l from-emerald-950 to-transparent pointer-events-none" />
-      
+
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes ticker {

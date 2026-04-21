@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import MarketTicker from "@/components/MarketTicker";
 
 function HamburgerIcon({ open }: { open: boolean }) {
   return (
@@ -162,9 +163,14 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 md:ml-64">
+      <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        {/* Ticker at the absolute top of the main area */}
+        <div className="sticky top-0 z-20">
+          <MarketTicker />
+        </div>
+
         {/* Top bar */}
-        <div className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
+        <div className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-10 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen((v) => !v)}

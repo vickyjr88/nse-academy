@@ -124,3 +124,16 @@ model ContactSubmission {
   status    String   @default("new")
   createdAt DateTime @default(now())
 }
+
+model StockPrice {
+  id        String   @id @default(cuid())
+  ticker    String
+  name      String
+  price     Float
+  volume    String
+  change    String
+  timestamp DateTime @default(now())
+
+  @@index([ticker])
+  @@index([timestamp])
+}

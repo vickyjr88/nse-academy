@@ -11,10 +11,13 @@ import { AdminModule } from './admin/admin.module';
 import { EbookModule } from './ebook/ebook.module';
 import { CorporateModule } from './corporate/corporate.module';
 import { ContactModule } from './contact/contact.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { MarketDataModule } from './market-data/market-data.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -26,6 +29,7 @@ import { ContactModule } from './contact/contact.module';
     EbookModule,
     CorporateModule,
     ContactModule,
+    MarketDataModule,
   ],
 })
 export class AppModule {}

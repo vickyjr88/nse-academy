@@ -56,6 +56,7 @@ PAYSTACK_PUBLIC_KEY=pk_live_xxxxxxxxxxxx
 ADMIN_API_KEY=generate_strong_secret_here
 GEMINI_API_KEY=your_google_gemini_api_key
 GEMINI_MODEL=gemini-1.5-flash-latest
+RAPID_API_KEY=your_rapid_api_key_here
 
 # --- GOOGLE ANALYTICS ---
 GA_PROPERTY_ID=your-property-id

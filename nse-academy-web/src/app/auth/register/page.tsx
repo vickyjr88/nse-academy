@@ -42,7 +42,9 @@ function RegisterForm() {
       if (!res.ok) throw new Error(data.message || "Registration failed");
       localStorage.setItem("access_token", data.access_token);
       localStorage.removeItem("referralCode");
-      router.push("/profile");
+      
+      const redirectTo = searchParams.get("redirectTo") || "/profile";
+      router.push(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {

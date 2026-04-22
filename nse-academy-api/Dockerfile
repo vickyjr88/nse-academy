@@ -23,5 +23,5 @@ RUN npm run build
 
 EXPOSE 3011
 
-# Start the application - run migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+# Start the application - baseline existing schema then deploy new migrations
+CMD ["sh", "-c", "npx prisma migrate resolve --applied 0_init && npx prisma migrate deploy && npm run start:prod"]

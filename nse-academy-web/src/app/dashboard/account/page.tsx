@@ -3,8 +3,6 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { getDigitalProducts, type DexterProduct } from "@/lib/dexter";
-
 interface User {
   id: string;
   email: string;
@@ -18,11 +16,23 @@ interface Purchase {
   purchasedAt: string;
 }
 
-interface Props {
-  initialProducts: DexterProduct[];
+interface DexterProduct {
+  id: string;
+  name: string;
+  price: number;
+  compare_at_price: number | null;
+  currency: string;
+  thumbnail: string | null;
+  description: string;
+  category: string;
+  is_digital: boolean;
+  status: string;
 }
 
-function AccountPageContent({ initialProducts }: Props) {
+const STOREFRONT_URL =
+  "https://dexter-api.vitaldigitalmedia.net/api/products/storefront/51fe5af0-266b-419e-8559-3f0febcd74c4";
+
+function AccountPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -32,7 +42,7 @@ function AccountPageContent({ initialProducts }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [dexterProducts] = useState<DexterProduct[]>(initialProducts);
+  const [dexterProducts, setDexterProducts] = useState<DexterProduct[]>([]);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState("");
@@ -48,7 +58,8 @@ function AccountPageContent({ initialProducts }: Props) {
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/status`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-    ]).then(([userData, ebookData]) => {
+      fetch(STOREFRONT_URL).then(r => r.json()).catch(() => ({ products: [] })),
+    ]).then(([userData, ebookData, storefrontData]) => {
       if (userData.statusCode === 401) {
         const dest = encodeURIComponent(window.location.pathname + window.location.search);
         router.push(`/auth/login?redirectTo=${dest}`);
@@ -58,6 +69,10 @@ function AccountPageContent({ initialProducts }: Props) {
       setEditName(userData.name ?? "");
       setEditPhone(userData.phone ?? "");
       setPurchases(ebookData?.purchases ?? []);
+      const digital = (storefrontData?.products ?? []).filter(
+        (p: DexterProduct) => p.is_digital && p.status === "active",
+      );
+      setDexterProducts(digital);
     }).catch(() => {
       // If everything fails, maybe we're offline or API is down
       setLoading(false);
@@ -354,12 +369,10 @@ function AccountPageContent({ initialProducts }: Props) {
   );
 }
 
-export default async function AccountPage() {
-  const products = await getDigitalProducts();
-  
+export default function AccountPage() {
   return (
     <Suspense fallback={<div className="p-8 text-gray-400 text-center">Loading...</div>}>
-      <AccountPageContent initialProducts={products} />
+      <AccountPageContent />
     </Suspense>
   );
 }

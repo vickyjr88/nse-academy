@@ -23,5 +23,5 @@ RUN npm run build
 
 EXPOSE 3011
 
-# Start the application with database sync
-CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+# Start the application - run migrations then start
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]

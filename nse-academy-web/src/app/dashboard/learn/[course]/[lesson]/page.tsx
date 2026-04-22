@@ -134,23 +134,21 @@ export default async function LessonPage({
   const nextHref = nextLesson ? `/dashboard/learn/${courseId}/${nextLesson.id}` : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top nav */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center gap-3 text-sm text-gray-500">
-          <Link href={coursePage} className="text-emerald-700 hover:underline font-medium">
-            Courses
-          </Link>
-          <span>/</span>
-          <span className="truncate max-w-[200px]">{moduleTitle}</span>
-          <span>/</span>
-          <span className="text-gray-900 font-medium truncate max-w-[240px]">
-            {lesson.title}
-          </span>
-        </div>
-      </header>
+    <div className="max-w-4xl">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <Link href={coursePage} className="text-emerald-700 hover:underline font-medium">
+          Courses
+        </Link>
+        <span>/</span>
+        <span className="truncate max-w-[200px]">{moduleTitle}</span>
+        <span>/</span>
+        <span className="text-gray-900 font-medium truncate max-w-[240px]">
+          {lesson.title}
+        </span>
+      </div>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <div>
         {/* Lesson meta */}
         <div className="mb-6">
           <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -233,7 +231,7 @@ export default async function LessonPage({
             </ul>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

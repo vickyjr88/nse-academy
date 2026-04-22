@@ -29,6 +29,20 @@ const navItems = [
   { label: "Corporate", href: "/dashboard/corporate", icon: "🏢" },
 ];
 
+const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/dashboard/profile": "My Profile",
+  "/dashboard/learn": "Learn",
+  "/dashboard/brokers": "Open Broker Account",
+  "/dashboard/stocks": "Stock Advisor",
+  "/dashboard/research": "Research",
+  "/dashboard/glossary": "Glossary",
+  "/dashboard/referrals": "Refer Friends",
+  "/dashboard/account": "Account",
+  "/dashboard/billing": "Subscription",
+  "/dashboard/corporate": "Corporate",
+};
+
 interface User {
   id: string;
   email: string;
@@ -81,14 +95,6 @@ export default function DashboardLayout({
     router.push("/");
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">
-        Loading…
-      </div>
-    );
-  }
-
   const navContent = (
     <>
       <nav className="flex-1 px-4 py-6 space-y-1">
@@ -122,7 +128,7 @@ export default function DashboardLayout({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col bg-white border-r border-gray-100 fixed inset-y-0">
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
@@ -163,7 +169,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <main className="md:ml-64 flex flex-col min-h-screen">
         {/* Ticker at the absolute top of the main area */}
         <div className="sticky top-0 z-20">
           <MarketTicker />
@@ -180,15 +186,17 @@ export default function DashboardLayout({
             >
               <HamburgerIcon open={mobileOpen} />
             </button>
-            <h1 className="font-semibold text-gray-900 capitalize">
-              {pathname.split("/").pop() || "Dashboard"}
+            <h1 className="font-semibold text-gray-900">
+              {PAGE_TITLES[pathname] || "Dashboard"}
             </h1>
           </div>
-          {user && (
+          {user ? (
             <span className="text-sm text-gray-500">
               Hello, {user.name.split(" ")[0]} 👋
             </span>
-          )}
+          ) : loading ? (
+            <span className="text-sm text-gray-300 animate-pulse">Loading…</span>
+          ) : null}
         </div>
 
         <div className="p-4 md:p-6">

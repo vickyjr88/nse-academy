@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InvestorCard from '@/components/InvestorCard';
 
@@ -111,11 +111,32 @@ interface InvestorProfile {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(-1); // -1 = loading/view mode, 0+ = quiz
+  const [existingProfile, setExistingProfile] = useState<InvestorProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [answers, setAnswers] = useState<{ questionId: number; optionIndex: number }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<InvestorProfile | null>(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { router.push('/auth/login'); return; }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.statusCode === 401) { router.push('/auth/login'); return; }
+        if (data?.investorProfile) {
+          setExistingProfile(data.investorProfile);
+        } else {
+          setStep(0); // no profile yet — go straight to quiz
+        }
+      })
+      .catch(() => setStep(0))
+      .finally(() => setProfileLoading(false));
+  }, [router]);
 
   async function handleAnswer(optionIndex: number) {
     const newAnswers = [...answers, { questionId: QUESTIONS[step].id, optionIndex }];
@@ -170,10 +191,42 @@ export default function ProfilePage() {
     setSubmitting(false);
   }
 
+  // Loading state while fetching existing profile
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-400">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show existing profile (step === -1 means view mode)
+  if (step === -1 && existingProfile) {
+    return (
+      <div className="max-w-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Your Investor Profile</h1>
+        </div>
+        <InvestorCard
+          type={existingProfile.type}
+          riskScore={existingProfile.riskScore}
+          horizonYears={existingProfile.horizonYears}
+          capitalRange={existingProfile.capitalRange}
+        />
+        <button
+          onClick={() => setStep(0)}
+          className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600"
+        >
+          Retake quiz
+        </button>
+      </div>
+    );
+  }
+
   if (step === 10) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full">
+      <div className="max-w-lg">
+        <div>
           {submitting && (
             <div className="text-center py-20">
               <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -224,50 +277,48 @@ export default function ProfilePage() {
   const progressPct = (step / 10) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-lg w-full">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-500">
-              Question {step + 1} of 10
-            </span>
-            <span className="text-sm text-gray-400">{Math.round(progressPct)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
+    <div className="max-w-lg">
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-500">
+            Question {step + 1} of 10
+          </span>
+          <span className="text-sm text-gray-400">{Math.round(progressPct)}%</span>
         </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">{question.question}</h2>
-          <div className="space-y-3">
-            {question.options.map((label, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleAnswer(idx)}
-                className="w-full text-left px-5 py-4 rounded-xl border border-gray-200 text-sm text-gray-700 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-900 transition-colors"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
-
-        {step > 0 && (
-          <button
-            onClick={() => {
-              setStep(step - 1);
-              setAnswers(answers.slice(0, -1));
-            }}
-            className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600"
-          >
-            ← Back
-          </button>
-        )}
       </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">{question.question}</h2>
+        <div className="space-y-3">
+          {question.options.map((label, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleAnswer(idx)}
+              className="w-full text-left px-5 py-4 rounded-xl border border-gray-200 text-sm text-gray-700 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-900 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {step > 0 && (
+        <button
+          onClick={() => {
+            setStep(step - 1);
+            setAnswers(answers.slice(0, -1));
+          }}
+          className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600"
+        >
+          ← Back
+        </button>
+      )}
     </div>
   );
 }

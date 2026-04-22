@@ -24,4 +24,4 @@ RUN npm run build
 EXPOSE 3011
 
 # Start the application - deploy pending migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+CMD ["sh", "-c", "npx prisma migrate resolve --applied 0_init || true && npx prisma migrate deploy && npm run start:prod"]

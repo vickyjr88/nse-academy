@@ -16,7 +16,7 @@ model User {
   referralCode     String           @unique @default(cuid())
   investorProfile  InvestorProfile?
   subscription     Subscription?
-  ebookPurchase    EbookPurchase?
+  ebookPurchase    EbookPurchase[]
   progress         LessonProgress[]
   referralsMade    Referral[]       @relation("ReferralsMade")
   referralReceived Referral?        @relation("ReferralReceived")
@@ -26,11 +26,14 @@ model User {
 
 model EbookPurchase {
   id          String   @id @default(cuid())
-  userId      String   @unique
+  userId      String
+  productId   String   // Dexter product ID
   user        User     @relation(fields: [userId], references: [id])
   reference   String   // Paystack reference
   amountKes   Int      // amount in KES
   purchasedAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 model InvestorProfile {

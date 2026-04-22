@@ -39,6 +39,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash-latest}
       RAPID_API_KEY: ${RAPID_API_KEY:-}
+      DEXTER_API_KEY: ${DEXTER_API_KEY:-}
       PORT: 3011
     depends_on:
       postgres:

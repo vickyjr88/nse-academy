@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticles } from "@/lib/cms";
+import { getDigitalProducts } from "@/lib/dexter";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
@@ -122,6 +123,7 @@ function formatDate(iso: string) {
 
 export default async function LandingPage() {
   const { articles: latestArticles } = await getArticles({ limit: 3 });
+  const ebooks = await getDigitalProducts();
 
   return (
     <div className="min-h-screen bg-white">
@@ -228,6 +230,62 @@ export default async function LandingPage() {
             </div>
             <div className="text-center mt-8 sm:hidden">
               <Link href="/blog" className="text-sm font-medium text-emerald-700 hover:underline">View all articles →</Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Ebooks */}
+      {ebooks.length > 0 && (
+        <section className="py-20 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="mb-10 text-center">
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">NSE Investment Guides</h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Comprehensive ebooks to accelerate your investing journey on the Nairobi Securities Exchange.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {ebooks.map((book) => (
+                <div
+                  key={book.id}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col"
+                >
+                  {book.thumbnail && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={book.thumbnail}
+                      alt={book.name}
+                      className="w-full h-52 object-cover"
+                    />
+                  )}
+                  <div className="p-6 flex flex-col flex-1">
+                    <span className="self-start text-xs font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full mb-3">
+                      {book.category}
+                    </span>
+                    <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2">{book.name}</h3>
+                    <p className="text-sm text-gray-500 line-clamp-3 mb-4 flex-1">{book.description}</p>
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-bold text-gray-900">
+                          KSh {book.price.toLocaleString("en-KE")}
+                        </span>
+                        {book.compare_at_price && (
+                          <span className="text-sm text-gray-400 line-through">
+                            KSh {book.compare_at_price.toLocaleString("en-KE")}
+                          </span>
+                        )}
+                      </div>
+                      <Link
+                        href={`/dashboard/account?buyEbook=${book.id}`}
+                        className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors"
+                      >
+                        Buy Now →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

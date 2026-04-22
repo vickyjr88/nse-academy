@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface User {
   id: string;
@@ -11,22 +11,40 @@ interface User {
   subscription?: { tier: string; status: string } | null;
 }
 
-interface EbookStatus {
-  purchased: boolean;
-  purchasedAt: string | null;
+interface Purchase {
+  productId: string;
+  purchasedAt: string;
 }
 
-export default function AccountPage() {
+interface DexterProduct {
+  id: string;
+  name: string;
+  price: number;
+  compare_at_price: number | null;
+  currency: string;
+  thumbnail: string | null;
+  description: string;
+  category: string;
+  is_digital: boolean;
+  status: string;
+}
+
+const STOREFRONT_URL =
+  "https://dexter-api.vitaldigitalmedia.net/api/products/storefront/51fe5af0-266b-419e-8559-3f0febcd74c4";
+
+function AccountPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const [ebook, setEbook] = useState<EbookStatus | null>(null);
-  const [ebookLoading, setEbookLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [dexterProducts, setDexterProducts] = useState<DexterProduct[]>([]);
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -35,50 +53,68 @@ export default function AccountPage() {
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/status`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-    ]).then(([userData, ebookData]) => {
+      fetch(STOREFRONT_URL).then(r => r.json()).catch(() => ({ products: [] })),
+    ]).then(([userData, ebookData, storefrontData]) => {
       setUser(userData);
       setEditName(userData.name ?? "");
       setEditPhone(userData.phone ?? "");
-      setEbook(ebookData);
+      setPurchases(ebookData?.purchases ?? []);
+      const digital = (storefrontData?.products ?? []).filter(
+        (p: DexterProduct) => p.is_digital && p.status === "active",
+      );
+      setDexterProducts(digital);
     }).finally(() => setLoading(false));
   }, [router]);
 
-  async function handleEbookPurchase() {
+  // Auto-trigger purchase when landing page passes ?buyEbook=productId
+  useEffect(() => {
+    const buyProductId = searchParams.get("buyEbook");
+    if (!buyProductId || !user || dexterProducts.length === 0) return;
+    const product = dexterProducts.find(p => p.id === buyProductId);
+    if (!product) return;
+    if (purchases.some(p => p.productId === buyProductId)) return;
+    handlePurchase(buyProductId, product.price);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, dexterProducts, searchParams]);
+
+  async function handlePurchase(productId: string, priceKes: number) {
     const token = localStorage.getItem("access_token");
-    if (!token) return;
-    setEbookLoading(true);
+    if (!token) { router.push("/auth/login"); return; }
+    setPurchasingId(productId);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/purchase`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ productId, priceKes }),
       });
       const data = await res.json();
       if (data?.authorization_url) {
         window.location.href = data.authorization_url;
       }
     } finally {
-      setEbookLoading(false);
+      setPurchasingId(null);
     }
   }
 
-  async function handleEbookDownload() {
+  async function handleDownload(productId: string, name: string) {
     const token = localStorage.getItem("access_token");
     if (!token) return;
-    setDownloading(true);
+    setDownloadingId(productId);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data?.url) {
-        const a = document.createElement("a");
-        a.href = data.url;
-        a.download = data.filename || "NSE_Complete_Investors_Guide_2026.pdf";
-        a.target = "_blank";
-        a.click();
-      }
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/ebook/download/${encodeURIComponent(productId)}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name.replace(/[^a-z0-9]/gi, "_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
     } finally {
-      setDownloading(false);
+      setDownloadingId(null);
     }
   }
 
@@ -166,48 +202,84 @@ export default function AccountPage() {
         </form>
       </div>
 
-      {/* Ebook */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">NSE Complete Investor's Guide 2026</h2>
-          {ebook?.purchased && (
-            <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Purchased</span>
-          )}
-        </div>
-        <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="text-5xl shrink-0">📘</div>
-          <div className="flex-1">
-            <p className="text-gray-600 text-sm mb-1">
-              The definitive guide to investing on the Nairobi Securities Exchange. 13 chapters, 63 company profiles, buy/hold/avoid verdicts.
-            </p>
-            {ebook?.purchased ? (
-              <>
-                <p className="text-xs text-gray-400 mb-3">
-                  Purchased {ebook.purchasedAt ? new Date(ebook.purchasedAt).toLocaleDateString("en-KE", { dateStyle: "medium" }) : ""}
-                </p>
-                <button
-                  onClick={handleEbookDownload}
-                  disabled={downloading}
-                  className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors disabled:opacity-60"
-                >
-                  {downloading ? "Preparing download…" : "⬇️ Download PDF"}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-bold text-gray-900 mb-3">KSh 750 — one-time purchase</p>
-                <button
-                  onClick={handleEbookPurchase}
-                  disabled={ebookLoading}
-                  className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors disabled:opacity-60"
-                >
-                  {ebookLoading ? "Redirecting…" : "Buy the Ebook — KSh 750"}
-                </button>
-              </>
-            )}
+      {/* Ebooks */}
+      {dexterProducts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <h2 className="text-sm font-semibold text-gray-700">NSE Investment Guides</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {dexterProducts.map(product => {
+              const purchase = purchases.find(p => p.productId === product.id);
+              const isOwned = !!purchase;
+              const isPurchasing = purchasingId === product.id;
+              const isDownloading = downloadingId === product.id;
+              return (
+                <div key={product.id} className="p-6 flex flex-col sm:flex-row items-start gap-5">
+                  {product.thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.thumbnail}
+                      alt={product.name}
+                      className="w-24 h-24 object-cover rounded-xl shrink-0 border border-gray-100"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-emerald-50 rounded-xl flex items-center justify-center text-4xl shrink-0">📘</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm leading-snug mb-1">{product.name}</p>
+                        <p className="text-xs text-gray-500 line-clamp-2">{product.description}</p>
+                      </div>
+                      {isOwned && (
+                        <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">Owned</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                      <div className="flex items-baseline gap-2">
+                        {isOwned ? (
+                          <span className="text-xs text-gray-400">
+                            Purchased {new Date(purchase!.purchasedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-base font-bold text-gray-900">
+                              KSh {product.price.toLocaleString("en-KE")}
+                            </span>
+                            {product.compare_at_price && (
+                              <span className="text-sm text-gray-400 line-through">
+                                KSh {product.compare_at_price.toLocaleString("en-KE")}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {isOwned ? (
+                        <button
+                          onClick={() => handleDownload(product.id, product.name)}
+                          disabled={isDownloading}
+                          className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-emerald-800 transition-colors disabled:opacity-60"
+                        >
+                          {isDownloading ? "Preparing…" : "⬇️ Download PDF"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePurchase(product.id, product.price)}
+                          disabled={isPurchasing}
+                          className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-emerald-800 transition-colors disabled:opacity-60"
+                        >
+                          {isPurchasing ? "Redirecting…" : `Buy — KSh ${product.price.toLocaleString("en-KE")}`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Security */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -221,5 +293,13 @@ export default function AccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-gray-400 text-center">Loading...</div>}>
+      <AccountPageContent />
+    </Suspense>
   );
 }

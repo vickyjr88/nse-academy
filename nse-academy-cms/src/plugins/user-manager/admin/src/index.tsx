@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '@strapi/icons';
+import { User, ShoppingCart, PieChart } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -25,9 +25,39 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/ebook-purchases`,
+      icon: ShoppingCart,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.ebook-purchases`,
+        defaultMessage: 'Ebook Purchases',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/investor-profiles`,
+      icon: PieChart,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.investor-profiles`,
+        defaultMessage: 'Investor Profiles',
+      },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/ebook-purchases`,
+      Component: React.lazy(() => import('./pages/EbookPurchasesList').then((m) => ({ default: m.EbookPurchasesList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/investor-profiles`,
+      Component: React.lazy(() => import('./pages/InvestorProfilesList').then((m) => ({ default: m.InvestorProfilesList }))),
     });
 
     app.router.addRoute({

@@ -110,6 +110,89 @@ export class AdminService {
     return rest;
   }
 
+  async listEbookPurchases(params: {
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { page, limit, search } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { reference: { contains: search, mode: 'insensitive' } },
+        { productId: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [purchases, total] = await Promise.all([
+      this.prisma.ebookPurchase.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+        orderBy: { purchasedAt: 'desc' },
+      }),
+      this.prisma.ebookPurchase.count({ where }),
+    ]);
+
+    return {
+      data: purchases,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async listInvestorProfiles(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    type?: string;
+    capitalRange?: string;
+  }) {
+    const { page, limit, search, type, capitalRange } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+    if (type) where.type = type;
+    if (capitalRange) where.capitalRange = capitalRange;
+
+    const [profiles, total] = await Promise.all([
+      this.prisma.investorProfile.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.investorProfile.count({ where }),
+    ]);
+
+    return {
+      data: profiles,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+
   async upsertSubscription(userId: string, dto: UpsertSubscriptionDto) {
     await this.getUser(userId);
     return this.prisma.subscription.upsert({

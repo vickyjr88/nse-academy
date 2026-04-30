@@ -52,6 +52,46 @@ export class AdminController {
     return this.admin.getUser(id);
   }
 
+  @Get('ebook-purchases')
+  @ApiOperation({ summary: 'List all ebook purchases (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  listEbookPurchases(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+  ) {
+    return this.admin.listEbookPurchases({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+    });
+  }
+
+  @Get('investor-profiles')
+  @ApiOperation({ summary: 'List all investor profiles (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'type', required: false })
+  @ApiQuery({ name: 'capitalRange', required: false })
+  listInvestorProfiles(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('type') type?: string,
+    @Query('capitalRange') capitalRange?: string,
+  ) {
+    return this.admin.listInvestorProfiles({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      type,
+      capitalRange,
+    });
+  }
+
   @Post('users/:id/subscription')
   @ApiOperation({ summary: 'Create or upsert subscription (bypasses Paystack)' })
   upsertSubscription(

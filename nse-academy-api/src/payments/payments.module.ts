@@ -4,9 +4,10 @@ import { PaymentsService } from './payments.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { ReferralsModule } from '../referrals/referrals.module';
+import { EbookModule } from '../ebook/ebook.module';
 
 @Module({
-  imports: [PrismaModule, ConfigModule, ReferralsModule],
+  imports: [PrismaModule, ConfigModule, ReferralsModule, EbookModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
 })

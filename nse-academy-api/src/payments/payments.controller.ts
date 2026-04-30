@@ -22,7 +22,7 @@ export class PaymentsController {
 
   @Post(['payments/webhook', 'api/webhooks/paystack', 'webhooks/paystack'])
   @HttpCode(200)
-  @ApiOperation({ summary: 'Paystack webhook listener' })
+  @ApiOperation({ summary: 'Paystack webhook listener (handles both subscription and ebook payments)' })
   async webhook(
     @Req() req: RawBodyRequest<Request>,
     @Body() body: any,
@@ -49,9 +49,18 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @Post('payments/verify')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Verify Paystack reference and immediately activate subscription' })
+  @ApiOperation({ summary: 'Verify Paystack reference and immediately activate subscription (legacy)' })
   async verify(@Req() req, @Body() body: { reference: string }) {
     return this.paymentsService.verifyAndActivate(req.user.id, body.reference);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('payments/verify-any')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Unified verify — auto-detects subscription vs ebook from Paystack metadata and activates accordingly' })
+  async verifyAny(@Req() req, @Body() body: { reference: string }) {
+    return this.paymentsService.verifyAny(req.user.id, body.reference);
   }
 
   @ApiBearerAuth()

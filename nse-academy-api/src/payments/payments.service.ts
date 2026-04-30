@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, Logger, BadRequestException }
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service';
+import { EbookService } from '../ebook/ebook.service';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 
@@ -19,6 +20,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private referrals: ReferralsService,
+    private ebookService: EbookService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -45,6 +47,7 @@ export class PaymentsService {
           amount: PLAN_PRICES[plan],
           callback_url: `${this.configService.get('WEB_URL', 'https://nseacademy.vitaldigitalmedia.net')}/payment/callback`,
           metadata: {
+            type: 'subscription',
             userId,
             plan,
           },
@@ -76,8 +79,8 @@ export class PaymentsService {
 
     try {
       if (event === 'charge.success') {
-        const userId = data.metadata.userId;
-        const plan: SubscriptionPlan = data.metadata.plan || 'premium';
+        const paymentType: string = data.metadata?.type || 'subscription';
+        const userId = data.metadata?.userId;
         const reference = data.reference;
 
         if (!userId) {
@@ -85,25 +88,42 @@ export class PaymentsService {
           return { received: true };
         }
 
-        await this.prisma.subscription.upsert({
-          where: { userId },
-          create: {
-            userId,
-            tier: plan,
-            status: 'active',
-            paystackSubId: reference,
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          },
-          update: {
-            tier: plan,
-            status: 'active',
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          },
-        });
+        if (paymentType === 'ebook') {
+          // --- Ebook purchase ---
+          const productId: string = data.metadata?.productId;
+          const priceKes: number = data.metadata?.price_kes ?? 0;
 
-        this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
-        // Complete referral if this is the user's first paid subscription
-        await this.referrals.completeReferral(userId);
+          if (!productId) {
+            this.logger.error('Ebook webhook missing productId');
+            return { received: true };
+          }
+
+          await this.ebookService.activateFromWebhook(userId, productId, reference, priceKes);
+          this.logger.log(`[Webhook] Ebook ${productId} activated for user ${userId}`);
+        } else {
+          // --- Subscription payment (default) ---
+          const plan: SubscriptionPlan = data.metadata.plan || 'premium';
+
+          await this.prisma.subscription.upsert({
+            where: { userId },
+            create: {
+              userId,
+              tier: plan,
+              status: 'active',
+              paystackSubId: reference,
+              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
+            update: {
+              tier: plan,
+              status: 'active',
+              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
+          });
+
+          this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
+          // Complete referral if this is the user's first paid subscription
+          await this.referrals.completeReferral(userId);
+        }
       }
     } catch (err) {
       this.logger.error(`Error processing webhook ${event}:`, err);
@@ -112,6 +132,41 @@ export class PaymentsService {
     return { received: true };
   }
 
+  /**
+   * Unified verify endpoint — inspects Paystack metadata.type to determine
+   * whether this is a subscription or ebook payment, then delegates accordingly.
+   */
+  async verifyAny(userId: string, reference: string) {
+    if (!reference) throw new BadRequestException('reference is required');
+
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${this.paystackSecret}` },
+    });
+    const json = await response.json();
+
+    if (!json.status || json.data?.status !== 'success') {
+      this.logger.warn(`Verify failed for ref ${reference}: ${json.message}`);
+      throw new BadRequestException(json.message || 'Payment not confirmed by Paystack');
+    }
+
+    const metaUserId: string = json.data?.metadata?.userId;
+    if (metaUserId && metaUserId !== userId) {
+      throw new BadRequestException('Reference does not belong to this user');
+    }
+
+    const paymentType: string = json.data?.metadata?.type || 'subscription';
+
+    if (paymentType === 'ebook') {
+      // Delegate to ebook service
+      const result = await this.ebookService.verifyAndActivate(userId, reference);
+      return { ...result, type: 'ebook' };
+    }
+
+    // Default: subscription
+    return this.activateSubscription(userId, reference, json.data?.metadata);
+  }
+
+  /** Legacy subscription-only verify (kept for backward compatibility) */
   async verifyAndActivate(userId: string, reference: string) {
     if (!reference) throw new BadRequestException('reference is required');
 
@@ -125,13 +180,16 @@ export class PaymentsService {
       throw new BadRequestException(json.message || 'Payment not confirmed by Paystack');
     }
 
-    const plan: SubscriptionPlan = json.data?.metadata?.plan || 'premium';
     const metaUserId: string = json.data?.metadata?.userId;
-
-    // Guard against verifying someone else's reference
     if (metaUserId && metaUserId !== userId) {
       throw new BadRequestException('Reference does not belong to this user');
     }
+
+    return this.activateSubscription(userId, reference, json.data?.metadata);
+  }
+
+  private async activateSubscription(userId: string, reference: string, metadata: any) {
+    const plan: SubscriptionPlan = metadata?.plan || 'premium';
 
     await this.prisma.subscription.upsert({
       where: { userId },
@@ -153,7 +211,7 @@ export class PaymentsService {
     this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify — ref ${reference}`);
     await this.referrals.completeReferral(userId);
 
-    return { success: true, tier: plan };
+    return { success: true, tier: plan, type: 'subscription' };
   }
 
   async getSubscriptionStatus(userId: string) {

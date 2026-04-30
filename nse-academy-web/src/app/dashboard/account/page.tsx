@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface User {
   id: string;
@@ -34,7 +35,6 @@ const STOREFRONT_URL =
 
 function AccountPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState("");
@@ -42,10 +42,11 @@ function AccountPageContent() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  /** null = all products (premium), string[] = specific IDs (intermediary), undefined = none (free) */
+  const [subscriberAccessProducts, setSubscriberAccessProducts] = useState<string[] | null | undefined>(undefined);
+  const [subscriptionTier, setSubscriptionTier] = useState("free");
   const [dexterProducts, setDexterProducts] = useState<DexterProduct[]>([]);
-  const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [purchaseError, setPurchaseError] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -69,64 +70,16 @@ function AccountPageContent() {
       setEditName(userData.name ?? "");
       setEditPhone(userData.phone ?? "");
       setPurchases(ebookData?.purchases ?? []);
+      setSubscriberAccessProducts(ebookData?.subscriberAccessProducts);
+      setSubscriptionTier(ebookData?.subscriptionTier ?? "free");
       const digital = (storefrontData?.products ?? []).filter(
         (p: DexterProduct) => p.is_digital && p.status === "active",
       );
       setDexterProducts(digital);
     }).catch(() => {
-      // If everything fails, maybe we're offline or API is down
       setLoading(false);
     }).finally(() => setLoading(false));
   }, [router]);
-
-  // Auto-trigger purchase when landing page passes ?buyEbook=productId
-  useEffect(() => {
-    const buyProductId = searchParams.get("buyEbook");
-    if (!buyProductId || !user?.id || dexterProducts.length === 0 || purchasingId) return;
-    
-    // Check if already owned
-    if (purchases.some(p => p.productId === buyProductId)) {
-      setPurchaseError("You already own this ebook. Check your library below!");
-      return;
-    }
-
-    const product = dexterProducts.find(p => p.id === buyProductId);
-    if (!product) {
-      setPurchaseError("The requested ebook could not be found.");
-      return;
-    }
-    
-    handlePurchase(buyProductId, product.price);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, dexterProducts, searchParams, purchases]);
-
-  async function handlePurchase(productId: string, priceKes: number) {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      const dest = encodeURIComponent(window.location.pathname + window.location.search);
-      router.push(`/auth/login?redirectTo=${dest}`);
-      return;
-    }
-    setPurchasingId(productId);
-    setPurchaseError("");
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/purchase`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ productId, priceKes }),
-      });
-      const data = await res.json();
-      if (data?.authorization_url) {
-        window.location.href = data.authorization_url;
-      } else {
-        setPurchaseError(data?.message || "Failed to initialize payment.");
-      }
-    } catch (err) {
-      setPurchaseError("Connection error. Please check your internet and try again.");
-    } finally {
-      setPurchasingId(null);
-    }
-  }
 
   async function handleDownload(productId: string, name: string) {
     const token = localStorage.getItem("access_token");
@@ -176,27 +129,29 @@ function AccountPageContent() {
 
   if (loading) return <div className="p-8 text-gray-400 text-center">Loading...</div>;
 
+  // Helper: check if subscriber access covers a specific product
+  function hasSubAccess(productId: string): boolean {
+    if (subscriberAccessProducts === null) return true;  // premium = all
+    if (Array.isArray(subscriberAccessProducts)) return subscriberAccessProducts.includes(productId);
+    return false; // undefined = free tier, no access
+  }
+
+  const hasAnySub = subscriberAccessProducts !== undefined;
+
+  // Determine which ebooks the user can download:
+  // - Purchased ebooks (always downloadable)
+  // - Ebooks covered by subscription tier
+  const downloadableProducts = dexterProducts.filter(p =>
+    purchases.some(pur => pur.productId === p.id) || hasSubAccess(p.id)
+  );
+
+  const purchasableProducts = dexterProducts.filter(p =>
+    !purchases.some(pur => pur.productId === p.id) && !hasSubAccess(p.id)
+  );
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
-      
-      {/* Purchase Status Alert */}
-      {purchaseError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl text-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
-            <p>{purchaseError}</p>
-          </div>
-          <button onClick={() => setPurchaseError("")} className="text-red-400 hover:text-red-600 transition-colors">✕</button>
-        </div>
-      )}
-
-      {purchasingId && searchParams.get("buyEbook") === purchasingId && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-2xl text-sm flex items-center gap-3 animate-pulse">
-          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="font-medium">Initializing your ebook purchase… You will be redirected to Paystack shortly.</p>
-        </div>
-      )}
 
       {/* Profile */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -255,19 +210,44 @@ function AccountPageContent() {
       {/* Ebooks Section */}
       {dexterProducts.length > 0 && (
         <div className="space-y-6">
-          {/* Owned Ebooks (Your Library) */}
-          {purchases.length > 0 && (
+          {/* Subscriber banner */}
+          {hasAnySub && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl px-6 py-4 flex items-center gap-3">
+              <span className="text-2xl">🎓</span>
+              <div>
+                <p className="font-bold text-emerald-800 text-sm">
+                  {subscriberAccessProducts === null
+                    ? <>All ebooks included with your <span className="capitalize">{subscriptionTier}</span> subscription</>
+                    : <>Trading Guide included with your <span className="capitalize">{subscriptionTier}</span> subscription</>}
+                </p>
+                <p className="text-xs text-emerald-600">
+                  {subscriberAccessProducts === null
+                    ? "Download any guide below — no extra charge."
+                    : "Upgrade to Premium for access to all guides."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Downloadable Ebooks (Your Library) */}
+          {downloadableProducts.length > 0 && (
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-8 py-5 border-b border-gray-50 bg-emerald-50/30 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Your Library</h2>
-                  <p className="text-xs text-gray-500">Guides you&apos;ve purchased for your investment journey.</p>
+                  <p className="text-xs text-gray-500">
+                    {subscriberAccessProducts === null
+                      ? "All guides available with your subscription."
+                      : purchases.length > 0
+                        ? "Your purchased and subscription guides."
+                        : "Guides included with your subscription."}
+                  </p>
                 </div>
                 <span className="text-2xl">📚</span>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {dexterProducts.filter(p => purchases.some(pur => pur.productId === p.id)).map(product => {
-                  const purchase = purchases.find(p => p.productId === product.id)!;
+                {downloadableProducts.map(product => {
+                  const purchase = purchases.find(p => p.productId === product.id);
                   const isDownloading = downloadingId === product.id;
                   return (
                     <div key={product.id} className="flex gap-4 p-4 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-colors bg-gray-50/30">
@@ -280,7 +260,11 @@ function AccountPageContent() {
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <p className="font-bold text-gray-900 text-sm leading-tight mb-1">{product.name}</p>
-                          <p className="text-[10px] text-gray-400">Purchased {new Date(purchase.purchasedAt).toLocaleDateString("en-KE")}</p>
+                          {purchase ? (
+                            <p className="text-[10px] text-gray-400">Purchased {new Date(purchase.purchasedAt).toLocaleDateString("en-KE")}</p>
+                          ) : hasSubAccess(product.id) ? (
+                            <p className="text-[10px] text-emerald-600 font-medium">Included with subscription</p>
+                          ) : null}
                         </div>
                         <button
                           onClick={() => handleDownload(product.id, product.name)}
@@ -304,16 +288,15 @@ function AccountPageContent() {
             </div>
           )}
 
-          {/* Available Ebooks (Marketplace) */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-8 py-5 border-b border-gray-50">
-              <h2 className="text-lg font-bold text-gray-900">Investment Guides</h2>
-              <p className="text-xs text-gray-500">Accelerate your learning with our comprehensive NSE guides.</p>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {dexterProducts.filter(p => !purchases.some(pur => pur.productId === p.id)).map(product => {
-                const isPurchasing = purchasingId === product.id;
-                return (
+          {/* Available Ebooks (not yet purchased, and not a subscriber) */}
+          {purchasableProducts.length > 0 && (
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-5 border-b border-gray-50">
+                <h2 className="text-lg font-bold text-gray-900">Investment Guides</h2>
+                <p className="text-xs text-gray-500">Accelerate your learning with our comprehensive NSE guides.</p>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {purchasableProducts.map(product => (
                   <div key={product.id} className="p-6 flex flex-col sm:flex-row items-center gap-6">
                     {product.thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -332,25 +315,26 @@ function AccountPageContent() {
                         </div>
                       </div>
                       <p className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</p>
-                      <button
-                        onClick={() => handlePurchase(product.id, product.price)}
-                        disabled={isPurchasing}
-                        className="w-full sm:w-auto bg-emerald-700 text-white text-sm font-bold px-8 py-3 rounded-xl hover:bg-emerald-800 transition-all shadow-md shadow-emerald-100 disabled:opacity-60"
+                      <Link
+                        href={`/ebooks/buy/${product.id}`}
+                        className="inline-block w-full sm:w-auto bg-emerald-700 text-white text-sm font-bold px-8 py-3 rounded-xl hover:bg-emerald-800 transition-all shadow-md shadow-emerald-100 text-center"
                       >
-                        {isPurchasing ? "Redirecting to Paystack…" : "Buy Now →"}
-                      </button>
+                        Buy Now →
+                      </Link>
                     </div>
                   </div>
-                );
-              })}
-              {dexterProducts.filter(p => !purchases.some(pur => pur.productId === p.id)).length === 0 && (
-                <div className="p-12 text-center text-gray-400">
-                  <p className="text-lg font-medium">You own all available guides! 🚀</p>
-                  <p className="text-sm">Check your library above to download them.</p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* All owned message */}
+          {purchasableProducts.length === 0 && downloadableProducts.length > 0 && !hasAnySub && (
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
+              <p className="text-lg font-medium text-gray-400">You own all available guides! 🚀</p>
+              <p className="text-sm text-gray-400">Check your library above to download them.</p>
+            </div>
+          )}
         </div>
       )}
 

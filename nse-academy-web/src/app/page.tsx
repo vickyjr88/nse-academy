@@ -277,7 +277,7 @@ export default async function LandingPage() {
                         )}
                       </div>
                       <Link
-                        href={`/dashboard/account?buyEbook=${book.id}`}
+                        href={`/ebooks/buy/${book.id}`}
                         className="bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors"
                       >
                         Buy Now →

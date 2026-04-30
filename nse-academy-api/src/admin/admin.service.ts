@@ -193,6 +193,90 @@ export class AdminService {
   }
 
 
+  async listLessonProgresses(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    completed?: string;
+  }) {
+    const { page, limit, search, completed } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { lessonId: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (completed === 'true') where.completed = true;
+    if (completed === 'false') where.completed = false;
+
+    const [progresses, total] = await Promise.all([
+      this.prisma.lessonProgress.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+        orderBy: { completedAt: 'desc' },
+      }),
+      this.prisma.lessonProgress.count({ where }),
+    ]);
+
+    return {
+      data: progresses,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async listOrganizations(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    type?: string;
+  }) {
+    const { page, limit, search, type } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { licenseKey: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (type) where.type = type;
+
+    const [organizations, total] = await Promise.all([
+      this.prisma.organization.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          license: true,
+          _count: { select: { members: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.organization.count({ where }),
+    ]);
+
+    return {
+      data: organizations,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async upsertSubscription(userId: string, dto: UpsertSubscriptionDto) {
     await this.getUser(userId);
     return this.prisma.subscription.upsert({

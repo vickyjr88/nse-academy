@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, PieChart } from '@strapi/icons';
+import { User, ShoppingCart, PieChart, Book, Briefcase } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -45,6 +45,26 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/lesson-progress`,
+      icon: Book,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.lesson-progress`,
+        defaultMessage: 'Lesson Progress',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/organizations`,
+      icon: Briefcase,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.organizations`,
+        defaultMessage: 'Organizations',
+      },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
@@ -58,6 +78,16 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/investor-profiles`,
       Component: React.lazy(() => import('./pages/InvestorProfilesList').then((m) => ({ default: m.InvestorProfilesList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/lesson-progress`,
+      Component: React.lazy(() => import('./pages/LessonProgressList').then((m) => ({ default: m.LessonProgressList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/organizations`,
+      Component: React.lazy(() => import('./pages/OrganizationsList').then((m) => ({ default: m.OrganizationsList }))),
     });
 
     app.router.addRoute({

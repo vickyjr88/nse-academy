@@ -92,6 +92,46 @@ export class AdminController {
     });
   }
 
+  @Get('lesson-progress')
+  @ApiOperation({ summary: 'List all lesson progresses (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'completed', required: false })
+  listLessonProgresses(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('completed') completed?: string,
+  ) {
+    return this.admin.listLessonProgresses({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      completed,
+    });
+  }
+
+  @Get('organizations')
+  @ApiOperation({ summary: 'List all organizations (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'type', required: false })
+  listOrganizations(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('type') type?: string,
+  ) {
+    return this.admin.listOrganizations({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      type,
+    });
+  }
+
   @Post('users/:id/subscription')
   @ApiOperation({ summary: 'Create or upsert subscription (bypasses Paystack)' })
   upsertSubscription(

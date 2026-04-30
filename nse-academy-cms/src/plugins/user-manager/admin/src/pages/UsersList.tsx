@@ -24,6 +24,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   createdAt: string;
   subscription: Subscription | null;
 }
@@ -92,6 +93,7 @@ export function UsersList() {
           <Tr>
             <Th><Typography variant="sigma">Name</Typography></Th>
             <Th><Typography variant="sigma">Email</Typography></Th>
+            <Th><Typography variant="sigma">Phone</Typography></Th>
             <Th><Typography variant="sigma">Tier</Typography></Th>
             <Th><Typography variant="sigma">Status</Typography></Th>
             <Th><Typography variant="sigma">Period End</Typography></Th>
@@ -103,6 +105,7 @@ export function UsersList() {
             <Tr key={user.id}>
               <Td><Typography>{user.name}</Typography></Td>
               <Td><Typography>{user.email}</Typography></Td>
+              <Td><Typography>{user.phone ?? '—'}</Typography></Td>
               <Td><Typography>{user.subscription?.tier ?? '—'}</Typography></Td>
               <Td><Typography>{user.subscription?.status ?? '—'}</Typography></Td>
               <Td>

@@ -40,6 +40,7 @@ export class AdminService {
           id: true,
           name: true,
           email: true,
+          phone: true,
           createdAt: true,
           subscription: {
             select: {

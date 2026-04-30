@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, PieChart, Book, Briefcase, Heart, Message, ChartLine } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -37,7 +37,7 @@ export default {
 
     app.addMenuLink({
       to: `plugins/${PLUGIN_ID}/investor-profiles`,
-      icon: PieChart,
+      icon: ChartPie,
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.investor-profiles`,
         defaultMessage: 'Investor Profiles',
@@ -87,7 +87,7 @@ export default {
 
     app.addMenuLink({
       to: `plugins/${PLUGIN_ID}/stock-prices`,
-      icon: ChartLine,
+      icon: TrendUp,
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.stock-prices`,
         defaultMessage: 'Stock Prices',

@@ -132,6 +132,63 @@ export class AdminController {
     });
   }
 
+  @Get('organizations/:id')
+  @ApiOperation({ summary: 'Get full organization detail including license and members' })
+  getOrganization(@Param('id') id: string) {
+    return this.admin.getOrganization(id);
+  }
+
+  @Get('referrals')
+  @ApiOperation({ summary: 'List all referrals (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'status', required: false })
+  listReferrals(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('status') status?: string,
+  ) {
+    return this.admin.listReferrals({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      status,
+    });
+  }
+
+  @Get('contact-submissions')
+  @ApiOperation({ summary: 'List all contact submissions (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'status', required: false })
+  listContactSubmissions(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('status') status?: string,
+  ) {
+    return this.admin.listContactSubmissions({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      status,
+    });
+  }
+
+  @Get('stock-prices')
+  @ApiOperation({ summary: 'List all stock prices (paginated)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'ticker', required: false })
+  listStockPrices(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('ticker') ticker?: string,
+  ) {
+    return this.admin.listStockPrices({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      ticker,
+    });
+  }
+
   @Post('users/:id/subscription')
   @ApiOperation({ summary: 'Create or upsert subscription (bypasses Paystack)' })
   upsertSubscription(

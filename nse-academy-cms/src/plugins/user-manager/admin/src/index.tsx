@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, PieChart, Book, Briefcase } from '@strapi/icons';
+import { User, ShoppingCart, PieChart, Book, Briefcase, Heart, Message, ChartLine } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -65,6 +65,36 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/referrals`,
+      icon: Heart,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.referrals`,
+        defaultMessage: 'Referrals',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/contact-submissions`,
+      icon: Message,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.contact-submissions`,
+        defaultMessage: 'Contact Submissions',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/stock-prices`,
+      icon: ChartLine,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.stock-prices`,
+        defaultMessage: 'Stock Prices',
+      },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
@@ -88,6 +118,26 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/organizations`,
       Component: React.lazy(() => import('./pages/OrganizationsList').then((m) => ({ default: m.OrganizationsList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/referrals`,
+      Component: React.lazy(() => import('./pages/ReferralsList').then((m) => ({ default: m.ReferralsList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/contact-submissions`,
+      Component: React.lazy(() => import('./pages/ContactSubmissionsList').then((m) => ({ default: m.ContactSubmissionsList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/stock-prices`,
+      Component: React.lazy(() => import('./pages/StockPricesList').then((m) => ({ default: m.StockPricesList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/organizations/:id`,
+      Component: React.lazy(() => import('./pages/OrganizationDetail').then((m) => ({ default: m.OrganizationDetail }))),
     });
 
     app.router.addRoute({

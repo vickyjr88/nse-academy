@@ -277,6 +277,118 @@ export class AdminService {
     };
   }
 
+  async getOrganization(id: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id },
+      include: {
+        license: true,
+        members: {
+          include: {
+            user: { select: { name: true, email: true } },
+          },
+        },
+      },
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+    return org;
+  }
+
+  async listReferrals(params: {
+    page: number;
+    limit: number;
+    status?: string;
+  }) {
+    const { page, limit, status } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) where.status = status;
+
+    const [referrals, total] = await Promise.all([
+      this.prisma.referral.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          referrer: { select: { name: true, email: true } },
+          referred: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.referral.count({ where }),
+    ]);
+
+    return {
+      data: referrals,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async listContactSubmissions(params: {
+    page: number;
+    limit: number;
+    status?: string;
+  }) {
+    const { page, limit, status } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) where.status = status;
+
+    const [submissions, total] = await Promise.all([
+      this.prisma.contactSubmission.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.contactSubmission.count({ where }),
+    ]);
+
+    return {
+      data: submissions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async listStockPrices(params: {
+    page: number;
+    limit: number;
+    ticker?: string;
+  }) {
+    const { page, limit, ticker } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (ticker) {
+      where.ticker = { contains: ticker, mode: 'insensitive' };
+    }
+
+    const [prices, total] = await Promise.all([
+      this.prisma.stockPrice.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy: { timestamp: 'desc' },
+      }),
+      this.prisma.stockPrice.count({ where }),
+    ]);
+
+    return {
+      data: prices,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async upsertSubscription(userId: string, dto: UpsertSubscriptionDto) {
     await this.getUser(userId);
     return this.prisma.subscription.upsert({

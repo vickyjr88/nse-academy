@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -38,6 +39,7 @@ interface OrganizationsResponse {
 }
 
 export function OrganizationsList() {
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export function OrganizationsList() {
             <Th><Typography variant="sigma">License Key</Typography></Th>
             <Th><Typography variant="sigma">Members Count</Typography></Th>
             <Th><Typography variant="sigma">Created At</Typography></Th>
+            <Th><Typography variant="sigma">Actions</Typography></Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -153,6 +156,11 @@ export function OrganizationsList() {
                 <Typography>
                   {new Date(org.createdAt).toLocaleDateString()}
                 </Typography>
+              </Td>
+              <Td>
+                <Button size="S" variant="secondary" onClick={() => navigate(`/plugins/user-manager/organizations/${org.id}`)}>
+                  View
+                </Button>
               </Td>
             </Tr>
           ))}

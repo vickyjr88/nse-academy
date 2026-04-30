@@ -1,4 +1,4 @@
-const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:1337";
+const CMS_URL = process.env.CMS_INTERNAL_URL || process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:1337";
 const CMS_TOKEN = process.env.CMS_API_TOKEN || "";
 
 const headers: Record<string, string> = CMS_TOKEN
@@ -176,7 +176,7 @@ export async function getStockProfiles(params?: { limit?: number; page?: number 
   try {
     const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
       headers,
-      next: { revalidate: 3600 },
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) return { profiles: [], total: 0, pageCount: 0 };
@@ -202,7 +202,7 @@ export async function getStockProfileByTicker(ticker: string): Promise<StockProf
   try {
     const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
       headers,
-      next: { revalidate: 3600 },
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) return null;

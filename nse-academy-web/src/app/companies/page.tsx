@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function CompaniesPage() {
-  const { profiles } = await getStockProfiles({ limit: 100 });
+  const { profiles } = await getStockProfiles({ limit: 200 });
 
   return (
     <div className="min-h-screen bg-white">

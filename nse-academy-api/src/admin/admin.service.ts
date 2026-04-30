@@ -30,12 +30,46 @@ export class AdminService {
     }
   }
 
-  async listUsers(page: number, limit: number) {
+  async listUsers(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    tier?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }) {
+    const { page, limit, search, tier, status, sortBy, sortOrder } = params;
     const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (tier || status) {
+      where.subscription = {};
+      if (tier) where.subscription.tier = tier;
+      if (status) where.subscription.status = status;
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortBy) {
+      if (sortBy === 'subscription.tier' || sortBy === 'subscription.status' || sortBy === 'subscription.currentPeriodEnd') {
+        const field = sortBy.split('.')[1];
+        orderBy = { subscription: { [field]: sortOrder || 'asc' } };
+      } else {
+        orderBy = { [sortBy]: sortOrder || 'asc' };
+      }
+    }
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         skip,
         take: limit,
+        where,
         select: {
           id: true,
           name: true,
@@ -50,9 +84,9 @@ export class AdminService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
     return {
       data: users,

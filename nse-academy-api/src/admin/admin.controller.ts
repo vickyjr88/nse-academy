@@ -21,11 +21,29 @@ export class AdminController {
   @ApiOperation({ summary: 'List all users (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'tier', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'sortBy', required: false })
+  @ApiQuery({ name: 'sortOrder', required: false })
   listUsers(
     @Query('page') page = '1',
     @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('tier') tier?: string,
+    @Query('status') status?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
-    return this.admin.listUsers(parseInt(page, 10), parseInt(limit, 10));
+    return this.admin.listUsers({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      tier,
+      status,
+      sortBy,
+      sortOrder,
+    });
   }
 
   @Get('users/:id')

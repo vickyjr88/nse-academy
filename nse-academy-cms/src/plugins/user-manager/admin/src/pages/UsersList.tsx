@@ -10,7 +10,12 @@ import {
   Tr,
   Th,
   Td,
+  Td,
   Typography,
+  TextInput,
+  SingleSelect,
+  SingleSelectOption,
+  Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
 
@@ -45,6 +50,16 @@ export function UsersList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const [search, setSearch] = useState('');
+  const [tier, setTier] = useState('');
+  const [status, setStatus] = useState('');
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => fetchUsers(1), 300);
+    return () => clearTimeout(timer);
+  }, [search, tier, status]);
+
   useEffect(() => {
     fetchUsers(page);
   }, [page]);
@@ -53,7 +68,15 @@ export function UsersList() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${NSE_API_URL}/admin/users?page=${p}&limit=20`, {
+      const params = new URLSearchParams({
+        page: String(p),
+        limit: '20',
+      });
+      if (search) params.append('search', search);
+      if (tier) params.append('tier', tier);
+      if (status) params.append('status', status);
+
+      const res = await fetch(`${NSE_API_URL}/admin/users?${params.toString()}`, {
         headers: { 'x-admin-key': NSE_ADMIN_KEY },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -88,7 +111,50 @@ export function UsersList() {
       <Box paddingBottom={4}>
         <Typography variant="alpha">Users</Typography>
       </Box>
-      <Table colCount={6} rowCount={users.length}>
+
+      {/* Filters */}
+      <Box paddingBottom={4}>
+        <Flex gap={4}>
+          <Box style={{ width: '300px' }}>
+            <TextInput
+              placeholder="Search by name, email, or phone..."
+              label="Search"
+              name="search"
+              value={search}
+              onChange={(e: any) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </Box>
+          <Box style={{ width: '200px' }}>
+            <SingleSelect
+              label="Tier"
+              value={tier}
+              onChange={(v: string) => { setTier(v); setPage(1); }}
+              onClear={() => { setTier(''); setPage(1); }}
+            >
+              <SingleSelectOption value="free">Free</SingleSelectOption>
+              <SingleSelectOption value="intermediary">Intermediary</SingleSelectOption>
+              <SingleSelectOption value="premium">Premium</SingleSelectOption>
+            </SingleSelect>
+          </Box>
+          <Box style={{ width: '200px' }}>
+            <SingleSelect
+              label="Status"
+              value={status}
+              onChange={(v: string) => { setStatus(v); setPage(1); }}
+              onClear={() => { setStatus(''); setPage(1); }}
+            >
+              <SingleSelectOption value="active">Active</SingleSelectOption>
+              <SingleSelectOption value="cancelled">Cancelled</SingleSelectOption>
+              <SingleSelectOption value="past_due">Past Due</SingleSelectOption>
+            </SingleSelect>
+          </Box>
+        </Flex>
+      </Box>
+
+      <Table colCount={7} rowCount={users.length}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">Name</Typography></Th>

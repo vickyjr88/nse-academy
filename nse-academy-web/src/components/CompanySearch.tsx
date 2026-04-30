@@ -4,16 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-interface Profile {
-  ticker: string;
-  company_name: string;
-  sector: string;
-  description: string;
-  risk_level: string;
-  dividend_yield: number | null;
-}
+import { type StockProfile } from "@/lib/cms";
 
-export default function CompanySearch({ profiles }: { profiles: Profile[] }) {
+export default function CompanySearch({ profiles }: { profiles: StockProfile[] }) {
   const [query, setQuery] = useState("");
 
   const filteredProfiles = profiles.filter((profile) => {

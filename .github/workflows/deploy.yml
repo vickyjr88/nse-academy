@@ -1,0 +1,75 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH deploy and health check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Deploy on server over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          command_timeout: 25m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "==> Fetching latest from origin/main"
+            git fetch --prune origin
+            git reset --hard origin/main
+
+            echo "==> Bringing stack down"
+            docker compose down
+
+            echo "==> Building images"
+            docker compose build --pull
+
+            echo "==> Starting stack"
+            docker compose up -d
+
+            echo "==> Pruning dangling images"
+            docker image prune -f
+
+            echo "==> Container status"
+            docker compose ps
+
+      - name: Wait for API to become healthy
+        env:
+          HEALTH_URL: ${{ secrets.API_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HEALTH_URL:-}" ]; then
+            echo "API_HEALTH_URL secret is not set"
+            exit 1
+          fi
+
+          echo "Polling $HEALTH_URL"
+          attempts=30
+          for i in $(seq 1 $attempts); do
+            code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "API healthy on attempt $i"
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Attempt $i/$attempts — got $code, retrying in 5s"
+            sleep 5
+          done
+
+          echo "API failed health check after $attempts attempts"
+          exit 1

@@ -19,6 +19,6 @@
       "enum": ["low", "medium", "high"],
       "default": "medium"
     },
-    "investor_types": { "type": "json" }
+    "investor_types": { "type": "string" }
   }
 }

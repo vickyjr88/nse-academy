@@ -28,6 +28,12 @@ export interface Article {
   sponsor_cta: string | null;
 }
 
+function parseArrayField(field: any): string[] | null {
+  if (Array.isArray(field)) return field;
+  if (typeof field === "string") return field.split(",").map(s => s.trim()).filter(Boolean);
+  return null;
+}
+
 function mapArticle(raw: any): Article {
   const a = raw.attributes ?? raw;
   return {
@@ -39,8 +45,8 @@ function mapArticle(raw: any): Article {
     category: a.category ?? "NSE News",
     author_name: a.author_name ?? "NSE Academy",
     read_time_minutes: a.read_time_minutes ?? 5,
-    tags: a.tags ?? null,
-    investor_types: a.investor_types ?? null,
+    tags: parseArrayField(a.tags),
+    investor_types: parseArrayField(a.investor_types),
     is_premium: a.is_premium ?? false,
     og_image_url: a.og_image_url ?? null,
     cover_image: a.cover_image?.data?.attributes
@@ -162,7 +168,7 @@ function mapStockProfile(raw: any): StockProfile {
     description: a.description ?? "",
     dividend_yield: a.dividend_yield ?? null,
     risk_level: a.risk_level ?? "medium",
-    investor_types: a.investor_types ?? [],
+    investor_types: parseArrayField(a.investor_types) ?? [],
   };
 }
 

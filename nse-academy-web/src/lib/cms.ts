@@ -176,7 +176,7 @@ export async function getStockProfiles(params?: { limit?: number; page?: number 
   try {
     const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
       headers,
-      next: { revalidate: 0 },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) return { profiles: [], total: 0, pageCount: 0 };
@@ -202,7 +202,7 @@ export async function getStockProfileByTicker(ticker: string): Promise<StockProf
   try {
     const res = await fetch(`${CMS_URL}/api/stock-profiles?${qs}`, {
       headers,
-      next: { revalidate: 0 },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) return null;

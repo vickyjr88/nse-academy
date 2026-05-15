@@ -128,7 +128,7 @@ export class EbookService {
    *  - The user has purchased the ebook (EbookPurchase record exists), OR
    *  - The user's subscription tier grants access to this specific product.
    */
-  async download(userId: string, productId: string): Promise<StreamableFile> {
+  async download(userId: string, productId: string) {
     const [purchase, subscription] = await Promise.all([
       this.prisma.ebookPurchase.findUnique({
         where: { userId_productId: { userId, productId } },
@@ -161,10 +161,8 @@ export class EbookService {
       throw new InternalServerErrorException('Failed to retrieve file from storage');
     }
 
-    const contentType = response.headers.get('content-type') ?? 'application/pdf';
-    const disposition = response.headers.get('content-disposition') ?? `attachment; filename="${productId}.pdf"`;
-
-    return new StreamableFile(Readable.fromWeb(response.body as any), { type: contentType, disposition });
+    const data = await response.json();
+    return data;
   }
 
   async getStatus(userId: string) {

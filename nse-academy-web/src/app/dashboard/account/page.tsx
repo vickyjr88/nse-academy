@@ -91,13 +91,18 @@ function AccountPageContent() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${name.replace(/[^a-z0-9]/gi, "_")}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const data = await res.json();
+      if (data.download_url) {
+        const a = document.createElement("a");
+        a.href = data.download_url;
+        a.download = data.file_name || `${name.replace(/[^a-z0-9]/gi, "_")}.pdf`;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        throw new Error("Invalid download URL");
+      }
     } finally {
       setDownloadingId(null);
     }

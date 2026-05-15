@@ -31,13 +31,11 @@ export class EbookController {
   }
 
   @Get('download/:productId')
-  @ApiOperation({ summary: 'Stream ebook file (purchase required)' })
+  @ApiOperation({ summary: 'Get ebook download URL (purchase required)' })
   download(
     @Req() req: any,
     @Param('productId') productId: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    @Res({ passthrough: true }) _res: Response,
-  ): Promise<StreamableFile> {
+  ) {
     return this.ebook.download(req.user.id, productId);
   }
 }

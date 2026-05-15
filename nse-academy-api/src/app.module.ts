@@ -13,6 +13,8 @@ import { CorporateModule } from './corporate/corporate.module';
 import { ContactModule } from './contact/contact.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -31,5 +33,7 @@ import { MarketDataModule } from './market-data/market-data.module';
     ContactModule,
     MarketDataModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -23,7 +23,7 @@ interface Stats {
 const SITE_URL =
   typeof window !== "undefined"
     ? window.location.origin
-    : "https://nseacademy.vitaldigitalmedia.net";
+    : (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
 
 export default function ReferralsPage() {
   const router = useRouter();

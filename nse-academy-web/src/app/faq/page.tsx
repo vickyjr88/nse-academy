@@ -16,11 +16,11 @@ export const metadata: Metadata = {
     title: "NSE Academy FAQ — Everything You Need to Know",
     description: "Comprehensive answers about NSE Academy, pricing, investor profiling, courses, and Nairobi Stock Exchange investing.",
     type: "website",
-    url: "https://nseacademy.vitaldigitalmedia.net/faq",
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/faq`,
     siteName: "NSE Academy",
   },
   twitter: { card: "summary", title: "NSE Academy FAQ", description: "Answers to all your questions about NSE Academy." },
-  alternates: { canonical: "https://nseacademy.vitaldigitalmedia.net/faq" },
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/faq` },
 };
 
 // ---------------------------------------------------------------------------

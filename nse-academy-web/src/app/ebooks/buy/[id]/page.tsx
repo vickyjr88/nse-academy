@@ -29,6 +29,31 @@ interface EbookStatus {
 const STOREFRONT_URL =
   "https://dexter-api.vitaldigitalmedia.net/api/products/storefront/51fe5af0-266b-419e-8559-3f0febcd74c4";
 
+function ProductJsonLd({ product }: { product: DexterProduct | null }) {
+  if (!product) return null;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description,
+    "image": product.thumbnail,
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "KES",
+      "price": product.price,
+      "availability": "https://schema.org/InStock",
+      "url": `${siteUrl}/ebooks/buy/${product.id}`
+    }
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 export default function EbookBuyPage() {
   const router = useRouter();
   const params = useParams();
@@ -332,6 +357,8 @@ export default function EbookBuyPage() {
   const otherProducts = allProducts.filter((p) => p.id !== productId);
 
   return (
+    <>
+    <ProductJsonLd product={product} />
     <div className="min-h-screen bg-white">
       <PublicHeader />
 
@@ -484,5 +511,6 @@ export default function EbookBuyPage() {
 
       <PublicFooter />
     </div>
+    </>
   );
 }

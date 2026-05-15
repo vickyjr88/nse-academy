@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     description:
       "Calculate broker fees, dividend yield, compound growth, DCA returns and dividend income targets for NSE investments.",
     type: "website",
-    url: "https://nseacademy.vitaldigitalmedia.net/calculators",
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/calculators`,
     siteName: "NSE Academy",
   },
   twitter: {
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     title: "NSE Investment Calculators | NSE Academy",
     description: "Free calculators for Kenyan NSE investors — fees, dividends, compounding, DCA.",
   },
-  alternates: { canonical: "https://nseacademy.vitaldigitalmedia.net/calculators" },
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/calculators` },
 };
 
 // ---------------------------------------------------------------------------

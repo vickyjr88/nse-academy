@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: "NSE Academy — Discover Your Investor Type",
     description: "Personalized investor education for the Nairobi Securities Exchange.",
     type: "website",
-    url: "https://nseacademy.vitaldigitalmedia.net",
+    url: (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'),
     siteName: "NSE Academy",
   },
   twitter: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     description: "Personalized NSE investor education for Kenyan investors.",
   },
   alternates: {
-    canonical: "https://nseacademy.vitaldigitalmedia.net",
+    canonical: (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'),
     types: { "application/rss+xml": "/blog/rss.xml" },
   },
 };
@@ -125,8 +125,24 @@ export default async function LandingPage() {
   const { articles: latestArticles } = await getArticles({ limit: 3 });
   const ebooks = await getDigitalProducts();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "NSE Academy",
+    "url": (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'),
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/companies/{search_term_string}`,
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PublicHeader />
 
       {/* Hero */}
@@ -145,7 +161,7 @@ export default async function LandingPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/profile"
+            href="/investor-profiler"
             className="inline-flex items-center justify-center gap-2 bg-emerald-700 text-white text-base font-semibold px-8 py-4 rounded-xl hover:bg-emerald-800 transition-colors shadow-sm"
           >
             Discover my investor type →

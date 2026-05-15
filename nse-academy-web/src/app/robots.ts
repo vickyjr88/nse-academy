@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/dashboard/', '/auth/', '/api/'],
     },
-    sitemap: 'https://nseacademy.vitaldigitalmedia.net/sitemap.xml',
+    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/sitemap.xml`,
   };
 }

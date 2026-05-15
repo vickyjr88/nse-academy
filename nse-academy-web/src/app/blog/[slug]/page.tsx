@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const article = await getArticleBySlug(slug);
   if (!article) return { title: "Article Not Found | NSE Academy" };
 
-  const siteUrl = "https://nseacademy.vitaldigitalmedia.net";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
   const canonicalUrl = `${siteUrl}/blog/${article.slug}`;
   const ogImage =
     article.og_image_url ||
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 function ArticleJsonLd({ article }: { article: Awaited<ReturnType<typeof getArticleBySlug>> }) {
   if (!article) return null;
 
-  const siteUrl = "https://nseacademy.vitaldigitalmedia.net";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",

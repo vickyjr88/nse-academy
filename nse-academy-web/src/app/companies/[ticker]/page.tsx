@@ -33,6 +33,26 @@ export async function generateStaticParams() {
   }));
 }
 
+function CompanyJsonLd({ profile }: { profile: any }) {
+  if (!profile) return null;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": profile.company_name,
+    "tickerSymbol": profile.ticker,
+    "description": profile.description,
+    "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/companies/${profile.ticker.toLowerCase()}`,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 export default async function CompanyDetailPage({ params }: Props) {
   const { ticker } = await params;
   const profile = await getStockProfileByTicker(ticker.toUpperCase());
@@ -40,7 +60,9 @@ export default async function CompanyDetailPage({ params }: Props) {
   if (!profile) notFound();
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+    <>
+      <CompanyJsonLd profile={profile} />
+      <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       <PublicHeader />
       
       <main className="flex-grow pt-24 pb-20">
@@ -153,5 +175,6 @@ export default async function CompanyDetailPage({ params }: Props) {
 
       <PublicFooter />
     </div>
+    </>
   );
 }

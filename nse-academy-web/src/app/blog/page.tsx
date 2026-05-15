@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description:
       "Daily NSE updates, weekly roundups, stock deep dives, and investor education from NSE Academy.",
     type: "website",
-    url: "https://nseacademy.vitaldigitalmedia.net/blog",
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/blog`,
     siteName: "NSE Academy",
   },
   twitter: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     description: "Daily NSE updates, weekly roundups, stock analysis for Kenyan investors.",
   },
   alternates: {
-    canonical: "https://nseacademy.vitaldigitalmedia.net/blog",
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/blog`,
     types: { "application/rss+xml": "/blog/rss.xml" },
   },
 };

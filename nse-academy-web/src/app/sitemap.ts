@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllArticleSlugs } from "@/lib/cms";
 
-const SITE_URL = "https://nseacademy.vitaldigitalmedia.net";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const slugs = await getAllArticleSlugs();

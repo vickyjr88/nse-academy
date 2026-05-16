@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 interface ReferralItem {
   id: string;
@@ -49,6 +50,9 @@ export default function ReferralsPage() {
     const link = `${SITE_URL}/auth/register?ref=${stats.referralCode}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
+      trackEvent("referral_link_copied", {
+        referral_code: stats.referralCode,
+      });
       setTimeout(() => setCopied(false), 2500);
     });
   }
@@ -59,6 +63,10 @@ export default function ReferralsPage() {
     const text = encodeURIComponent(
       `Join me on NSE Academy — the best way to learn how to invest on the Nairobi Securities Exchange. Sign up free and we both get 1 month free when you subscribe! 🎁\n\n${link}`
     );
+    trackEvent("referral_link_shared", {
+      referral_code: stats.referralCode,
+      channel: "whatsapp",
+    });
     window.open(`https://wa.me/?text=${text}`, "_blank");
   }
 

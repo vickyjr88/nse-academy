@@ -3,12 +3,56 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   lessonId: number;
   isPremium: boolean;
   prevHref: string | null;
   nextHref: string | null;
+}
+
+/**
+ * Renders the upgrade-prompt when a free-tier (or anonymous) user lands on a
+ * premium lesson. Fires premium_lock_seen on mount — strong upgrade-intent
+ * signal we want to feed into PostHog funnels.
+ */
+function PremiumLock({ lessonId, hasToken }: { lessonId: number; hasToken: boolean }) {
+  useEffect(() => {
+    trackEvent("premium_lock_seen", {
+      lessonId,
+      is_anonymous: !hasToken,
+    });
+  }, [lessonId, hasToken]);
+  return (
+    <div className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 px-8 py-8 text-center">
+      <div className="text-3xl mb-3">🔒</div>
+      <h3 className="text-lg font-bold text-gray-900 mb-1">Premium lesson</h3>
+      <p className="text-sm text-gray-600 mb-5">
+        Upgrade to NSE Academy Premium to unlock all lessons, company profiles, and
+        personalised recommendations.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Link
+          href="/pricing"
+          onClick={() =>
+            trackEvent("premium_lock_upgrade_clicked", { lessonId })
+          }
+          className="bg-emerald-700 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors"
+        >
+          Upgrade to Premium
+        </Link>
+        {!hasToken && (
+          <Link
+            href="/auth/login"
+            className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            Log in
+          </Link>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function LessonActions({ lessonId, isPremium, prevHref, nextHref }: Props) {
@@ -51,32 +95,7 @@ export default function LessonActions({ lessonId, isPremium, prevHref, nextHref 
 
   // Premium lock: user is not logged in or is on free tier
   if (isPremium && (!token || userTier === "free")) {
-    return (
-      <div className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 px-8 py-8 text-center">
-        <div className="text-3xl mb-3">🔒</div>
-        <h3 className="text-lg font-bold text-gray-900 mb-1">Premium lesson</h3>
-        <p className="text-sm text-gray-600 mb-5">
-          Upgrade to NSE Academy Premium to unlock all lessons, company profiles, and
-          personalised recommendations.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            href="/pricing"
-            className="bg-emerald-700 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors"
-          >
-            Upgrade to Premium
-          </Link>
-          {!token && (
-            <Link
-              href="/auth/login"
-              className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              Log in
-            </Link>
-          )}
-        </div>
-      </div>
-    );
+    return <PremiumLock lessonId={lessonId} hasToken={Boolean(token)} />;
   }
 
   async function handleMarkComplete() {
@@ -88,6 +107,12 @@ export default function LessonActions({ lessonId, isPremium, prevHref, nextHref 
         headers: { Authorization: `Bearer ${token}` },
       });
       setCompleted(true);
+      trackEvent("lesson_completed", {
+        lessonId,
+        is_premium: isPremium,
+        user_tier: userTier,
+        had_next: Boolean(nextHref),
+      });
       if (nextHref) {
         router.push(nextHref);
       }

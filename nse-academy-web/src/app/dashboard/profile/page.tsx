@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InvestorCard from '@/components/InvestorCard';
+import { trackEvent } from '@/lib/analytics';
 
 const QUESTIONS = [
   {
@@ -139,6 +140,12 @@ export default function ProfilePage() {
   }, [router]);
 
   async function handleAnswer(optionIndex: number) {
+    // First answer doubles as "quiz started" — captures the moment a user
+    // commits past the intro screen.
+    if (answers.length === 0) {
+      trackEvent('profiler_quiz_started', { location: 'dashboard_profile' });
+    }
+
     const newAnswers = [...answers, { questionId: QUESTIONS[step].id, optionIndex }];
     setAnswers(newAnswers);
 
@@ -149,6 +156,7 @@ export default function ProfilePage() {
 
     setStep(10);
     setSubmitting(true);
+    trackEvent('profiler_quiz_submitted', { question_count: newAnswers.length });
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -175,8 +183,16 @@ export default function ProfilePage() {
         throw new Error('Submission failed');
       }
 
-      setResult(await res.json());
+      const profile = (await res.json()) as InvestorProfile;
+      setResult(profile);
+      trackEvent('profiler_result_viewed', {
+        investor_type: profile.type,
+        risk_score: profile.riskScore,
+        horizon_years: profile.horizonYears,
+        capital_range: profile.capitalRange,
+      });
     } catch {
+      trackEvent('profiler_quiz_failed', { reason: 'submit_error' });
       setError('Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);

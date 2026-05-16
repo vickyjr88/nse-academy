@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import MarketTicker from "@/components/MarketTicker";
+import { identifyUser, resetIdentity, trackEvent } from "@/lib/analytics";
 
 function HamburgerIcon({ open }: { open: boolean }) {
   return (
@@ -84,6 +85,17 @@ export default function DashboardLayout({
           router.push("/auth/login");
         } else {
           setUser(data);
+          // Belt-and-braces: re-identify on every dashboard visit so users
+          // who stay logged in across sessions still get correct PostHog
+          // identity even if the login-time identify was never fired.
+          if (data?.id) {
+            identifyUser(data.id, {
+              email: data.email,
+              role: data.role,
+              name: data.name,
+              subscription_tier: data?.subscription?.tier ?? "free",
+            });
+          }
         }
       })
       .catch(() => router.push("/auth/login"))
@@ -91,6 +103,8 @@ export default function DashboardLayout({
   }, [router]);
 
   function handleLogout() {
+    trackEvent("auth_logout");
+    resetIdentity();
     localStorage.removeItem("access_token");
     router.push("/");
   }

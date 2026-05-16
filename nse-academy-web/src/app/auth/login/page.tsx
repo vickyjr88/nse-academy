@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { decodeJwtPayload, identifyUser, trackEvent } from "@/lib/analytics";
 
 function LoginForm() {
   const router = useRouter();
@@ -28,7 +29,23 @@ function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Login failed");
       localStorage.setItem("access_token", data.access_token);
-      
+
+      // Tie subsequent PostHog events to this user. The JWT payload carries
+      // sub (userId) + email + role from the API; we read them client-side
+      // since the token was just minted server-side and we trust the issuer.
+      const payload = decodeJwtPayload<{
+        sub?: string;
+        email?: string;
+        role?: string;
+      }>(data.access_token);
+      if (payload?.sub) {
+        identifyUser(payload.sub, {
+          email: payload.email,
+          role: payload.role,
+        });
+      }
+      trackEvent("auth_login_succeeded", { method: "password" });
+
       const redirectTo = searchParams.get("redirectTo") || "/dashboard";
       router.push(redirectTo);
     } catch (err: unknown) {

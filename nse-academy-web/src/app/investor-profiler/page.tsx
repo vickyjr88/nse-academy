@@ -1,7 +1,7 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import { TrackedLink } from "@/components/TrackedLink";
 
 export const metadata: Metadata = {
   title: "Investor Profiler Quiz | NSE Academy",
@@ -78,12 +78,14 @@ export default function InvestorProfilerPage() {
               </div>
 
               <div className="text-center">
-                <Link
+                <TrackedLink
                   href="/profile"
+                  event="profiler_quiz_started"
+                  eventProps={{ location: "profiler_landing" }}
                   className="inline-block bg-emerald-700 text-white text-lg font-bold px-10 py-4 rounded-xl hover:bg-emerald-800 transition-colors shadow-lg hover:shadow-xl w-full sm:w-auto"
                 >
                   Start the Free Quiz →
-                </Link>
+                </TrackedLink>
                 <p className="mt-4 text-sm text-gray-400">Takes less than 3 minutes. No credit card required.</p>
               </div>
             </div>

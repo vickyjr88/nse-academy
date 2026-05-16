@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 type State = "verifying" | "success" | "error";
 type PaymentType = "subscription" | "ebook";
@@ -44,16 +45,29 @@ function CallbackHandler() {
           setPaymentType(type);
           setTier(data.tier || "");
           setState("success");
+          trackEvent("payment_succeeded", {
+            kind: type,
+            tier: data.tier ?? null,
+            reference,
+          });
 
           // Redirect after showing success
           const destination = type === "ebook" ? "/dashboard/account" : "/dashboard";
           setTimeout(() => router.push(destination), 2500);
         } else {
+          trackEvent("payment_failed", {
+            reference,
+            message: data?.message ?? null,
+          });
           setErrorMsg(data?.message || "Payment could not be confirmed.");
           setState("error");
         }
       })
       .catch(() => {
+        trackEvent("payment_failed", {
+          reference,
+          message: "verify_network_error",
+        });
         setErrorMsg("Network error. Please contact support with your reference.");
         setState("error");
       });

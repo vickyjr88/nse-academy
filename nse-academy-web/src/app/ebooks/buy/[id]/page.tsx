@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import { trackEvent } from "@/lib/analytics";
 
 interface DexterProduct {
   id: string;
@@ -136,6 +137,11 @@ export default function EbookBuyPage() {
   async function handlePurchase() {
     const token = localStorage.getItem("access_token");
     if (!token) {
+      trackEvent("ebook_buy_clicked", {
+        productId,
+        priceKes: product?.price,
+        status: "redirect_to_login",
+      });
       // Redirect to login, come back here after
       const returnUrl = `/ebooks/buy/${productId}`;
       router.push(
@@ -144,6 +150,13 @@ export default function EbookBuyPage() {
       return;
     }
     if (!product) return;
+
+    trackEvent("ebook_buy_clicked", {
+      productId: product.id,
+      name: product.name,
+      priceKes: product.price,
+      status: "checkout_initiated",
+    });
 
     setPurchasing(true);
     setPurchaseError("");
@@ -164,13 +177,28 @@ export default function EbookBuyPage() {
       );
       const data = await res.json();
       if (data?.authorization_url) {
+        trackEvent("payment_initiated", {
+          kind: "ebook",
+          productId: product.id,
+          priceKes: product.price,
+        });
         window.location.href = data.authorization_url;
       } else {
+        trackEvent("payment_init_failed", {
+          kind: "ebook",
+          productId: product.id,
+          message: data?.message ?? null,
+        });
         setPurchaseError(
           data?.message || "Failed to initialize payment. Please try again."
         );
       }
     } catch {
+      trackEvent("payment_init_failed", {
+        kind: "ebook",
+        productId: product.id,
+        message: "network_error",
+      });
       setPurchaseError(
         "Connection error. Please check your internet and try again."
       );

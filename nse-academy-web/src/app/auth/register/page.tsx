@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { decodeJwtPayload, identifyUser, trackEvent } from "@/lib/analytics";
 
 function RegisterForm() {
   const router = useRouter();
@@ -42,7 +43,25 @@ function RegisterForm() {
       if (!res.ok) throw new Error(data.message || "Registration failed");
       localStorage.setItem("access_token", data.access_token);
       localStorage.removeItem("referralCode");
-      
+
+      const payload = decodeJwtPayload<{
+        sub?: string;
+        email?: string;
+        role?: string;
+      }>(data.access_token);
+      if (payload?.sub) {
+        identifyUser(payload.sub, {
+          email: payload.email,
+          role: payload.role,
+          name,
+        });
+      }
+      trackEvent("auth_register_succeeded", {
+        has_referral: Boolean(referralCode),
+        has_phone: Boolean(phone),
+        plan: searchParams.get("plan") ?? null,
+      });
+
       const redirectTo = searchParams.get("redirectTo") || "/profile";
       router.push(redirectTo);
     } catch (err: unknown) {

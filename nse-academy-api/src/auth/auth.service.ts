@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { LeadsService } from '../leads/leads.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -12,6 +13,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private referrals: ReferralsService,
+    private leads: LeadsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -26,6 +28,11 @@ export class AuthService {
     if (dto.referralCode) {
       await this.referrals.recordPendingReferral(dto.referralCode, user.id);
     }
+
+    // Mark any matching lead as converted + flag in Brevo so the welcome
+    // drip can branch on REGISTERED=true. Fire-and-forget — register flow
+    // must not block on Brevo.
+    void this.leads.markConverted(dto.email);
 
     return this.signToken(user.id, user.email);
   }

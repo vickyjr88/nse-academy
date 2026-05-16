@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { ReferralsModule } from '../referrals/referrals.module';
+import { LeadsModule } from '../leads/leads.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ReferralsModule } from '../referrals/referrals.module';
       signOptions: { expiresIn: '7d' },
     }),
     ReferralsModule,
+    LeadsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

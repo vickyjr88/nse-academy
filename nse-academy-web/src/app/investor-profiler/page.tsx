@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import { TrackedLink } from "@/components/TrackedLink";
+import LeadMagnetForm from "@/components/LeadMagnetForm";
+import { getLeadMagnet } from "@/lib/cms";
 
 export const metadata: Metadata = {
   title: "Investor Profiler Quiz | NSE Academy",
@@ -14,7 +16,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function InvestorProfilerPage() {
+export default async function InvestorProfilerPage() {
+  const leadMagnet = await getLeadMagnet("free-chapter");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -90,6 +93,16 @@ export default function InvestorProfilerPage() {
               </div>
             </div>
           </div>
+
+          {leadMagnet && (
+            <div className="max-w-3xl w-full mt-8">
+              <LeadMagnetForm
+                magnet={leadMagnet}
+                source="investor_profiler"
+                variant="inline"
+              />
+            </div>
+          )}
         </main>
 
         <PublicFooter />

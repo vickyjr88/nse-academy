@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getArticles } from "@/lib/cms";
+import { getArticles, getLeadMagnet } from "@/lib/cms";
 import { getDigitalProducts } from "@/lib/dexter";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import { TrackedAnchor, TrackedLink } from "@/components/TrackedLink";
+import LeadMagnetForm from "@/components/LeadMagnetForm";
 
 export const revalidate = 300;
 
@@ -123,8 +124,11 @@ function formatDate(iso: string) {
 }
 
 export default async function LandingPage() {
-  const { articles: latestArticles } = await getArticles({ limit: 3 });
-  const ebooks = await getDigitalProducts();
+  const [{ articles: latestArticles }, ebooks, leadMagnet] = await Promise.all([
+    getArticles({ limit: 3 }),
+    getDigitalProducts(),
+    getLeadMagnet("free-chapter"),
+  ]);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -178,6 +182,16 @@ export default async function LandingPage() {
         </div>
         <p className="mt-4 text-sm text-gray-400">Free to start — no credit card required</p>
       </section>
+
+      {/* Lead magnet — free chapter capture. Only renders when an active
+          lead-magnet exists in Strapi, so admins can disable without a deploy. */}
+      {leadMagnet && (
+        <section className="bg-emerald-50/40 py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <LeadMagnetForm magnet={leadMagnet} source="landing_hero" />
+          </div>
+        </section>
+      )}
 
       {/* Features */}
       <section className="bg-gray-50 py-20">

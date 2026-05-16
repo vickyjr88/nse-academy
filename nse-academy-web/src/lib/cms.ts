@@ -135,6 +135,73 @@ export async function getAllArticleSlugs(): Promise<string[]> {
   }
 }
 
+// =============================================================================
+// Lead magnets — Strapi-managed PDFs offered as email-capture incentives.
+// =============================================================================
+
+export interface LeadMagnet {
+  id: number;
+  slug: string;
+  title: string;
+  headline: string;
+  description: string | null;
+  button_label: string;
+  success_message: string;
+  /** Absolute URL to the PDF, derived from `file` upload or `download_url`. */
+  download_url: string | null;
+  cover_image_url: string | null;
+}
+
+function absoluteCmsUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const publicBase = process.env.NEXT_PUBLIC_CMS_URL || "";
+  return `${publicBase}${path}`;
+}
+
+function mapLeadMagnet(raw: any): LeadMagnet {
+  const a = raw.attributes ?? raw;
+  const fileUrl =
+    a.file?.data?.attributes?.url ?? a.file?.url ?? null;
+  const coverUrl =
+    a.cover_image?.data?.attributes?.url ?? a.cover_image?.url ?? null;
+  return {
+    id: raw.id,
+    slug: a.slug,
+    title: a.title,
+    headline: a.headline,
+    description: a.description ?? null,
+    button_label: a.button_label || "Send me the free chapter",
+    success_message:
+      a.success_message ||
+      "Your free chapter is ready. We've also emailed it to you for safekeeping.",
+    download_url: absoluteCmsUrl(fileUrl) || a.download_url || null,
+    cover_image_url: absoluteCmsUrl(coverUrl),
+  };
+}
+
+export async function getLeadMagnet(slug: string): Promise<LeadMagnet | null> {
+  const qs = new URLSearchParams({
+    "filters[slug][$eq]": slug,
+    "filters[is_active][$eq]": "true",
+    "populate[file]": "true",
+    "populate[cover_image]": "true",
+  });
+  try {
+    const res = await fetch(`${CMS_URL}/api/lead-magnets?${qs}`, {
+      headers,
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const item = json.data?.[0];
+    return item ? mapLeadMagnet(item) : null;
+  } catch (error) {
+    console.warn(`CMS Fetch (getLeadMagnet: ${slug}) failed:`, error);
+    return null;
+  }
+}
+
 export const CATEGORIES = [
   "NSE News",
   "Weekly Roundup",

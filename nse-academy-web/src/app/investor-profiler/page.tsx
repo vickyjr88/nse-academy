@@ -16,8 +16,14 @@ export const metadata: Metadata = {
   },
 };
 
+// See landing page for context — same kill switch.
+const LEAD_CAPTURE_ENABLED =
+  process.env.NEXT_PUBLIC_LEAD_CAPTURE_ENABLED === "true";
+
 export default async function InvestorProfilerPage() {
-  const leadMagnet = await getLeadMagnet("free-chapter");
+  const leadMagnet = LEAD_CAPTURE_ENABLED
+    ? await getLeadMagnet("free-chapter")
+    : null;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",

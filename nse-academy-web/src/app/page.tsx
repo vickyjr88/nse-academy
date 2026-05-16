@@ -123,11 +123,18 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// Build-time gate. Off by default so the capture form stays hidden until
+// every dependency is in place: published Strapi entry, uploaded PDF, Brevo
+// list, verified sender DNS, welcome automation. Flip to "true" in prod env
+// to enable.
+const LEAD_CAPTURE_ENABLED =
+  process.env.NEXT_PUBLIC_LEAD_CAPTURE_ENABLED === "true";
+
 export default async function LandingPage() {
   const [{ articles: latestArticles }, ebooks, leadMagnet] = await Promise.all([
     getArticles({ limit: 3 }),
     getDigitalProducts(),
-    getLeadMagnet("free-chapter"),
+    LEAD_CAPTURE_ENABLED ? getLeadMagnet("free-chapter") : Promise.resolve(null),
   ]);
 
   const jsonLd = {

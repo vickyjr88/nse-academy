@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lead_magnets",
+  "info": {
+    "singularName": "lead-magnet",
+    "pluralName": "lead-magnets",
+    "displayName": "Lead Magnet",
+    "description": "Free downloadable resources (PDFs) used as email-capture incentives. Each magnet has a slug referenced by the website form."
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "headline": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text",
+      "required": false
+    },
+    "button_label": {
+      "type": "string",
+      "default": "Send me the free chapter"
+    },
+    "success_message": {
+      "type": "text",
+      "default": "Your free chapter is ready. We've also emailed it to you for safekeeping."
+    },
+    "file": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["files"]
+    },
+    "download_url": {
+      "type": "string",
+      "required": false
+    },
+    "cover_image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

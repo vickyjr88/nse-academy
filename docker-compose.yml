@@ -40,6 +40,12 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash-latest}
       RAPID_API_KEY: ${RAPID_API_KEY:-}
       DEXTER_API_KEY: ${DEXTER_API_KEY:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_LIST_ID: ${BREVO_LIST_ID:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-no-reply@nseacademy.vitaldigitalmedia.net}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-NSE Academy}
+      BREVO_LEAD_MAGNET_TEMPLATE_ID: ${BREVO_LEAD_MAGNET_TEMPLATE_ID:-}
+      SITE_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
       PORT: 3011
     depends_on:
       postgres:

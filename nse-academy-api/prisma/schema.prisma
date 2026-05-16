@@ -128,6 +128,38 @@ model ContactSubmission {
   createdAt DateTime @default(now())
 }
 
+model Lead {
+  id            String    @id @default(cuid())
+  email         String
+  name          String?
+  // Slug of the lead-magnet from Strapi (e.g. "free-chapter"). Determines
+  // which PDF the user gets.
+  magnetSlug    String
+  // Where the visitor was when they submitted (e.g. "/", "/investor-profiler").
+  source        String?
+  // Referral code present in the URL or cookie at capture time.
+  referralCode  String?
+  // UTM attribution from the inbound URL.
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmTerm       String?
+  utmContent    String?
+  // How many times the user has clicked the download link in the success page.
+  downloadCount Int       @default(0)
+  downloadedAt  DateTime?
+  // Marks leads who later registered for an account (set by the auth service
+  // when it matches a register email against a recent Lead).
+  convertedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  // A given email captures once per magnet — re-submitting just updates the
+  // existing record (avoids duplicate rows when users hit refresh / retry).
+  @@unique([email, magnetSlug])
+  @@index([magnetSlug, createdAt])
+  @@index([createdAt])
+}
+
 model StockPrice {
   id        String   @id @default(cuid())
   ticker    String

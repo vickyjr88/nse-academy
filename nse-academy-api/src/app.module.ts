@@ -11,6 +11,7 @@ import { AdminModule } from './admin/admin.module';
 import { EbookModule } from './ebook/ebook.module';
 import { CorporateModule } from './corporate/corporate.module';
 import { ContactModule } from './contact/contact.module';
+import { LeadsModule } from './leads/leads.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
 import { AppController } from './app.controller';
@@ -31,6 +32,7 @@ import { AppService } from './app.service';
     EbookModule,
     CorporateModule,
     ContactModule,
+    LeadsModule,
     MarketDataModule,
   ],
   controllers: [AppController],

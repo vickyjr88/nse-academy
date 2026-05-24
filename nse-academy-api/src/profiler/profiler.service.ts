@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { QUIZ_QUESTIONS } from './quiz-questions.seed';
@@ -68,4 +69,86 @@ export class ProfilerService {
     if (score <= 80) return 'aggressive';
     return 'growth';
   }
+
+  async setShareVisibility(userId: string, isPublic: boolean) {
+    const profile = await this.prisma.investorProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      throw new NotFoundException('No investor profile to share. Complete the quiz first.');
+    }
+
+    let publicSlug = profile.publicSlug;
+    if (isPublic && !publicSlug) {
+      publicSlug = await this.generateUniqueSlug();
+    }
+
+    return this.prisma.investorProfile.update({
+      where: { userId },
+      data: { isPublic, publicSlug },
+      select: {
+        isPublic: true,
+        publicSlug: true,
+        type: true,
+        riskScore: true,
+        horizonYears: true,
+        capitalRange: true,
+      },
+    });
+  }
+
+  async getPublicProfile(slug: string) {
+    const profile = await this.prisma.investorProfile.findUnique({
+      where: { publicSlug: slug },
+      select: {
+        type: true,
+        riskScore: true,
+        horizonYears: true,
+        capitalRange: true,
+        createdAt: true,
+        isPublic: true,
+        user: { select: { name: true } },
+      },
+    });
+
+    if (!profile || !profile.isPublic) {
+      throw new NotFoundException('Profile not found or not public.');
+    }
+
+    return {
+      type: profile.type,
+      riskScore: profile.riskScore,
+      horizonYears: profile.horizonYears,
+      capitalRange: profile.capitalRange,
+      createdAt: profile.createdAt,
+      displayName: firstName(profile.user.name),
+    };
+  }
+
+  async listPublicSlugs() {
+    const profiles = await this.prisma.investorProfile.findMany({
+      where: { isPublic: true, publicSlug: { not: null } },
+      select: { publicSlug: true, createdAt: true },
+      take: 5000,
+      orderBy: { createdAt: 'desc' },
+    });
+    return profiles.map((p) => ({ slug: p.publicSlug, updatedAt: p.createdAt }));
+  }
+
+  private async generateUniqueSlug(): Promise<string> {
+    for (let i = 0; i < 5; i++) {
+      const candidate = randomBytes(6).toString('base64url');
+      const exists = await this.prisma.investorProfile.findUnique({
+        where: { publicSlug: candidate },
+        select: { id: true },
+      });
+      if (!exists) return candidate;
+    }
+    throw new Error('Failed to generate unique share slug');
+  }
+}
+
+function firstName(fullName: string | null | undefined): string {
+  if (!fullName) return 'NSE Investor';
+  const trimmed = fullName.trim();
+  if (!trimmed) return 'NSE Investor';
+  return trimmed.split(/\s+/)[0];
 }

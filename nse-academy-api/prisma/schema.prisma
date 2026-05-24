@@ -45,6 +45,8 @@ model InvestorProfile {
   horizonYears Int
   capitalRange String   // <100k | 100k-500k | 500k-2M | >2M
   quizAnswers  Json
+  isPublic     Boolean  @default(false)
+  publicSlug   String?  @unique
   createdAt    DateTime @default(now())
 }
 

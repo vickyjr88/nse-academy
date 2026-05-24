@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InvestorCard from '@/components/InvestorCard';
 import PersonalizedUpgrade from '@/components/PersonalizedUpgrade';
+import ShareProfilePanel from '@/components/ShareProfilePanel';
 import { trackEvent } from '@/lib/analytics';
 
 const QUESTIONS = [
@@ -109,6 +110,8 @@ interface InvestorProfile {
   riskScore: number;
   horizonYears: number;
   capitalRange: string;
+  isPublic?: boolean;
+  publicSlug?: string | null;
 }
 
 export default function ProfilePage() {
@@ -230,6 +233,11 @@ export default function ProfilePage() {
           horizonYears={existingProfile.horizonYears}
           capitalRange={existingProfile.capitalRange}
         />
+        <ShareProfilePanel
+          investorType={existingProfile.type}
+          initialIsPublic={existingProfile.isPublic ?? false}
+          initialSlug={existingProfile.publicSlug ?? null}
+        />
         <PersonalizedUpgrade investorType={existingProfile.type} source="profile_view" />
         <button
           onClick={() => setStep(0)}
@@ -277,6 +285,11 @@ export default function ProfilePage() {
                 riskScore={result.riskScore}
                 horizonYears={result.horizonYears}
                 capitalRange={result.capitalRange}
+              />
+              <ShareProfilePanel
+                investorType={result.type}
+                initialIsPublic={result.isPublic ?? false}
+                initialSlug={result.publicSlug ?? null}
               />
               <PersonalizedUpgrade investorType={result.type} source="profiler_result" />
               <button

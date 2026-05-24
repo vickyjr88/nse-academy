@@ -10,6 +10,9 @@ interface Props {
   isPremium: boolean;
   prevHref: string | null;
   nextHref: string | null;
+  prevLabel?: string | null;
+  nextLabel?: string | null;
+  isLastInCourse?: boolean;
 }
 
 /**
@@ -55,7 +58,15 @@ function PremiumLock({ lessonId, hasToken }: { lessonId: number; hasToken: boole
   );
 }
 
-export default function LessonActions({ lessonId, isPremium, prevHref, nextHref }: Props) {
+export default function LessonActions({
+  lessonId,
+  isPremium,
+  prevHref,
+  nextHref,
+  prevLabel,
+  nextLabel,
+  isLastInCourse,
+}: Props) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [userTier, setUserTier] = useState<string>("free");
@@ -130,9 +141,9 @@ export default function LessonActions({ lessonId, isPremium, prevHref, nextHref 
         {prevHref ? (
           <Link
             href={prevHref}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors max-w-[220px] truncate"
           >
-            ← Previous lesson
+            {prevLabel ?? "← Previous lesson"}
           </Link>
         ) : (
           <span />
@@ -150,7 +161,15 @@ export default function LessonActions({ lessonId, isPremium, prevHref, nextHref 
               : "bg-emerald-700 text-white hover:bg-emerald-800"
           }`}
         >
-          {completed ? "✓ Completed" : marking ? "Saving…" : "Mark Complete"}
+          {completed
+            ? isLastInCourse
+              ? "✓ Course complete"
+              : "✓ Completed"
+            : marking
+              ? "Saving…"
+              : nextHref
+                ? "Mark Complete & Continue →"
+                : "Mark Complete"}
         </button>
       ) : (
         <Link
@@ -166,12 +185,17 @@ export default function LessonActions({ lessonId, isPremium, prevHref, nextHref 
         {nextHref ? (
           <Link
             href={nextHref}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors max-w-[260px] truncate"
           >
-            Next lesson →
+            {nextLabel ?? "Next lesson →"}
           </Link>
         ) : (
-          <span />
+          <Link
+            href="/dashboard/learn"
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            Back to courses →
+          </Link>
         )}
       </div>
     </div>

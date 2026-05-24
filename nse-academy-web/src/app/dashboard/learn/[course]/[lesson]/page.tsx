@@ -66,14 +66,45 @@ async function fetchModuleLessons(
   try {
     const res = await fetch(
       `${CMS_URL}/api/lessons?filters[module][id][$eq]=${moduleId}&sort=id:asc&fields[0]=id&fields[1]=title`,
-      { 
+      {
         headers: { ...headers },
-        cache: "no-store" 
+        cache: "no-store"
       }
     );
     if (!res.ok) return [];
     const json = await res.json();
     return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+interface CourseLesson {
+  id: number;
+  title: string;
+  module: { id: number; title: string; order: number };
+}
+
+// All lessons across every module of the course, ordered module.order → lesson.id.
+// We need this so prev/next can cross chapter boundaries — otherwise the last
+// lesson of a module is a dead-end for the reader.
+async function fetchCourseLessons(courseId: number): Promise<CourseLesson[]> {
+  try {
+    const res = await fetch(
+      `${CMS_URL}/api/lessons?filters[module][course][id][$eq]=${courseId}&populate[module][fields][0]=title&populate[module][fields][1]=order&fields[0]=id&fields[1]=title&sort=id:asc&pagination[limit]=1000`,
+      { headers: { ...headers }, cache: "no-store" }
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    const lessons: CourseLesson[] = json.data ?? [];
+    return lessons
+      .filter((l) => l?.module)
+      .sort((a, b) => {
+        const oa = a.module?.order ?? 0;
+        const ob = b.module?.order ?? 0;
+        if (oa !== ob) return oa - ob;
+        return a.id - b.id;
+      });
   } catch {
     return [];
   }
@@ -118,20 +149,33 @@ export default async function LessonPage({
   const moduleTitle = lesson.module?.title ?? "Module";
   const coursePage = `/dashboard/learn`;
 
-  // All lessons in this module for prev/next navigation
+  // All lessons in this module for the bottom sidebar list
   const moduleLessons = moduleId
     ? await fetchModuleLessons(moduleId, Number(courseId))
     : [];
 
-  const currentIdx = moduleLessons.findIndex((l) => l.id === lesson.id);
-  const prevLesson = currentIdx > 0 ? moduleLessons[currentIdx - 1] : null;
-  const nextLesson =
-    currentIdx >= 0 && currentIdx < moduleLessons.length - 1
-      ? moduleLessons[currentIdx + 1]
+  // All lessons across the course for cross-chapter prev/next
+  const courseLessons = await fetchCourseLessons(Number(courseId));
+  const courseIdx = courseLessons.findIndex((l) => l.id === lesson.id);
+  const prevCourseLesson = courseIdx > 0 ? courseLessons[courseIdx - 1] : null;
+  const nextCourseLesson =
+    courseIdx >= 0 && courseIdx < courseLessons.length - 1
+      ? courseLessons[courseIdx + 1]
       : null;
 
-  const prevHref = prevLesson ? `/dashboard/learn/${courseId}/${prevLesson.id}` : null;
-  const nextHref = nextLesson ? `/dashboard/learn/${courseId}/${nextLesson.id}` : null;
+  const prevHref = prevCourseLesson
+    ? `/dashboard/learn/${courseId}/${prevCourseLesson.id}`
+    : null;
+  const nextHref = nextCourseLesson
+    ? `/dashboard/learn/${courseId}/${nextCourseLesson.id}`
+    : null;
+
+  const prevIsNewModule =
+    prevCourseLesson != null && prevCourseLesson.module?.id !== moduleId;
+  const nextIsNewModule =
+    nextCourseLesson != null && nextCourseLesson.module?.id !== moduleId;
+
+  const currentIdx = moduleLessons.findIndex((l) => l.id === lesson.id);
 
   return (
     <div className="max-w-4xl">
@@ -204,6 +248,21 @@ export default async function LessonPage({
           isPremium={lesson.is_premium}
           prevHref={prevHref}
           nextHref={nextHref}
+          prevLabel={
+            prevCourseLesson
+              ? prevIsNewModule
+                ? `← Previous chapter: ${prevCourseLesson.module?.title ?? ""}`
+                : "← Previous lesson"
+              : null
+          }
+          nextLabel={
+            nextCourseLesson
+              ? nextIsNewModule
+                ? `Next chapter: ${nextCourseLesson.module?.title ?? ""} →`
+                : "Next lesson →"
+              : null
+          }
+          isLastInCourse={nextCourseLesson == null}
         />
 
         {/* Module lesson list (sidebar-style at bottom on mobile) */}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription, type Tier } from "@/hooks/useSubscription";
 
 // ---------------------------------------------------------------------------
@@ -330,6 +331,18 @@ export default function LearnPage() {
           From your first trade to a fully diversified NSE portfolio — learn at your own pace.
         </p>
       </div>
+
+      {tier === "free" && (
+        <div className="mb-8">
+          <UpgradePrompt
+            variant="banner"
+            location="learn_top"
+            highlightTier="intermediary"
+            headline="You're reading 3 of 13 chapters."
+            subline="The next 10 cover stock picking, dividend laddering, position sizing, and the NSE exit framework. Unlock from KSh 100/mo."
+          />
+        </div>
+      )}
 
       {courses.length === 0 ? (
         <div className="text-center py-24 text-gray-400">

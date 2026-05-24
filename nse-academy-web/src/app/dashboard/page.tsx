@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import InvestorCard from "@/components/InvestorCard";
+import PersonalizedUpgrade from "@/components/PersonalizedUpgrade";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription, type Tier } from "@/hooks/useSubscription";
+import { getPersonalization } from "@/lib/investorPersonalization";
 
 interface User {
   id: string;
@@ -137,6 +140,34 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* Free-tier banner — visible immediately, before the fold of cards */}
+          {tier === "free" && user?.investorProfile && (() => {
+            const p = getPersonalization(user.investorProfile.type);
+            return (
+              <div className="mb-6">
+                <UpgradePrompt
+                  variant="banner"
+                  location="dashboard_top"
+                  highlightTier={p.recommendedTier}
+                  headline={`${p.label}? You're leaving NSE returns on the table.`}
+                  subline={p.urgencyAngle}
+                  ctaLabel={`Unlock ${p.recommendedTier === "intermediary" ? "Intermediary — KSh 100/mo" : "Premium — KSh 500/mo"}`}
+                />
+              </div>
+            );
+          })()}
+          {tier === "free" && !user?.investorProfile && (
+            <div className="mb-6">
+              <UpgradePrompt
+                variant="banner"
+                location="dashboard_top_no_profile"
+                headline="Free tier = Getting Started chapters. The rest is locked."
+                subline="Subscribers get the trading playbook, 62-company research, and personalised stock picks."
+                ctaLabel="See plans from KSh 100/mo →"
+              />
+            </div>
+          )}
+
           {/* Investor profile */}
           {user?.investorProfile ? (
             <div className="mb-6">
@@ -191,13 +222,21 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Upgrade nudge for free users */}
-          {tier === "free" && (
+          {/* Upgrade nudge for free users — personalized if profile exists */}
+          {tier === "free" && user?.investorProfile && (
+            <div className="mt-8">
+              <PersonalizedUpgrade
+                investorType={user.investorProfile.type}
+                source="dashboard_home"
+              />
+            </div>
+          )}
+          {tier === "free" && !user?.investorProfile && (
             <div className="mt-8 bg-gradient-to-r from-emerald-700 to-emerald-600 rounded-3xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
                 <h3 className="text-xl font-bold mb-1">Unlock the full NSE Academy</h3>
                 <p className="text-emerald-200 text-sm">
-                  Stock Advisor, Company Research, Trading Guide & Investor's Guide — from KSh 100/mo.
+                  Stock Advisor, Company Research, Trading Guide &amp; Investor&apos;s Guide — from KSh 100/mo.
                 </p>
               </div>
               <Link
@@ -206,6 +245,19 @@ export default function DashboardPage() {
               >
                 View Plans →
               </Link>
+            </div>
+          )}
+
+          {/* Intermediary users — soft Premium nudge */}
+          {tier === "intermediary" && (
+            <div className="mt-8">
+              <UpgradePrompt
+                variant="card"
+                location="dashboard_intermediary_to_premium"
+                highlightTier="premium"
+                headline="Going from Intermediary to Premium pays for itself."
+                subline="Stock Advisor, Company Research, the full 13-chapter Investor's Guide, and the ebook (worth KSh 999) — included."
+              />
             </div>
           )}
         </>

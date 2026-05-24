@@ -5,7 +5,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import { TrackedLink } from "@/components/TrackedLink";
 import { getArticleBySlug, getAllArticleSlugs, getArticles } from "@/lib/cms";
+import { getDigitalProducts } from "@/lib/dexter";
 
 // ---------------------------------------------------------------------------
 // Static generation
@@ -138,14 +140,17 @@ function formatDate(iso: string) {
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [article, { articles: related }] = await Promise.all([
+  const [article, { articles: related }, ebooks] = await Promise.all([
     getArticleBySlug(slug),
     getArticles({ limit: 3 }),
+    getDigitalProducts(),
   ]);
 
   if (!article) notFound();
 
   const relatedArticles = related.filter((a) => a.slug !== article.slug).slice(0, 3);
+  const featuredEbook =
+    ebooks.find((b) => /complete\s+investor/i.test(b.name)) ?? ebooks[0] ?? null;
 
   return (
     <>
@@ -249,6 +254,56 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </ReactMarkdown>
             </article>
 
+            {/* Mid-content paid CTA */}
+            {!article.is_sponsored && featuredEbook && (
+              <aside className="my-12 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+                {featuredEbook.thumbnail && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={featuredEbook.thumbnail}
+                    alt={featuredEbook.name}
+                    className="w-32 h-40 object-cover rounded-xl border border-gray-100 shrink-0"
+                  />
+                )}
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2">
+                    Featured guide
+                  </p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {featuredEbook.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    {featuredEbook.description}
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <TrackedLink
+                      href={`/ebooks/buy/${featuredEbook.id}`}
+                      event="blog_inline_ebook_cta_clicked"
+                      eventProps={{
+                        article_slug: article.slug,
+                        article_category: article.category,
+                        productId: featuredEbook.id,
+                      }}
+                      className="bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl hover:bg-emerald-800 transition-colors text-sm w-full sm:w-auto text-center"
+                    >
+                      Buy now — KSh {featuredEbook.price.toLocaleString("en-KE")} →
+                    </TrackedLink>
+                    <TrackedLink
+                      href="/auth/register?plan=premium"
+                      event="blog_inline_premium_cta_clicked"
+                      eventProps={{
+                        article_slug: article.slug,
+                        article_category: article.category,
+                      }}
+                      className="text-sm font-bold text-emerald-700 hover:underline"
+                    >
+                      Or get it free with Premium (KSh 500/mo) →
+                    </TrackedLink>
+                  </div>
+                </div>
+              </aside>
+            )}
+
             {/* Sponsor closing CTA */}
             {article.is_sponsored && article.sponsor_url && (
               <div className="mt-12 bg-amber-50 border border-amber-200 rounded-3xl p-8 text-center">
@@ -265,22 +320,70 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* CTA */}
-            <div className="mt-12 bg-emerald-50 border border-emerald-100 rounded-3xl p-8 text-center">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                Ready to start investing on the NSE?
+            {/* End-of-article paid CTA */}
+            <div className="mt-12 bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-3xl p-8 sm:p-10 text-center text-white shadow-xl">
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-200 mb-3">
+                Stop reading. Start investing.
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+                {featuredEbook
+                  ? "Get the playbook this article only scratched."
+                  : "Get the framework Kenyan investors use to compound on the NSE."}
               </h2>
-              <p className="text-gray-500 mb-6">
-                Discover your investor type, get a personalised learning path, and get matched to stocks that fit your goals.
+              <p className="text-emerald-100 mb-7 max-w-xl mx-auto">
+                {featuredEbook
+                  ? `${featuredEbook.name} — 13 chapters covering stock picking, dividend laddering, position sizing and exit strategy on the NSE.`
+                  : "Subscribe from KSh 100/mo for weekly NSE research, deep-dive company analysis, and personalised stock picks."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/auth/register" className="inline-block bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-800 transition-colors text-sm">
-                  Get started free →
-                </Link>
-                <Link href="/pricing" className="inline-block border border-emerald-200 text-emerald-700 font-medium px-6 py-3 rounded-xl hover:bg-emerald-50 transition-colors text-sm">
-                  See pricing
-                </Link>
+                {featuredEbook ? (
+                  <TrackedLink
+                    href={`/ebooks/buy/${featuredEbook.id}`}
+                    event="blog_footer_ebook_cta_clicked"
+                    eventProps={{
+                      article_slug: article.slug,
+                      article_category: article.category,
+                      productId: featuredEbook.id,
+                    }}
+                    className="inline-block bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-md"
+                  >
+                    Buy the Complete Guide — KSh {featuredEbook.price.toLocaleString("en-KE")} →
+                  </TrackedLink>
+                ) : (
+                  <TrackedLink
+                    href="/auth/register?plan=premium"
+                    event="blog_footer_premium_cta_clicked"
+                    eventProps={{
+                      article_slug: article.slug,
+                      article_category: article.category,
+                    }}
+                    className="inline-block bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-md"
+                  >
+                    Start Premium — KSh 500/mo →
+                  </TrackedLink>
+                )}
+                <TrackedLink
+                  href="/auth/register?plan=intermediary"
+                  event="blog_footer_intermediary_cta_clicked"
+                  eventProps={{
+                    article_slug: article.slug,
+                    article_category: article.category,
+                  }}
+                  className="inline-block border border-emerald-300/50 text-emerald-50 font-semibold px-7 py-3.5 rounded-xl hover:bg-emerald-800/40 transition-colors text-sm"
+                >
+                  Or subscribe from KSh 100/mo
+                </TrackedLink>
               </div>
+              <p className="mt-5 text-xs text-emerald-200">
+                Prefer to try free first?{" "}
+                <Link
+                  href="/investor-profiler"
+                  className="underline underline-offset-2 hover:text-white"
+                >
+                  Take the 3-minute investor quiz
+                </Link>
+                .
+              </p>
             </div>
 
             {/* Back to blog */}

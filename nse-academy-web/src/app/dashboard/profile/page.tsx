@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InvestorCard from '@/components/InvestorCard';
+import PersonalizedUpgrade from '@/components/PersonalizedUpgrade';
 import { trackEvent } from '@/lib/analytics';
 
 const QUESTIONS = [
@@ -219,7 +220,7 @@ export default function ProfilePage() {
   // Show existing profile (step === -1 means view mode)
   if (step === -1 && existingProfile) {
     return (
-      <div className="max-w-lg">
+      <div className="max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Your Investor Profile</h1>
         </div>
@@ -229,9 +230,10 @@ export default function ProfilePage() {
           horizonYears={existingProfile.horizonYears}
           capitalRange={existingProfile.capitalRange}
         />
+        <PersonalizedUpgrade investorType={existingProfile.type} source="profile_view" />
         <button
           onClick={() => setStep(0)}
-          className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600"
+          className="mt-8 w-full text-center text-sm text-gray-400 hover:text-gray-600"
         >
           Retake quiz
         </button>
@@ -241,7 +243,7 @@ export default function ProfilePage() {
 
   if (step === 10) {
     return (
-      <div className="max-w-lg">
+      <div className="max-w-3xl">
         <div>
           {submitting && (
             <div className="text-center py-20">
@@ -263,7 +265,7 @@ export default function ProfilePage() {
           )}
 
           {!submitting && result && (
-            <div>
+            <div className="max-w-3xl">
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Your profile is ready</h1>
                 <p className="text-sm text-gray-500 mt-1">
@@ -276,9 +278,10 @@ export default function ProfilePage() {
                 horizonYears={result.horizonYears}
                 capitalRange={result.capitalRange}
               />
+              <PersonalizedUpgrade investorType={result.type} source="profiler_result" />
               <button
                 onClick={restart}
-                className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600"
+                className="mt-8 w-full text-center text-sm text-gray-400 hover:text-gray-600"
               >
                 Retake quiz
               </button>

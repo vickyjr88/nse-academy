@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import ShareArticle from "@/components/ShareArticle";
 import { TrackedLink } from "@/components/TrackedLink";
 import { getArticleBySlug, getAllArticleSlugs, getArticles } from "@/lib/cms";
 import { getDigitalProducts } from "@/lib/dexter";
@@ -152,6 +153,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const featuredEbook =
     ebooks.find((b) => /complete\s+investor/i.test(b.name)) ?? ebooks[0] ?? null;
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
+  const shareUrl = `${siteUrl}/blog/${article.slug}`;
+  const shareExcerpt =
+    article.excerpt ?? article.body.slice(0, 160).replace(/[#*\n]/g, " ").trim();
+
   return (
     <>
       <ArticleJsonLd article={article} />
@@ -247,12 +253,34 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               )}
             </div>
 
+            {/* Share — top */}
+            <ShareArticle
+              url={shareUrl}
+              title={article.title}
+              excerpt={shareExcerpt}
+              slug={article.slug}
+              category={article.category}
+              variant="inline"
+            />
+
             {/* Body */}
-            <article className="prose prose-gray prose-lg max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-emerald-700 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-emerald-500 prose-blockquote:bg-emerald-50 prose-blockquote:py-1 prose-blockquote:rounded-r-lg prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:px-1 prose-code:rounded prose-table:text-sm">
+            <article className="prose prose-gray prose-lg max-w-none mt-8 prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-emerald-700 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-emerald-500 prose-blockquote:bg-emerald-50 prose-blockquote:py-1 prose-blockquote:rounded-r-lg prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:px-1 prose-code:rounded prose-table:text-sm">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {article.body}
               </ReactMarkdown>
             </article>
+
+            {/* Share — bottom */}
+            <div className="mt-10">
+              <ShareArticle
+                url={shareUrl}
+                title={article.title}
+                excerpt={shareExcerpt}
+                slug={article.slug}
+                category={article.category}
+                variant="card"
+              />
+            </div>
 
             {/* Mid-content paid CTA */}
             {!article.is_sponsored && featuredEbook && (
@@ -401,19 +429,31 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 <h2 className="text-xl font-bold text-gray-900 mb-8">More from NSE Academy</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {relatedArticles.map((a) => (
-                    <Link key={a.id} href={`/blog/${a.slug}`} className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-emerald-200 transition-colors">
-                      <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-3 ${CATEGORY_COLORS[a.category] ?? "bg-gray-100 text-gray-600"}`}>
-                        {a.category}
-                      </span>
-                      <h3 className="font-bold text-gray-900 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2 mb-2">
-                        {a.title}
-                      </h3>
-                      <p className="text-xs text-gray-400">
-                        <time dateTime={a.publishedAt}>{formatDate(a.publishedAt)}</time>
-                        {" · "}
-                        {a.read_time_minutes} min read
-                      </p>
-                    </Link>
+                    <article key={a.id} className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-emerald-200 transition-colors flex flex-col">
+                      <Link href={`/blog/${a.slug}`} className="block">
+                        <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-3 ${CATEGORY_COLORS[a.category] ?? "bg-gray-100 text-gray-600"}`}>
+                          {a.category}
+                        </span>
+                        <h3 className="font-bold text-gray-900 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2 mb-2">
+                          {a.title}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center justify-between gap-3 mt-3">
+                        <p className="text-xs text-gray-400 min-w-0 truncate">
+                          <time dateTime={a.publishedAt}>{formatDate(a.publishedAt)}</time>
+                          {" · "}
+                          {a.read_time_minutes} min
+                        </p>
+                        <ShareArticle
+                          url={`${siteUrl}/blog/${a.slug}`}
+                          title={a.title}
+                          excerpt={a.excerpt ?? undefined}
+                          slug={a.slug}
+                          category={a.category}
+                          variant="compact"
+                        />
+                      </div>
+                    </article>
                   ))}
                 </div>
               </div>

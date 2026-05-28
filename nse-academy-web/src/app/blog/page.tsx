@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { getArticles, CATEGORIES } from "@/lib/cms";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import ShareArticle from "@/components/ShareArticle";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -17,7 +20,7 @@ export const metadata: Metadata = {
     description:
       "Daily NSE updates, weekly roundups, stock deep dives, and investor education from NSE Academy.",
     type: "website",
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/blog`,
+    url: `${SITE_URL}/blog`,
     siteName: "NSE Academy",
   },
   twitter: {
@@ -26,7 +29,7 @@ export const metadata: Metadata = {
     description: "Daily NSE updates, weekly roundups, stock analysis for Kenyan investors.",
   },
   alternates: {
-    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/blog`,
+    canonical: `${SITE_URL}/blog`,
     types: { "application/rss+xml": "/blog/rss.xml" },
   },
 };
@@ -161,57 +164,69 @@ export default async function BlogPage({
         {rest.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {rest.map((article) => (
-              <Link key={article.id} href={`/blog/${article.slug}`} className={`group flex flex-col ${article.is_sponsored ? "ring-1 ring-amber-200 rounded-2xl" : ""}`}>
-                {article.cover_image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={
-                      article.cover_image.url.startsWith("http")
-                        ? article.cover_image.url
-                        : `${process.env.NEXT_PUBLIC_CMS_URL}${article.cover_image.url}`
-                    }
-                    alt={article.cover_image.alternativeText ?? article.title}
-                    className="w-full h-48 object-cover rounded-2xl mb-4 group-hover:opacity-90 transition-opacity"
-                  />
-                ) : (
-                  <div className="w-full h-48 rounded-2xl mb-4 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center text-4xl">
-                    {article.category === "Weekly Roundup" ? "📊" :
-                     article.category === "Daily Update" ? "📰" :
-                     article.category === "Stock Deep Dive" ? "🔍" :
-                     article.category === "Market Analysis" ? "📈" :
-                     article.category === "IPO Watch" ? "🚀" :
-                     article.category === "Investor Education" ? "🎓" : "📋"}
-                  </div>
-                )}
+              <article key={article.id} className={`group flex flex-col ${article.is_sponsored ? "ring-1 ring-amber-200 rounded-2xl" : ""}`}>
+                <Link href={`/blog/${article.slug}`} className="flex flex-col flex-1">
+                  {article.cover_image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={
+                        article.cover_image.url.startsWith("http")
+                          ? article.cover_image.url
+                          : `${process.env.NEXT_PUBLIC_CMS_URL}${article.cover_image.url}`
+                      }
+                      alt={article.cover_image.alternativeText ?? article.title}
+                      className="w-full h-48 object-cover rounded-2xl mb-4 group-hover:opacity-90 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-full h-48 rounded-2xl mb-4 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center text-4xl">
+                      {article.category === "Weekly Roundup" ? "📊" :
+                       article.category === "Daily Update" ? "📰" :
+                       article.category === "Stock Deep Dive" ? "🔍" :
+                       article.category === "Market Analysis" ? "📈" :
+                       article.category === "IPO Watch" ? "🚀" :
+                       article.category === "Investor Education" ? "🎓" : "📋"}
+                    </div>
+                  )}
 
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLORS[article.category] ?? "bg-gray-100 text-gray-600"}`}>
-                      {article.category}
-                    </span>
-                    {article.is_sponsored && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                        Sponsored
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLORS[article.category] ?? "bg-gray-100 text-gray-600"}`}>
+                        {article.category}
                       </span>
+                      {article.is_sponsored && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                          Sponsored
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2">
+                      {article.title}
+                    </h3>
+                    {article.excerpt && (
+                      <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-1">{article.excerpt}</p>
                     )}
                   </div>
-                  <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2">
-                    {article.title}
-                  </h3>
-                  {article.excerpt && (
-                    <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-1">{article.excerpt}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-50">
+                </Link>
+                <div className="flex items-center justify-between gap-3 mt-auto pt-3 border-t border-gray-50">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 min-w-0">
                     {article.is_sponsored && article.sponsor_name ? (
-                      <span className="text-amber-600 font-medium">{article.sponsor_name}</span>
+                      <span className="text-amber-600 font-medium truncate">{article.sponsor_name}</span>
                     ) : (
                       <time dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
                     )}
                     <span>·</span>
-                    <span>{article.read_time_minutes} min read</span>
+                    <span className="whitespace-nowrap">{article.read_time_minutes} min</span>
                   </div>
+                  <ShareArticle
+                    url={`${SITE_URL}/blog/${article.slug}`}
+                    title={article.title}
+                    excerpt={article.excerpt ?? undefined}
+                    slug={article.slug}
+                    category={article.category}
+                    variant="compact"
+                  />
                 </div>
-              </Link>
+              </article>
             ))}
           </div>
         ) : (

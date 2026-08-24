@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   STOREFRONT_URL,
   downloadOwnedEbook,
+  getAccessToken,
   hasSubscriberAccess,
   type DexterProduct,
   type EbookStatus,
@@ -20,7 +21,9 @@ export default function DownloadsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    // Validated getter: an expired token routes to login rather than
+    // rendering an empty library against a rejected request.
+    const token = getAccessToken();
     if (!token) {
       router.push(
         `/auth/login?redirectTo=${encodeURIComponent("/dashboard/downloads")}`,

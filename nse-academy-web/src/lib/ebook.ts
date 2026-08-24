@@ -35,9 +35,44 @@ export function apiUrl(): string {
 const AUTH_EVENT = "nse-auth-changed";
 const UNLOCK_EVENT = "nse-ebook-unlock";
 
+/**
+ * True when the JWT is structurally valid and not past its `exp`.
+ * Tokens last 7 days, so a stale one is common on a returning visit.
+ * A token we can't decode is treated as unusable rather than trusted —
+ * the API's optional-auth guard would treat it as anonymous anyway, and
+ * trusting it here hides the guest email field and dead-ends checkout.
+ */
+export function isTokenUsable(token: string | null): boolean {
+  if (!token) return false;
+  const payload = decodeJwtPayload<{ exp?: number }>(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  return payload.exp * 1000 > Date.now();
+}
+
+/** Clear credentials that the API will no longer accept. */
+export function clearExpiredToken() {
+  try {
+    localStorage.removeItem("access_token");
+    window.dispatchEvent(new Event(AUTH_EVENT));
+  } catch {
+    /* ignore private mode */
+  }
+}
+
+/**
+ * The stored JWT, but only while it is still valid. Expired tokens are
+ * dropped so the UI falls back to guest checkout instead of claiming the
+ * user is logged in and then failing at the API.
+ */
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
+  const token = localStorage.getItem("access_token");
+  if (!token) return null;
+  if (!isTokenUsable(token)) {
+    clearExpiredToken();
+    return null;
+  }
+  return token;
 }
 
 function subscribeAuth(onChange: () => void) {

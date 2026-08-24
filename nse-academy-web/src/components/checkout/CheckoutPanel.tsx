@@ -5,6 +5,7 @@ import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
 import {
   apiUrl,
+  clearExpiredToken,
   downloadGuestEbook,
   downloadOwnedEbook,
   getAccessToken,
@@ -58,6 +59,9 @@ export default function CheckoutPanel({ product }: Props) {
         headers: { Authorization: `Bearer ${access}` },
       });
       if (res.status === 401) {
+        // Token rejected by the API — fall back to guest so the email
+        // field appears instead of dead-ending on "Email is required".
+        clearExpiredToken();
         setEbookStatus(null);
         return;
       }
@@ -78,7 +82,10 @@ export default function CheckoutPanel({ product }: Props) {
     })
       .then(async (res) => {
         if (cancelled) return null;
-        if (res.status === 401) return null;
+        if (res.status === 401) {
+          clearExpiredToken();
+          return null;
+        }
         return (await res.json()) as EbookStatus;
       })
       .then((data) => {
@@ -130,7 +137,7 @@ export default function CheckoutPanel({ product }: Props) {
 
   async function startEbookPayment() {
     const token = getAccessToken();
-    const checkoutEmail = token ? undefined : email.trim();
+    const checkoutEmail = email.trim() || undefined;
     if (!token && !checkoutEmail) {
       setError("Enter your email so we can send the ebook after payment.");
       return;
@@ -172,6 +179,15 @@ export default function CheckoutPanel({ product }: Props) {
         guest: !token,
       });
       window.location.href = data.authorization_url;
+      return;
+    }
+
+    if (res.status === 401 || (res.status === 400 && !checkoutEmail)) {
+      // The token we sent isn't accepted. Become a guest so the email
+      // field renders, and ask for the one thing that unblocks checkout.
+      clearExpiredToken();
+      setAuthMode("guest");
+      setError("Your session expired. Enter your email to continue as a guest.");
       return;
     }
 

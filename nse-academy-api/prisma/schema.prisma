@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id               String           @id @default(cuid())
-  email            String           @unique
+  id               String            @id @default(cuid())
+  email            String            @unique
   passwordHash     String
   name             String
   phone            String?
-  referralCode     String           @unique @default(cuid())
+  referralCode     String            @unique @default(cuid())
   investorProfile  InvestorProfile?
   subscription     Subscription?
   ebookPurchase    EbookPurchase[]
   progress         LessonProgress[]
-  referralsMade    Referral[]       @relation("ReferralsMade")
-  referralReceived Referral?        @relation("ReferralReceived")
+  referralsMade    Referral[]        @relation("ReferralsMade")
+  referralReceived Referral?         @relation("ReferralReceived")
   orgMembership    OrgMember?
-  createdAt        DateTime         @default(now())
+  createdAt        DateTime          @default(now())
+  trades           Trade[]
+  holdings         Holding[]
+  statementImports StatementImport[]
 }
 
 model EbookPurchase {
@@ -180,4 +183,72 @@ model StockPrice {
 
   @@index([ticker])
   @@index([timestamp])
+}
+
+model Broker {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  cdaCode     String?  @unique // CDSC custodian/agent code, e.g. "B12", "EQBC". Null for non-CDS brokers.
+  feePercent  Float // flat all-in commission + levies, e.g. 1.85 for 1.85%
+  cdsRequired Boolean  @default(true) // false for Ziidi Trader and similar non-CDS platforms
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  trades   Trade[]
+  holdings Holding[]
+}
+
+model Holding {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  brokerId    String
+  broker      Broker   @relation(fields: [brokerId], references: [id])
+  ticker      String
+  companyName String?
+  quantity    Int      @default(0)
+  avgCost     Float? // average price per share; null until priced trades exist
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, brokerId, ticker])
+  @@index([userId])
+}
+
+model Trade {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  brokerId      String
+  broker        Broker   @relation(fields: [brokerId], references: [id])
+  ticker        String
+  companyName   String?
+  side          String // BUY | SELL
+  quantity      Int
+  pricePerShare Float
+  feesKes       Float    @default(0) // computed from broker.feePercent at entry time, editable
+  totalKes      Float // quantity * pricePerShare (+/- feesKes depending on side)
+  tradeDate     DateTime
+  notes         String?
+  source        String   @default("MANUAL") // MANUAL | CDSC_IMPORT
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, ticker])
+}
+
+model StatementImport {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  filename     String
+  accountNo    String?
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  holdingsRead Int       @default(0) // number of ticker/broker positions parsed
+  status       String    @default("completed") // completed | failed
+  error        String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
 }

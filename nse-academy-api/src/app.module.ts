@@ -15,6 +15,7 @@ import { LeadsModule } from './leads/leads.module';
 import { BrevoModule } from './brevo/brevo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
+import { JournalModule } from './journal/journal.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -36,6 +37,7 @@ import { AppService } from './app.service';
     BrevoModule,
     LeadsModule,
     MarketDataModule,
+    JournalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

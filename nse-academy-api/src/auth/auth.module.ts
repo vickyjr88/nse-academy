@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { LeadsModule } from '../leads/leads.module';
+import { EbookModule } from '../ebook/ebook.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LeadsModule } from '../leads/leads.module';
     }),
     ReferralsModule,
     LeadsModule,
+    EbookModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

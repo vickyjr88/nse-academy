@@ -25,25 +25,32 @@ model User {
 }
 
 model EbookPurchase {
-  id          String   @id @default(cuid())
-  userId      String
-  productId   String   // Dexter product ID
-  user        User     @relation(fields: [userId], references: [id])
-  reference   String   // Paystack reference
-  amountKes   Int      // amount in KES
-  purchasedAt DateTime @default(now())
+  id            String    @id @default(cuid())
+  userId        String?
+  email         String
+  productId     String // Dexter product ID
+  user          User?     @relation(fields: [userId], references: [id])
+  reference     String    @unique
+  amountKes     Int
+  guestToken    String    @unique
+  downloadCount Int       @default(0)
+  downloadedAt  DateTime?
+  emailedAt     DateTime?
+  purchasedAt   DateTime  @default(now())
 
   @@unique([userId, productId])
+  @@unique([email, productId])
+  @@index([email])
 }
 
 model InvestorProfile {
   id           String   @id @default(cuid())
   userId       String   @unique
   user         User     @relation(fields: [userId], references: [id])
-  type         String   // conservative | moderate | aggressive | dividend | growth
-  riskScore    Int      // 0-100
+  type         String // conservative | moderate | aggressive | dividend | growth
+  riskScore    Int // 0-100
   horizonYears Int
-  capitalRange String   // <100k | 100k-500k | 500k-2M | >2M
+  capitalRange String // <100k | 100k-500k | 500k-2M | >2M
   quizAnswers  Json
   isPublic     Boolean  @default(false)
   publicSlug   String?  @unique
@@ -54,10 +61,10 @@ model Subscription {
   id               String    @id @default(cuid())
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id])
-  tier             String    // free | intermediary | premium
+  tier             String // free | intermediary | premium
   paystackSubId    String?
   currentPeriodEnd DateTime?
-  status           String    // active | cancelled | past_due
+  status           String // active | cancelled | past_due
   freeMonths       Int       @default(0)
 }
 
@@ -65,20 +72,20 @@ model LessonProgress {
   id          String    @id @default(cuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id])
-  lessonId    String    // Strapi lesson ID
+  lessonId    String // Strapi lesson ID
   completed   Boolean   @default(false)
   completedAt DateTime?
 }
 
 model Referral {
-  id          String    @id @default(cuid())
-  referrerId  String
-  referrer    User      @relation("ReferralsMade", fields: [referrerId], references: [id])
-  referredId  String    @unique
-  referred    User      @relation("ReferralReceived", fields: [referredId], references: [id])
-  status      String    @default("pending") // pending | completed
-  rewardedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  id         String    @id @default(cuid())
+  referrerId String
+  referrer   User      @relation("ReferralsMade", fields: [referrerId], references: [id])
+  referredId String    @unique
+  referred   User      @relation("ReferralReceived", fields: [referredId], references: [id])
+  status     String    @default("pending") // pending | completed
+  rewardedAt DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Organization {

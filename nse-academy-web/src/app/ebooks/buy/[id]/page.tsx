@@ -1,34 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import { trackEvent } from "@/lib/analytics";
-
-interface DexterProduct {
-  id: string;
-  name: string;
-  price: number;
-  compare_at_price: number | null;
-  currency: string;
-  thumbnail: string | null;
-  description: string;
-  category: string;
-  is_digital: boolean;
-  status: string;
-}
-
-interface EbookStatus {
-  purchases: { productId: string; purchasedAt: string }[];
-  /** null = all products (premium), string[] = specific IDs (intermediary), absent/undefined = none (free) */
-  subscriberAccessProducts: string[] | null;
-  subscriptionTier: string;
-}
-
-const STOREFRONT_URL =
-  "https://dexter-api.vitaldigitalmedia.net/api/products/storefront/51fe5af0-266b-419e-8559-3f0febcd74c4";
+import CheckoutPanel from "@/components/checkout/CheckoutPanel";
+import { STOREFRONT_URL, type DexterProduct } from "@/lib/ebook";
 
 function ProductJsonLd({ product }: { product: DexterProduct | null }) {
   if (!product) return null;
@@ -56,7 +34,6 @@ function ProductJsonLd({ product }: { product: DexterProduct | null }) {
 }
 
 export default function EbookBuyPage() {
-  const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
 
@@ -65,19 +42,6 @@ export default function EbookBuyPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Auth + ebook status
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [ebookStatus, setEbookStatus] = useState<EbookStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
-
-  // Purchase flow
-  const [purchasing, setPurchasing] = useState(false);
-  const [purchaseError, setPurchaseError] = useState("");
-
-  // Download flow
-  const [downloading, setDownloading] = useState(false);
-
-  // Load product data
   useEffect(() => {
     fetch(STOREFRONT_URL)
       .then((r) => r.json())
@@ -96,145 +60,6 @@ export default function EbookBuyPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [productId]);
-
-  // Check auth + ebook status
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setIsLoggedIn(false);
-      setStatusLoading(false);
-      return;
-    }
-    setIsLoggedIn(true);
-
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/ebook/status`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => {
-        if (r.status === 401) {
-          setIsLoggedIn(false);
-          return null;
-        }
-        return r.json();
-      })
-      .then((data) => {
-        if (data) setEbookStatus(data);
-      })
-      .catch(() => {})
-      .finally(() => setStatusLoading(false));
-  }, []);
-
-  const alreadyOwned = ebookStatus?.purchases?.some(
-    (p) => p.productId === productId
-  );
-  // null = all products accessible (premium), string[] = check if this product is in list
-  const subProducts = ebookStatus?.subscriberAccessProducts;
-  const hasSubscriberAccess = subProducts === null
-    ? true
-    : Array.isArray(subProducts) && subProducts.includes(productId);
-  const canDownloadFree = alreadyOwned || hasSubscriberAccess;
-
-  async function handlePurchase() {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      trackEvent("ebook_buy_clicked", {
-        productId,
-        priceKes: product?.price,
-        status: "redirect_to_login",
-      });
-      // Redirect to login, come back here after
-      const returnUrl = `/ebooks/buy/${productId}`;
-      router.push(
-        `/auth/login?redirectTo=${encodeURIComponent(returnUrl)}`
-      );
-      return;
-    }
-    if (!product) return;
-
-    trackEvent("ebook_buy_clicked", {
-      productId: product.id,
-      name: product.name,
-      priceKes: product.price,
-      status: "checkout_initiated",
-    });
-
-    setPurchasing(true);
-    setPurchaseError("");
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/ebook/purchase`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            productId: product.id,
-            priceKes: product.price,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (data?.authorization_url) {
-        trackEvent("payment_initiated", {
-          kind: "ebook",
-          productId: product.id,
-          priceKes: product.price,
-        });
-        window.location.href = data.authorization_url;
-      } else {
-        trackEvent("payment_init_failed", {
-          kind: "ebook",
-          productId: product.id,
-          message: data?.message ?? null,
-        });
-        setPurchaseError(
-          data?.message || "Failed to initialize payment. Please try again."
-        );
-      }
-    } catch {
-      trackEvent("payment_init_failed", {
-        kind: "ebook",
-        productId: product.id,
-        message: "network_error",
-      });
-      setPurchaseError(
-        "Connection error. Please check your internet and try again."
-      );
-    } finally {
-      setPurchasing(false);
-    }
-  }
-
-  async function handleDownload() {
-    const token = localStorage.getItem("access_token");
-    if (!token || !product) return;
-    setDownloading(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/ebook/download/${encodeURIComponent(product.id)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error("Download failed");
-      const data = await res.json();
-      if (data.download_url) {
-        const a = document.createElement("a");
-        a.href = data.download_url;
-        a.download = data.file_name || `${product.name.replace(/[^a-z0-9]/gi, "_")}.pdf`;
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } else {
-        throw new Error("Invalid download URL");
-      }
-    } catch {
-      setPurchaseError("Download failed. Please try again.");
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   // --- Loading state ---
   if (loading) {
@@ -274,114 +99,6 @@ export default function EbookBuyPage() {
     );
   }
 
-  // --- Determine CTA ---
-  let ctaElement: React.ReactNode;
-
-  if (statusLoading) {
-    ctaElement = (
-      <div className="flex items-center justify-center gap-2 text-gray-400 py-3">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-        Checking access…
-      </div>
-    );
-  } else if (canDownloadFree) {
-    ctaElement = (
-      <div className="space-y-3">
-        {hasSubscriberAccess && !alreadyOwned && (
-          <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-medium">
-            <span>✅</span>
-            <span>
-              Included with your{" "}
-              <span className="capitalize font-bold">
-                {ebookStatus?.subscriptionTier}
-              </span>{" "}
-              subscription — download free!
-            </span>
-          </div>
-        )}
-        {alreadyOwned && (
-          <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-medium">
-            <span>📚</span>
-            <span>You already own this ebook!</span>
-          </div>
-        )}
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="w-full bg-emerald-700 text-white text-base font-bold py-4 rounded-xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-60 flex items-center justify-center gap-2"
-        >
-          {downloading ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Preparing download…
-            </>
-          ) : (
-            <>
-              <span>⬇️</span> Download PDF — Free
-            </>
-          )}
-        </button>
-      </div>
-    );
-  } else if (isLoggedIn) {
-    ctaElement = (
-      <button
-        onClick={handlePurchase}
-        disabled={purchasing}
-        className="w-full bg-emerald-700 text-white text-base font-bold py-4 rounded-xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-60 flex items-center justify-center gap-2"
-      >
-        {purchasing ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Redirecting to Paystack…
-          </>
-        ) : (
-          <>
-            Buy Now — KSh {product.price.toLocaleString("en-KE")} →
-          </>
-        )}
-      </button>
-    );
-  } else {
-    // Not logged in — two options
-    ctaElement = (
-      <div className="space-y-3">
-        <button
-          onClick={handlePurchase}
-          className="w-full bg-emerald-700 text-white text-base font-bold py-4 rounded-xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
-        >
-          Buy Now — KSh {product.price.toLocaleString("en-KE")} →
-        </button>
-        <p className="text-xs text-gray-400 text-center">
-          You&apos;ll be asked to log in or create a free account first.
-        </p>
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-100" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-xs text-gray-400 uppercase tracking-wider">or</span>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4 text-center">
-          <p className="text-sm text-emerald-800 font-medium mb-1">
-            🎓 Subscribe &amp; get ebooks included
-          </p>
-          <p className="text-xs text-emerald-600 mb-3">
-            Intermediary (KSh 100/mo) includes the Trading Guide. Premium (KSh 500/mo) includes all ebooks.
-          </p>
-          <Link
-            href="/auth/register?plan=intermediary"
-            className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:text-emerald-900 underline underline-offset-2"
-          >
-            Get started from KSh 100/mo →
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Other ebooks for cross-sell
   const otherProducts = allProducts.filter((p) => p.id !== productId);
 
   return (
@@ -395,6 +112,10 @@ export default function EbookBuyPage() {
         <nav className="mb-8 text-sm text-gray-400">
           <Link href="/" className="hover:text-gray-600 transition-colors">
             Home
+          </Link>
+          <span className="mx-2">›</span>
+          <Link href="/store" className="hover:text-gray-600 transition-colors">
+            Store
           </Link>
           <span className="mx-2">›</span>
           <span className="text-gray-700">{product.name}</span>
@@ -471,13 +192,7 @@ export default function EbookBuyPage() {
               </div>
 
               <div className="p-6 space-y-4">
-                {ctaElement}
-
-                {purchaseError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                    {purchaseError}
-                  </div>
-                )}
+                <CheckoutPanel product={product} />
 
                 <div className="pt-4 border-t border-gray-100 space-y-3">
                   <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -486,7 +201,11 @@ export default function EbookBuyPage() {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>📱</span>
-                    <span>Instant PDF download after purchase</span>
+                    <span>Instant PDF download + email after purchase</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span>👤</span>
+                    <span>Guest checkout — no account required</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>♾️</span>

@@ -83,24 +83,36 @@ export class PaymentsService {
         const userId = data.metadata?.userId;
         const reference = data.reference;
 
-        if (!userId) {
-          this.logger.error('No userId found in webhook metadata');
-          return { received: true };
-        }
-
         if (paymentType === 'ebook') {
-          // --- Ebook purchase ---
           const productId: string = data.metadata?.productId;
           const priceKes: number = data.metadata?.price_kes ?? 0;
+          const email: string =
+            data.metadata?.email || data.customer?.email || '';
 
           if (!productId) {
             this.logger.error('Ebook webhook missing productId');
             return { received: true };
           }
+          if (!email && !userId) {
+            this.logger.error('Ebook webhook missing email and userId');
+            return { received: true };
+          }
 
-          await this.ebookService.activateFromWebhook(userId, productId, reference, priceKes);
-          this.logger.log(`[Webhook] Ebook ${productId} activated for user ${userId}`);
+          await this.ebookService.activateFromWebhook({
+            userId: userId || null,
+            email,
+            productId,
+            reference,
+            priceKes,
+          });
+          this.logger.log(
+            `[Webhook] Ebook ${productId} activated for ${email || userId}`,
+          );
         } else {
+          if (!userId) {
+            this.logger.error('No userId found in webhook metadata');
+            return { received: true };
+          }
           // --- Subscription payment (default) ---
           const plan: SubscriptionPlan = data.metadata.plan || 'premium';
 
@@ -136,7 +148,7 @@ export class PaymentsService {
    * Unified verify endpoint — inspects Paystack metadata.type to determine
    * whether this is a subscription or ebook payment, then delegates accordingly.
    */
-  async verifyAny(userId: string, reference: string) {
+  async verifyAny(userId: string | null, reference: string) {
     if (!reference) throw new BadRequestException('reference is required');
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
@@ -149,20 +161,27 @@ export class PaymentsService {
       throw new BadRequestException(json.message || 'Payment not confirmed by Paystack');
     }
 
-    const metaUserId: string = json.data?.metadata?.userId;
-    if (metaUserId && metaUserId !== userId) {
+    const metaUserId: string | undefined = json.data?.metadata?.userId;
+    if (metaUserId && userId && metaUserId !== userId) {
       throw new BadRequestException('Reference does not belong to this user');
     }
 
     const paymentType: string = json.data?.metadata?.type || 'subscription';
 
     if (paymentType === 'ebook') {
-      // Delegate to ebook service
-      const result = await this.ebookService.verifyAndActivate(userId, reference);
+      const result = await this.ebookService.verifyAndActivate(
+        reference,
+        userId || metaUserId || null,
+      );
       return { ...result, type: 'ebook' };
     }
 
-    // Default: subscription
+    if (!userId) {
+      throw new BadRequestException(
+        'Log in to activate a subscription payment. Ebook purchases can complete as a guest.',
+      );
+    }
+
     return this.activateSubscription(userId, reference, json.data?.metadata);
   }
 

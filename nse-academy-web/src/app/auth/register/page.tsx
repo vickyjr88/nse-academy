@@ -17,7 +17,7 @@ function RegisterForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Pre-fill referral code from URL and persist in localStorage
+  // Pre-fill referral code and email from URL
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) {
@@ -27,6 +27,8 @@ function RegisterForm() {
       const saved = localStorage.getItem("referralCode");
       if (saved) setReferralCode(saved);
     }
+    const prefillEmail = searchParams.get("email");
+    if (prefillEmail) setEmail(prefillEmail);
   }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {

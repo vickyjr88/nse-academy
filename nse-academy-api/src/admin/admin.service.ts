@@ -121,6 +121,7 @@ export class AdminService {
     const where: any = {};
     if (search) {
       where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
         { user: { name: { contains: search, mode: 'insensitive' } } },
         { user: { email: { contains: search, mode: 'insensitive' } } },
         { reference: { contains: search, mode: 'insensitive' } },

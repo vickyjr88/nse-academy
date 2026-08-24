@@ -88,6 +88,13 @@ export default function DashboardPage() {
       locked: tier !== "premium" || !isActive,
     },
     {
+      title: "My Downloads",
+      desc: "Ebooks and PDF guides",
+      href: "/dashboard/downloads",
+      icon: "⬇️",
+      color: "bg-teal-50 border-teal-100",
+    },
+    {
       title: "NSE Glossary",
       desc: "Look up any term instantly",
       href: "/dashboard/glossary",

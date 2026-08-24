@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralsService } from '../referrals/referrals.service';
 import { LeadsService } from '../leads/leads.service';
+import { EbookService } from '../ebook/ebook.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -14,15 +15,17 @@ export class AuthService {
     private jwt: JwtService,
     private referrals: ReferralsService,
     private leads: LeadsService,
+    private ebooks: EbookService,
   ) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
-      data: { name: dto.name, email: dto.email, passwordHash, ...(dto.phone ? { phone: dto.phone } : {}) },
+      data: { name: dto.name, email, passwordHash, ...(dto.phone ? { phone: dto.phone } : {}) },
     });
 
     if (dto.referralCode) {
@@ -32,17 +35,23 @@ export class AuthService {
     // Mark any matching lead as converted + flag in Brevo so the welcome
     // drip can branch on REGISTERED=true. Fire-and-forget — register flow
     // must not block on Brevo.
-    void this.leads.markConverted(dto.email);
+    void this.leads.markConverted(email);
+    void this.ebooks.claimPurchasesForEmail(user.id, user.email);
 
     return this.signToken(user.id, user.email);
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    void this.ebooks.claimPurchasesForEmail(user.id, user.email);
 
     return this.signToken(user.id, user.email);
   }

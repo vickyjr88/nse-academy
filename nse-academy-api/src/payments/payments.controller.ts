@@ -3,8 +3,10 @@ import type { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import * as crypto from 'crypto';
+import { VerifyReferenceDto } from '../ebook/dto/verify-reference.dto';
 
 @ApiTags('payments')
 @Controller()
@@ -50,17 +52,23 @@ export class PaymentsController {
   @Post('payments/verify')
   @HttpCode(200)
   @ApiOperation({ summary: 'Verify Paystack reference and immediately activate subscription (legacy)' })
-  async verify(@Req() req, @Body() body: { reference: string }) {
+  async verify(@Req() req, @Body() body: VerifyReferenceDto) {
     return this.paymentsService.verifyAndActivate(req.user.id, body.reference);
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('payments/verify-any')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Unified verify — auto-detects subscription vs ebook from Paystack metadata and activates accordingly' })
-  async verifyAny(@Req() req, @Body() body: { reference: string }) {
-    return this.paymentsService.verifyAny(req.user.id, body.reference);
+  @ApiOperation({
+    summary:
+      'Unified verify — auto-detects subscription vs ebook. Auth optional for guest ebook purchases.',
+  })
+  async verifyAny(
+    @Req() req: { user?: { id: string } },
+    @Body() body: VerifyReferenceDto,
+  ) {
+    return this.paymentsService.verifyAny(req.user?.id ?? null, body.reference);
   }
 
   @ApiBearerAuth()

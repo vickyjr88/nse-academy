@@ -113,7 +113,7 @@ Free users get access to the first 3 modules of the Investor's Guide covering NS
       },
       {
         q: "Can I download the course content or ebooks?",
-        a: "Intermediary subscribers can download the NSE Complete Trading Guide as a PDF. Premium subscribers can download both the NSE Complete Trading Guide and the NSE Complete Investor's Guide as PDFs. Free users cannot download PDFs but can access free lessons online.",
+        a: "Yes. Buy an ebook as a guest (no account needed) and we email you the PDF plus a download link. If you log in, everything lives under My Downloads. Intermediary subscribers can download the Trading Guide; Premium subscribers get every ebook PDF. Trying to download a guide you have not paid for takes you to checkout instead of an error.",
       },
       {
         q: "How often is new content added?",

@@ -158,7 +158,7 @@ export default function DashboardPage() {
                   highlightTier={p.recommendedTier}
                   headline={`${p.label}? You're leaving NSE returns on the table.`}
                   subline={p.urgencyAngle}
-                  ctaLabel={`Unlock ${p.recommendedTier === "intermediary" ? "Intermediary — KSh 100/mo" : "Premium — KSh 500/mo"}`}
+                  ctaLabel={`Unlock ${p.recommendedTier === "intermediary" ? "Intermediary — KSh 300/mo" : "Premium — KSh 500/mo"}`}
                 />
               </div>
             );
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                 location="dashboard_top_no_profile"
                 headline="Free tier = Getting Started chapters. The rest is locked."
                 subline="Subscribers get the trading playbook, 62-company research, and personalised stock picks."
-                ctaLabel="See plans from KSh 100/mo →"
+                ctaLabel="See plans from KSh 300/mo →"
               />
             </div>
           )}
@@ -243,7 +243,7 @@ export default function DashboardPage() {
               <div>
                 <h3 className="text-xl font-bold mb-1">Unlock the full NSE Academy</h3>
                 <p className="text-emerald-200 text-sm">
-                  Stock Advisor, Company Research, Trading Guide &amp; Investor&apos;s Guide — from KSh 100/mo.
+                  Stock Advisor, Company Research, Trading Guide &amp; Investor&apos;s Guide — from KSh 300/mo.
                 </p>
               </div>
               <Link

@@ -361,7 +361,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <p className="text-emerald-100 mb-7 max-w-xl mx-auto">
                 {featuredEbook
                   ? `${featuredEbook.name} — 13 chapters covering stock picking, dividend laddering, position sizing and exit strategy on the NSE.`
-                  : "Subscribe from KSh 100/mo for weekly NSE research, deep-dive company analysis, and personalised stock picks."}
+                  : "Subscribe from KSh 300/mo for weekly NSE research, deep-dive company analysis, and personalised stock picks."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {featuredEbook ? (
@@ -399,7 +399,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   }}
                   className="inline-block border border-emerald-300/50 text-emerald-50 font-semibold px-7 py-3.5 rounded-xl hover:bg-emerald-800/40 transition-colors text-sm"
                 >
-                  Or subscribe from KSh 100/mo
+                  Or subscribe from KSh 300/mo
                 </TrackedLink>
               </div>
               <p className="mt-5 text-xs text-emerald-200">

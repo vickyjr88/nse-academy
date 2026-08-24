@@ -136,7 +136,7 @@ Free users get access to the first 3 modules of the Investor's Guide covering NS
 
 Free (KSh 0) — Investor profiler quiz, first 3 course modules, NSE glossary, basic stock profiles. No credit card required.
 
-Intermediary (KSh 100/month) — Everything in Free plus the full NSE Complete Trading Guide course (7 chapters, all 62 companies, brokers, strategies), Trading Guide PDF download.
+Intermediary (KSh 300/month) — Everything in Free plus the full NSE Complete Trading Guide course (7 chapters, all 62 companies, brokers, strategies), Trading Guide PDF download.
 
 Premium (KSh 500/month) — Everything in Intermediary plus the full 13-chapter NSE Investor's Guide, personalized stock advisor, company research tool, both ebook PDFs, and priority support.`,
       },

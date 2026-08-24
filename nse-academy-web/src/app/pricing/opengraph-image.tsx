@@ -93,7 +93,7 @@ export default function Image() {
           </div>
           <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 700 }}>Intermediary</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ color: "#0f172a", fontSize: 36, fontWeight: 800 }}>KSh 100</span>
+            <span style={{ color: "#0f172a", fontSize: 36, fontWeight: 800 }}>KSh 300</span>
             <span style={{ color: "#94a3b8", fontSize: 16 }}>/mo</span>
           </div>
           {["Full trading guide", "62 companies", "Stockbroker guide"].map((f) => (

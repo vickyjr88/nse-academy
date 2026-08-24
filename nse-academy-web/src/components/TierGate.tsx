@@ -9,7 +9,7 @@ const TIER_NAMES: Record<Tier, string> = {
 };
 
 const TIER_PRICES: Record<string, string> = {
-  intermediary: "KSh 100/mo",
+  intermediary: "KSh 300/mo",
   premium: "KSh 500/mo",
 };
 
@@ -91,7 +91,7 @@ export function TierGate({ required, currentTier, loading, featureName, children
           <p className="mt-4 text-sm text-gray-400">
             Or start with{" "}
             <Link href="/dashboard/billing" className="text-emerald-600 hover:underline font-medium">
-              Intermediary at KSh 100/mo
+              Intermediary at KSh 300/mo
             </Link>
           </p>
         )}

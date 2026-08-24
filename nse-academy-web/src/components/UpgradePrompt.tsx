@@ -18,7 +18,7 @@ interface UpgradePromptProps {
 }
 
 const TIER_PRICE: Record<"intermediary" | "premium", string> = {
-  intermediary: "KSh 100/mo",
+  intermediary: "KSh 300/mo",
   premium: "KSh 500/mo",
 };
 

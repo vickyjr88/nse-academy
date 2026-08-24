@@ -12,7 +12,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "NSE Academy — The Complete Investor's Guide to the Nairobi Securities Exchange",
   description:
-    "Build a real NSE portfolio with the Complete Investor's Guide (KSh 999) or subscribe from KSh 100/mo. Stock picks, deep-dive research, dividend laddering, and a personalised learning path for Kenyan investors.",
+    "Build a real NSE portfolio with the Complete Investor's Guide (KSh 999) or subscribe from KSh 300/mo. Stock picks, deep-dive research, dividend laddering, and a personalised learning path for Kenyan investors.",
   openGraph: {
     title: "NSE Academy — Build Your NSE Portfolio With Confidence",
     description:
@@ -67,7 +67,7 @@ const features = [
 const pricingTiers = [
   {
     name: "Intermediary",
-    price: "KSh 100",
+    price: "KSh 300",
     period: "/month",
     badge: "Start here",
     features: [
@@ -77,7 +77,7 @@ const pricingTiers = [
       "Trading Guide PDF",
       "Cancel anytime",
     ],
-    cta: "Start Intermediary — KSh 100/mo",
+    cta: "Start Intermediary — KSh 300/mo",
     href: "/auth/register?plan=intermediary",
     highlighted: false,
   },
@@ -225,7 +225,7 @@ export default async function LandingPage() {
                 eventProps={{ intent: "intermediary" }}
                 className="inline-flex items-center justify-center gap-2 bg-white border border-emerald-300 text-emerald-800 text-base font-semibold px-7 py-4 rounded-xl hover:bg-emerald-50 transition-colors"
               >
-                Or subscribe from KSh 100/mo
+                Or subscribe from KSh 300/mo
               </TrackedLink>
             </div>
 

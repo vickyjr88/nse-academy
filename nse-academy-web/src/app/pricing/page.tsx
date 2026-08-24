@@ -26,7 +26,7 @@ const pricingTiers = [
   },
   {
     name: "Intermediary",
-    price: "KSh 100",
+    price: "KSh 300",
     period: "/month",
     features: [
       "Everything in Free",

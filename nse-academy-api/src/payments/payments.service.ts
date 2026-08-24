@@ -7,7 +7,7 @@ import { EbookService } from '../ebook/ebook.service';
 export type SubscriptionPlan = 'intermediary' | 'premium';
 
 const PLAN_PRICES: Record<SubscriptionPlan, number> = {
-  intermediary: 10000, // KSh 100 in kobo
+  intermediary: 30000, // KSh 300 in kobo
   premium: 50000,      // KSh 500 in kobo
 };
 

@@ -191,7 +191,7 @@ function CourseCard({ course, tier }: { course: StrapiCourse; tier: Tier }) {
       {!accessible ? (
         <div className="px-6 py-8 text-center bg-gray-50">
           <p className="text-sm text-gray-500 mb-4">
-            Upgrade to <span className="font-semibold">{required === "intermediary" ? "Intermediary (KSh 100/mo)" : "Premium (KSh 500/mo)"}</span> to access this course.
+            Upgrade to <span className="font-semibold">{required === "intermediary" ? "Intermediary (KSh 300/mo)" : "Premium (KSh 500/mo)"}</span> to access this course.
           </p>
           <Link
             href="/dashboard/billing"
@@ -339,7 +339,7 @@ export default function LearnPage() {
             location="learn_top"
             highlightTier="intermediary"
             headline="You're reading 3 of 13 chapters."
-            subline="The next 10 cover stock picking, dividend laddering, position sizing, and the NSE exit framework. Unlock from KSh 100/mo."
+            subline="The next 10 cover stock picking, dividend laddering, position sizing, and the NSE exit framework. Unlock from KSh 300/mo."
           />
         </div>
       )}

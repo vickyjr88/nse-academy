@@ -324,7 +324,7 @@ export default function CheckoutPanel({ product }: Props) {
   const ctaLabel = (() => {
     if (busy) return "Please wait…";
     if (payPath === "premium") return "Subscribe Premium — KSh 500/mo →";
-    if (payPath === "intermediary") return "Subscribe Intermediary — KSh 100/mo →";
+    if (payPath === "intermediary") return "Subscribe Intermediary — KSh 300/mo →";
     return `Buy now — KSh ${product.price.toLocaleString("en-KE")} →`;
   })();
 
@@ -350,7 +350,7 @@ export default function CheckoutPanel({ product }: Props) {
                 if (!isLoggedIn) setAuthMode("register");
               }}
               title="Intermediary subscription"
-              price="KSh 100/mo"
+              price="KSh 300/mo"
               detail="This guide + the full Trading Guide course. Cancel anytime."
               badge="Best for this book"
             />

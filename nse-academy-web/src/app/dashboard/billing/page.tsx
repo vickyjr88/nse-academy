@@ -21,7 +21,7 @@ const UPGRADE_OPTIONS: { plan: "intermediary" | "premium"; label: string; price:
   {
     plan: "intermediary",
     label: "Intermediary",
-    price: "KSh 100/mo",
+    price: "KSh 300/mo",
     features: [
       "NSE Complete Trading Guide course",
       "62 NSE-listed companies deep dive",

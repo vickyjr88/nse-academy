@@ -68,9 +68,12 @@ export class BrevoService {
 
   /**
    * Create or update a contact in Brevo. Idempotent via updateEnabled.
+   * Returns whether the upsert actually succeeded so bulk callers can tell
+   * a real sync from a silently-swallowed failure - existing callers that
+   * only `await` this and ignore the result are unaffected.
    */
-  async upsertContact(input: BrevoContactInput): Promise<void> {
-    if (this.warnIfDisabled()) return;
+  async upsertContact(input: BrevoContactInput): Promise<boolean> {
+    if (this.warnIfDisabled()) return false;
     const body = {
       email: input.email.toLowerCase(),
       attributes: input.attributes ?? {},
@@ -79,12 +82,14 @@ export class BrevoService {
     };
     try {
       await this.request('POST', '/contacts', body);
+      return true;
     } catch (err) {
       this.log.error(
         `Brevo upsertContact failed for ${input.email}: ${
           (err as Error).message
         }`,
       );
+      return false;
     }
   }
 

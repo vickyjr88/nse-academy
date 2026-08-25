@@ -24,7 +24,12 @@ export function ComposeEmail() {
   const [confirmed, setConfirmed] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ campaignId: number; audienceCount: number } | null>(null);
+  const [success, setSuccess] = useState<{
+    campaignId: number;
+    audienceCount: number;
+    failedCount: number;
+    failedEmails: string[];
+  } | null>(null);
 
   useEffect(() => {
     setAudienceLoading(true);
@@ -98,10 +103,25 @@ export function ComposeEmail() {
           <Alert
             closeLabel="Close"
             title="Sent"
-            variant="success"
+            variant={success.failedCount > 0 ? 'warning' : 'success'}
             onClose={() => setSuccess(null)}
           >
             Campaign #{success.campaignId} sent to {success.audienceCount.toLocaleString()} users.
+            {success.failedCount > 0 && (
+              <>
+                {' '}
+                {success.failedCount.toLocaleString()} user{success.failedCount === 1 ? '' : 's'} could not
+                be synced to Brevo and did NOT receive this email:
+                <Box
+                  paddingTop={2}
+                  style={{ maxHeight: '160px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '12px' }}
+                >
+                  {success.failedEmails.map((email) => (
+                    <div key={email}>{email}</div>
+                  ))}
+                </Box>
+              </>
+            )}
           </Alert>
         </Box>
       )}

@@ -28,10 +28,14 @@ export class BroadcastService {
     return { count };
   }
 
-  private async syncAudienceToBrevo(tier: Tier | undefined, listId: number): Promise<number> {
+  private async syncAudienceToBrevo(
+    tier: Tier | undefined,
+    listId: number,
+  ): Promise<{ synced: number; failedEmails: string[] }> {
     const where = this.audienceWhere(tier);
     let skip = 0;
     let synced = 0;
+    const failedEmails: string[] = [];
 
     for (;;) {
       const users = await this.prisma.user.findMany({
@@ -45,25 +49,35 @@ export class BroadcastService {
 
       for (let i = 0; i < users.length; i += SYNC_CONCURRENCY) {
         const batch = users.slice(i, i + SYNC_CONCURRENCY);
-        await Promise.all(
+        const results = await Promise.all(
           batch.map((u) =>
-            this.brevo.upsertContact({
-              email: u.email,
-              attributes: { FIRSTNAME: u.name },
-              listIds: [listId],
-            }),
+            this.brevo
+              .upsertContact({
+                email: u.email,
+                attributes: { FIRSTNAME: u.name },
+                listIds: [listId],
+              })
+              .then((ok) => ({ email: u.email, ok })),
           ),
         );
+        for (const r of results) {
+          if (r.ok) synced++;
+          else failedEmails.push(r.email);
+        }
       }
 
-      synced += users.length;
       skip += SYNC_PAGE_SIZE;
     }
 
-    return synced;
+    return { synced, failedEmails };
   }
 
-  async composeAndSend(dto: ComposeBroadcastDto): Promise<{ campaignId: number; audienceCount: number }> {
+  async composeAndSend(dto: ComposeBroadcastDto): Promise<{
+    campaignId: number;
+    audienceCount: number;
+    failedCount: number;
+    failedEmails: string[];
+  }> {
     const listIdRaw = this.config.get<string>('BREVO_BROADCAST_LIST_ID');
     const listId = listIdRaw ? parseInt(listIdRaw, 10) : NaN;
     if (!listId || Number.isNaN(listId)) {
@@ -72,11 +86,20 @@ export class BroadcastService {
       );
     }
 
-    const audienceCount = await this.syncAudienceToBrevo(dto.tier, listId);
+    const { synced: audienceCount, failedEmails } = await this.syncAudienceToBrevo(dto.tier, listId);
     if (audienceCount === 0) {
-      throw new BadRequestException('No users match this audience - nothing to send');
+      throw new BadRequestException(
+        failedEmails.length > 0
+          ? `Could not sync any users to Brevo - all ${failedEmails.length} attempts failed. Check BREVO_API_KEY and server logs.`
+          : 'No users match this audience - nothing to send',
+      );
     }
 
+    if (failedEmails.length > 0) {
+      this.logger.warn(
+        `${failedEmails.length} user(s) failed to sync to Brevo and will NOT receive this broadcast: ${failedEmails.join(', ')}`,
+      );
+    }
     this.logger.log(`Synced ${audienceCount} users to Brevo list ${listId} for a broadcast`);
 
     try {
@@ -89,7 +112,7 @@ export class BroadcastService {
       await this.brevo.sendCampaignNow(campaign.id);
 
       this.logger.log(`Sent broadcast campaign ${campaign.id} to ${audienceCount} users`);
-      return { campaignId: campaign.id, audienceCount };
+      return { campaignId: campaign.id, audienceCount, failedCount: failedEmails.length, failedEmails };
     } catch (err) {
       // Surface the real reason to the admin UI rather than a generic 500 -
       // the audience is already synced at this point, so this is almost

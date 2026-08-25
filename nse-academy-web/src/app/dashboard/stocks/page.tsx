@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TierGate } from "@/components/TierGate";
+import { SetAlertModal } from "@/components/SetAlertModal";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,7 @@ export default function StocksPage() {
   const [data, setData] = useState<AdvisorData | null>(null);
   const [loading, setLoading] = useState(true);
   const { tier, loading: subLoading } = useSubscription();
+  const [alertTicker, setAlertTicker] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -132,6 +134,13 @@ export default function StocksPage() {
                 </div>
               )}
             </div>
+
+            <button
+              onClick={() => setAlertTicker(stock.ticker)}
+              className="mt-4 w-full h-9 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+            >
+              🔔 Set alert
+            </button>
           </div>
         ))}
       </div>
@@ -141,6 +150,10 @@ export default function StocksPage() {
           <p>No specific matches found for your criteria yet.</p>
           <p className="text-xs mt-1">Try updating your profile or check back later.</p>
         </div>
+      )}
+
+      {alertTicker && (
+        <SetAlertModal ticker={alertTicker} onClose={() => setAlertTicker(null)} />
       )}
     </div>
   );

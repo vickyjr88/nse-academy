@@ -25,6 +25,8 @@ model User {
   trades           Trade[]
   holdings         Holding[]
   statementImports StatementImport[]
+  priceAlerts      PriceAlert[]
+  notifications    Notification[]
 }
 
 model EbookPurchase {
@@ -251,4 +253,34 @@ model StatementImport {
   createdAt    DateTime  @default(now())
 
   @@index([userId])
+}
+
+model PriceAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  ticker      String
+  targetPrice Float
+  direction   String // ABOVE | BELOW
+  status      String    @default("pending") // pending | triggered | cancelled
+  createdAt   DateTime  @default(now())
+  triggeredAt DateTime?
+
+  @@index([userId])
+  @@index([ticker, status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String // e.g. "PRICE_ALERT" - kept generic for future reuse
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

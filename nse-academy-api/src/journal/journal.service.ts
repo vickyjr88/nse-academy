@@ -3,44 +3,17 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
 import { UpdateTradeDto } from './dto/update-trade.dto';
-import { BROKER_SEED } from './brokers.seed';
 import { parseCdscStatement } from './statement-parser';
 
 @Injectable()
-export class JournalService implements OnModuleInit {
+export class JournalService {
   private readonly logger = new Logger(JournalService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
-  async onModuleInit() {
-    await this.seedBrokers();
-  }
-
-  private async seedBrokers() {
-    for (const broker of BROKER_SEED) {
-      await this.prisma.broker.upsert({
-        where: { name: broker.name },
-        update: {
-          cdaCode: broker.cdaCode,
-          feePercent: broker.feePercent,
-          cdsRequired: broker.cdsRequired,
-        },
-        create: broker,
-      });
-    }
-  }
-
-  listBrokers() {
-    return this.prisma.broker.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-    });
-  }
 
   private async findBrokerOrThrow(brokerId: string) {
     const broker = await this.prisma.broker.findUnique({ where: { id: brokerId } });

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service';
 import { EbookService } from '../ebook/ebook.service';
+import { computeEffectiveTier } from '../auth/effective-tier.util';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 
@@ -237,7 +238,8 @@ export class PaymentsService {
     const sub = await this.prisma.subscription.findUnique({
       where: { userId },
     });
+    const { effectiveTier } = await computeEffectiveTier(this.prisma, userId);
 
-    return sub || { tier: 'free', status: 'none' };
+    return { ...(sub || { tier: 'free', status: 'none' }), effectiveTier };
   }
 }

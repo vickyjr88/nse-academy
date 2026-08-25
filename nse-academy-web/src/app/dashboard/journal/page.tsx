@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/ebook";
+import { useSubscription } from "@/hooks/useSubscription";
+import { TierGate } from "@/components/TierGate";
 import {
   type Broker,
   type CreateTradeInput,
@@ -15,6 +17,7 @@ import {
   listBrokers,
   listTrades,
 } from "@/lib/journal";
+import { type PriceAlert, deleteAlert, listAlerts } from "@/lib/alerts";
 
 const KES = new Intl.NumberFormat("en-KE", { maximumFractionDigits: 2 });
 
@@ -31,10 +34,12 @@ function emptyForm(): CreateTradeInput {
 
 export default function JournalPage() {
   const router = useRouter();
+  const { tier, loading: subLoading } = useSubscription();
   const [loading, setLoading] = useState(true);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateTradeInput>(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -44,10 +49,16 @@ export default function JournalPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadAll() {
-    const [t, b, p] = await Promise.all([listTrades(), listBrokers(), getPortfolio()]);
+    const [t, b, p, a] = await Promise.all([listTrades(), listBrokers(), getPortfolio(), listAlerts()]);
     setTrades(t);
     setBrokers(b);
     setPortfolio(p);
+    setAlerts(a);
+  }
+
+  async function handleDeleteAlert(id: string) {
+    await deleteAlert(id);
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
   }
 
   useEffect(() => {
@@ -56,10 +67,15 @@ export default function JournalPage() {
       router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard/journal")}`);
       return;
     }
+    if (subLoading) return;
+    if (tier === "free") {
+      setLoading(false);
+      return;
+    }
     loadAll()
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, tier, subLoading]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,8 +121,16 @@ export default function JournalPage() {
       ? (form.quantity * form.pricePerShare * selectedBroker.feePercent) / 100
       : 0;
 
-  if (loading) {
+  if (subLoading || loading) {
     return <div className="text-center py-20 text-gray-400">Loading your journal…</div>;
+  }
+
+  if (tier === "free") {
+    return (
+      <TierGate required="intermediary" currentTier={tier} loading={false} featureName="Trade Journal">
+        {null}
+      </TierGate>
+    );
   }
 
   return (
@@ -360,6 +384,48 @@ export default function JournalPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* Price alerts */}
+      <div className="mt-10">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">My Alerts</h2>
+        {alerts.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            No alerts set. Set one from the Stock Advisor to get notified when a price target is hit.
+          </p>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm divide-y divide-gray-50">
+            {alerts.map((a) => (
+              <div key={a.id} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold px-2 py-1 rounded bg-emerald-50 text-emerald-700">
+                    {a.ticker}
+                  </span>
+                  <span className="text-sm text-gray-700">
+                    {a.direction === "ABOVE" ? "Above ↑" : "Below ↓"} KES {KES.format(a.targetPrice)}
+                  </span>
+                  <span
+                    className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${
+                      a.status === "triggered"
+                        ? "bg-blue-50 text-blue-700"
+                        : a.status === "pending"
+                          ? "bg-gray-50 text-gray-500"
+                          : "bg-gray-50 text-gray-400"
+                    }`}
+                  >
+                    {a.status}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteAlert(a.id)}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

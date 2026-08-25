@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import MarketTicker from "@/components/MarketTicker";
+import { NotificationBell } from "@/components/NotificationBell";
 import { identifyUser, resetIdentity, trackEvent } from "@/lib/analytics";
 
 function HamburgerIcon({ open }: { open: boolean }) {
@@ -208,13 +209,16 @@ export default function DashboardLayout({
               {PAGE_TITLES[pathname] || "Dashboard"}
             </h1>
           </div>
-          {user ? (
-            <span className="text-sm text-gray-500">
-              Hello, {user.name.split(" ")[0]} 👋
-            </span>
-          ) : loading ? (
-            <span className="text-sm text-gray-300 animate-pulse">Loading…</span>
-          ) : null}
+          <div className="flex items-center gap-4">
+            {user && <NotificationBell />}
+            {user ? (
+              <span className="text-sm text-gray-500">
+                Hello, {user.name.split(" ")[0]} 👋
+              </span>
+            ) : loading ? (
+              <span className="text-sm text-gray-300 animate-pulse">Loading…</span>
+            ) : null}
+          </div>
         </div>
 
         <div className="p-4 md:p-6">

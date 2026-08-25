@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { TierGuard } from './tier.guard';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { LeadsModule } from '../leads/leads.module';
 import { EbookModule } from '../ebook/ebook.module';
@@ -20,7 +21,7 @@ import { EbookModule } from '../ebook/ebook.module';
     EbookModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [JwtModule],
+  providers: [AuthService, JwtStrategy, TierGuard],
+  exports: [JwtModule, TierGuard],
 })
 export class AuthModule {}

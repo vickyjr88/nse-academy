@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { deriveEffectiveTier } from '../auth/effective-tier.util';
 
 @Injectable()
 export class UsersService {
@@ -17,12 +18,7 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     const { passwordHash: _, ...safe } = user;
     const orgLicense = safe.orgMembership?.org?.license;
-    const corporateActive =
-      orgLicense?.status === 'active' &&
-      orgLicense.currentPeriodEnd > new Date();
-    const effectiveTier = corporateActive
-      ? 'premium'
-      : safe.subscription?.tier ?? 'free';
+    const effectiveTier = deriveEffectiveTier(safe.subscription, orgLicense);
     return { ...safe, effectiveTier };
   }
 

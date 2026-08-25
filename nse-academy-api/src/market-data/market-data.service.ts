@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertsService } from '../alerts/alerts.service';
 import axios from 'axios';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class MarketDataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly alertsService: AlertsService,
   ) {}
 
   /**
@@ -67,6 +69,10 @@ export class MarketDataService {
             data: dataToSave,
           });
           this.logger.log(`Successfully saved ${stocks.length} stock snapshots in ${Date.now() - start}ms.`);
+
+          await this.alertsService
+            .checkAlertsForTickers(dataToSave.map((s) => ({ ticker: s.ticker, price: s.price })))
+            .catch((err) => this.logger.error(`Alert check failed: ${err.message}`));
         }
       } else {
         this.logger.warn('Market API returned success:false or invalid data structure.');

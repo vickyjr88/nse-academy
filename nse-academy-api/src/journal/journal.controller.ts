@@ -15,6 +15,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TierGuard } from '../auth/tier.guard';
+import { RequireTier } from '../auth/tier.decorator';
 import { JournalService } from './journal.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
 import { UpdateTradeDto } from './dto/update-trade.dto';
@@ -23,16 +25,11 @@ const MAX_STATEMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
 @ApiTags('journal')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TierGuard)
+@RequireTier('intermediary')
 @Controller('journal')
 export class JournalController {
   constructor(private journal: JournalService) {}
-
-  @Get('brokers')
-  @ApiOperation({ summary: 'List active brokers and their fee rates' })
-  listBrokers() {
-    return this.journal.listBrokers();
-  }
 
   @Get('trades')
   @ApiOperation({ summary: 'List the current user trade journal entries' })

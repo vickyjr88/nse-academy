@@ -82,9 +82,7 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export function listBrokers(): Promise<Broker[]> {
-  return fetch(apiUrl("/journal/brokers"), { headers: authHeaders() }).then((r) =>
-    handle<Broker[]>(r),
-  );
+  return fetch(apiUrl("/brokers")).then((r) => handle<Broker[]>(r));
 }
 
 export function listTrades(): Promise<Trade[]> {

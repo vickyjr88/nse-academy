@@ -8,6 +8,9 @@ export interface Subscription {
   status: string;
   freeMonths?: number;
   currentPeriodEnd?: string;
+  // Accounts for active corporate/SACCO org membership, which has no
+  // personal Subscription row but should still unlock premium features.
+  effectiveTier?: Tier;
 }
 
 const TIER_LEVEL: Record<Tier, number> = { free: 0, intermediary: 1, premium: 2 };
@@ -29,7 +32,7 @@ export function useSubscription() {
       .finally(() => setLoading(false));
   }, []);
 
-  const tier: Tier = sub?.tier ?? "free";
+  const tier: Tier = sub?.effectiveTier ?? sub?.tier ?? "free";
 
   function canAccess(required: Tier): boolean {
     return TIER_LEVEL[tier] >= TIER_LEVEL[required];

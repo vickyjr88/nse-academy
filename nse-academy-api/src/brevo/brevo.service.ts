@@ -147,6 +147,42 @@ export class BrevoService {
     }
   }
 
+  /**
+   * Create a Brevo email campaign targeting one or more contact lists.
+   * Unlike the other methods here, this throws on failure rather than
+   * swallowing errors - the broadcast feature needs to know a send actually
+   * worked before reporting success to an admin sending to real users.
+   */
+  async createCampaign(input: {
+    name: string;
+    subject: string;
+    htmlContent: string;
+    listIds: number[];
+  }): Promise<{ id: number }> {
+    if (!this.apiKey) {
+      throw new Error('BREVO_API_KEY is not set - cannot create a campaign');
+    }
+    const result = await this.request<{ id: number }>('POST', '/emailCampaigns', {
+      name: input.name,
+      subject: input.subject,
+      htmlContent: input.htmlContent,
+      sender: { email: this.senderEmail, name: this.senderName },
+      recipients: { listIds: input.listIds },
+    });
+    if (!result?.id) {
+      throw new Error('Brevo did not return a campaign id');
+    }
+    return result;
+  }
+
+  /** Triggers immediate sending of a previously created campaign. */
+  async sendCampaignNow(campaignId: number): Promise<void> {
+    if (!this.apiKey) {
+      throw new Error('BREVO_API_KEY is not set - cannot send a campaign');
+    }
+    await this.request('POST', `/emailCampaigns/${campaignId}/sendNow`);
+  }
+
   private async request<T = unknown>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,

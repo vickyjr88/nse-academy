@@ -83,6 +83,44 @@ interface GoogleAnalytics {
   dailyStats: Array<{ date: string; users: number; views: number }>;
 }
 
+interface JournalFeatures {
+  trades: {
+    total: number;
+    buy: number;
+    sell: number;
+    usersWithTrades: number;
+    topTickers: Array<{ ticker: string; count: number }>;
+  };
+  portfolio: {
+    aggregateCostBasisKes: number;
+  };
+  priceAlerts: {
+    total: number;
+    pending: number;
+    triggered: number;
+    cancelled: number;
+    usersWithAlerts: number;
+  };
+  dividends: {
+    total: number;
+    totalAmountKes: number;
+    manual: number;
+    cdscImport: number;
+  };
+  realizedGains: {
+    totalKes: number;
+    closedPositions: number;
+  };
+  statementImports: {
+    total: number;
+    completed: number;
+    failed: number;
+  };
+  brokers: {
+    activeCount: number;
+  };
+}
+
 interface AnalyticsData {
   overview: Overview;
   userGrowth: MonthCount[];
@@ -91,6 +129,7 @@ interface AnalyticsData {
   referrals: Referrals;
   investorProfiles: InvestorProfiles;
   googleAnalytics: GoogleAnalytics | null; // Added GA
+  journalFeatures: JournalFeatures;
 }
 
 const COLORS = ['#4945FF', '#7B79FF', '#66B7F1', '#0C75AF', '#AC73E5'];
@@ -201,7 +240,7 @@ export function Dashboard() {
     );
   }
 
-  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics } = data;
+  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures } = data;
 
   const tierPieData = [
     { name: 'Free', value: overview.tierBreakdown.free },
@@ -218,6 +257,17 @@ export function Dashboard() {
     name,
     value,
   }));
+
+  const alertStatusPieData = [
+    { name: 'Pending', value: journalFeatures.priceAlerts.pending },
+    { name: 'Triggered', value: journalFeatures.priceAlerts.triggered },
+    { name: 'Cancelled', value: journalFeatures.priceAlerts.cancelled },
+  ];
+
+  const dividendSourcePieData = [
+    { name: 'Manual', value: journalFeatures.dividends.manual },
+    { name: 'CDSC Import', value: journalFeatures.dividends.cdscImport },
+  ];
 
   return (
     <Box padding={8}>
@@ -440,6 +490,113 @@ export function Dashboard() {
         <Typography textColor="neutral600" variant="pi">
           Investor Profiles: {investorProfiles.total.toLocaleString()} total · Avg risk score: {investorProfiles.avgRiskScore}/100
         </Typography>
+      </Box>
+
+      {/* Trade Journal */}
+      <SectionTitle>Trade Journal</SectionTitle>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        <StatCard label="Total Trades" value={journalFeatures.trades.total.toLocaleString()} />
+        <StatCard label="Buy / Sell" value={`${journalFeatures.trades.buy} / ${journalFeatures.trades.sell}`} />
+        <StatCard label="Users With Trades" value={journalFeatures.trades.usersWithTrades.toLocaleString()} />
+        <StatCard label="Aggregate Cost Basis (KES)" value={journalFeatures.portfolio.aggregateCostBasisKes.toLocaleString(undefined, { maximumFractionDigits: 0 })} />
+      </div>
+
+      <Box background="neutral0" padding={4} hasRadius shadow="filterShadow">
+        <Typography variant="delta">Most Traded Tickers</Typography>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={journalFeatures.trades.topTickers} margin={{ top: 15, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F6F6F9" />
+            <XAxis dataKey="ticker" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="count" fill="#4945FF" name="Trades" />
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
+
+      {/* Price Alerts + Dividends side by side */}
+      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <SectionTitle>Price Alerts</SectionTitle>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <StatCard label="Total Alerts" value={journalFeatures.priceAlerts.total} />
+            <StatCard label="Users With Alerts" value={journalFeatures.priceAlerts.usersWithAlerts} />
+          </div>
+          <Box background="neutral0" padding={4} hasRadius shadow="filterShadow">
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={alertStatusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {alertStatusPieData.map((_entry, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </div>
+
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <SectionTitle>Dividends</SectionTitle>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <StatCard label="Total Logged" value={journalFeatures.dividends.total} />
+            <StatCard label="Total Amount (KES)" value={journalFeatures.dividends.totalAmountKes.toLocaleString(undefined, { maximumFractionDigits: 0 })} />
+          </div>
+          <Box background="neutral0" padding={4} hasRadius shadow="filterShadow">
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={dividendSourcePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {dividendSourcePieData.map((_entry, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </div>
+      </div>
+
+      {/* Realized Gains + Statement Imports */}
+      <SectionTitle>Portfolio Performance & Statement Imports</SectionTitle>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        <StatCard
+          label="Total Realized Gain/Loss (KES)"
+          value={journalFeatures.realizedGains.totalKes.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+        />
+        <StatCard label="Closed Positions" value={journalFeatures.realizedGains.closedPositions} />
+        <StatCard label="Active Brokers Listed" value={journalFeatures.brokers.activeCount} />
+      </div>
+
+      <Box background="neutral0" hasRadius shadow="filterShadow">
+        <Box padding={4} paddingBottom={2}>
+          <Typography variant="delta">CDSC Statement Imports</Typography>
+        </Box>
+        <Table colCount={2} rowCount={2}>
+          <Thead>
+            <Tr>
+              <Th><Typography variant="sigma">Status</Typography></Th>
+              <Th><Typography variant="sigma">Count</Typography></Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            <Tr>
+              <Td><Typography>Completed</Typography></Td>
+              <Td><Typography>{journalFeatures.statementImports.completed.toLocaleString()}</Typography></Td>
+            </Tr>
+            <Tr>
+              <Td><Typography>Failed</Typography></Td>
+              <Td><Typography>{journalFeatures.statementImports.failed.toLocaleString()}</Typography></Td>
+            </Tr>
+          </Tbody>
+        </Table>
+        <Box padding={4} paddingTop={2}>
+          <Typography textColor="neutral600" variant="pi">
+            Total imports attempted: {journalFeatures.statementImports.total.toLocaleString()}
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );

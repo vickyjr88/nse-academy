@@ -95,6 +95,16 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/compose-email`,
+      icon: Message,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.compose-email`,
+        defaultMessage: 'Compose Email',
+      },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
@@ -133,6 +143,11 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/stock-prices`,
       Component: React.lazy(() => import('./pages/StockPricesList').then((m) => ({ default: m.StockPricesList }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/compose-email`,
+      Component: React.lazy(() => import('./pages/ComposeEmail').then((m) => ({ default: m.ComposeEmail }))),
     });
 
     app.router.addRoute({

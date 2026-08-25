@@ -18,6 +18,7 @@ import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { BroadcastModule } from './broadcast/broadcast.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -42,6 +43,7 @@ import { AppService } from './app.service';
     JournalModule,
     BrokersModule,
     AlertsModule,
+    BroadcastModule,
   ],
   controllers: [AppController],
   providers: [AppService],

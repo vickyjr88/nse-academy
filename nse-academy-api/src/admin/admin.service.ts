@@ -443,7 +443,7 @@ export class AdminService {
       intermediary: tierStats.find(t => t.tier === 'intermediary')?._count ?? 0,
       premium: tierStats.find(t => t.tier === 'premium')?._count ?? 0,
     };
-    const estimatedMRR = tierBreakdown.intermediary * 100 + tierBreakdown.premium * 500;
+    const estimatedMRR = tierBreakdown.intermediary * 300 + tierBreakdown.premium * 500;
 
     const [userGrowthRaw, subTrendRaw] = await Promise.all([
       this.prisma.$queryRaw<GrowthRow[]>`
@@ -501,6 +501,83 @@ export class AdminService {
       this.prisma.investorProfile.aggregate({ _avg: { riskScore: true } }),
     ]);
 
+    const [
+      totalTrades,
+      tradesBySide,
+      usersWithTrades,
+      topTickersRaw,
+      costBasisRaw,
+      totalAlerts,
+      alertsByStatus,
+      usersWithAlerts,
+      totalDividends,
+      dividendAmountRaw,
+      dividendsBySource,
+      realizedGainRaw,
+      realizedGainCount,
+      totalStatementImports,
+      importsByStatus,
+      totalBrokers,
+    ] = await Promise.all([
+      this.prisma.trade.count(),
+      this.prisma.trade.groupBy({ by: ['side'], _count: true }),
+      this.prisma.trade.findMany({ select: { userId: true }, distinct: ['userId'] }).then(r => r.length),
+      this.prisma.$queryRaw<Array<{ ticker: string; count: bigint }>>`
+        SELECT ticker, COUNT(*) AS count FROM "Trade"
+        GROUP BY ticker ORDER BY count DESC LIMIT 10`,
+      this.prisma.$queryRaw<[{ total: number | null }]>`
+        SELECT SUM(quantity * "avgCost") AS total FROM "Holding" WHERE "avgCost" IS NOT NULL`,
+      this.prisma.priceAlert.count(),
+      this.prisma.priceAlert.groupBy({ by: ['status'], _count: true }),
+      this.prisma.priceAlert.findMany({ select: { userId: true }, distinct: ['userId'] }).then(r => r.length),
+      this.prisma.dividend.count(),
+      this.prisma.dividend.aggregate({ _sum: { amountKes: true } }),
+      this.prisma.dividend.groupBy({ by: ['source'], _count: true }),
+      this.prisma.realizedGain.aggregate({ _sum: { realizedGainKes: true } }),
+      this.prisma.realizedGain.count(),
+      this.prisma.statementImport.count(),
+      this.prisma.statementImport.groupBy({ by: ['status'], _count: true }),
+      this.prisma.broker.count({ where: { isActive: true } }),
+    ]);
+
+    const journalFeatures = {
+      trades: {
+        total: totalTrades,
+        buy: tradesBySide.find(t => t.side === 'BUY')?._count ?? 0,
+        sell: tradesBySide.find(t => t.side === 'SELL')?._count ?? 0,
+        usersWithTrades,
+        topTickers: topTickersRaw.map(r => ({ ticker: r.ticker, count: Number(r.count) })),
+      },
+      portfolio: {
+        aggregateCostBasisKes: Number(costBasisRaw[0]?.total ?? 0),
+      },
+      priceAlerts: {
+        total: totalAlerts,
+        pending: alertsByStatus.find(a => a.status === 'pending')?._count ?? 0,
+        triggered: alertsByStatus.find(a => a.status === 'triggered')?._count ?? 0,
+        cancelled: alertsByStatus.find(a => a.status === 'cancelled')?._count ?? 0,
+        usersWithAlerts,
+      },
+      dividends: {
+        total: totalDividends,
+        totalAmountKes: dividendAmountRaw._sum.amountKes ?? 0,
+        manual: dividendsBySource.find(d => d.source === 'MANUAL')?._count ?? 0,
+        cdscImport: dividendsBySource.find(d => d.source === 'CDSC_IMPORT')?._count ?? 0,
+      },
+      realizedGains: {
+        totalKes: realizedGainRaw._sum.realizedGainKes ?? 0,
+        closedPositions: realizedGainCount,
+      },
+      statementImports: {
+        total: totalStatementImports,
+        completed: importsByStatus.find(i => i.status === 'completed')?._count ?? 0,
+        failed: importsByStatus.find(i => i.status === 'failed')?._count ?? 0,
+      },
+      brokers: {
+        activeCount: totalBrokers,
+      },
+    };
+
     let googleAnalytics: any = null;
     if (this.analyticsClient) {
       try {
@@ -550,6 +627,7 @@ export class AdminService {
       userGrowth,
       subscriptionTrend,
       googleAnalytics, // Added GA data
+      journalFeatures,
       lessonProgress: {
         totalCompletions,
         uniqueLearners: Number(uniqueLearnersRaw[0].count),

@@ -40,6 +40,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/brokers": "Open Broker Account",
   "/dashboard/stocks": "Stock Advisor",
   "/dashboard/journal": "Trade Journal",
+  "/dashboard/journal/performance": "Portfolio Performance",
   "/dashboard/research": "Research",
   "/dashboard/glossary": "Glossary",
   "/dashboard/referrals": "Refer Friends",

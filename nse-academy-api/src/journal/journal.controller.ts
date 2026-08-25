@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -20,6 +21,9 @@ import { RequireTier } from '../auth/tier.decorator';
 import { JournalService } from './journal.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
 import { UpdateTradeDto } from './dto/update-trade.dto';
+import { CreateDividendDto } from './dto/create-dividend.dto';
+import { UpdateDividendDto } from './dto/update-dividend.dto';
+import { RealizedGainsQueryDto } from './dto/realized-gains-query.dto';
 
 const MAX_STATEMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -60,9 +64,24 @@ export class JournalController {
   }
 
   @Get('portfolio')
-  @ApiOperation({ summary: 'Get current holdings and cost basis, computed from trades' })
+  @ApiOperation({ summary: 'Get current holdings, cost basis, and live valuation computed from trades' })
   getPortfolio(@Req() req: { user: { id: string } }) {
     return this.journal.getPortfolio(req.user.id);
+  }
+
+  @Get('realized-gains')
+  @ApiOperation({ summary: 'Portfolio performance: realized gain/loss summary, optionally filtered by year' })
+  getRealizedGainsSummary(
+    @Req() req: { user: { id: string } },
+    @Query() query: RealizedGainsQueryDto,
+  ) {
+    return this.journal.getRealizedGainsSummary(req.user.id, query.year);
+  }
+
+  @Get('realized-gains/trades')
+  @ApiOperation({ summary: 'Chronological list of realized gain/loss entries, one per SELL trade' })
+  listRealizedGains(@Req() req: { user: { id: string } }) {
+    return this.journal.listRealizedGains(req.user.id);
   }
 
   @Post('statements/import')
@@ -87,5 +106,39 @@ export class JournalController {
   @ApiOperation({ summary: 'List past statement imports for the current user' })
   listStatementImports(@Req() req: { user: { id: string } }) {
     return this.journal.listStatementImports(req.user.id);
+  }
+
+  @Get('dividends')
+  @ApiOperation({ summary: 'List the current user dividend entries' })
+  listDividends(@Req() req: { user: { id: string } }) {
+    return this.journal.listDividends(req.user.id);
+  }
+
+  @Post('dividends')
+  @ApiOperation({ summary: 'Log a dividend payment' })
+  createDividend(@Req() req: { user: { id: string } }, @Body() body: CreateDividendDto) {
+    return this.journal.createDividend(req.user.id, body);
+  }
+
+  @Put('dividends/:id')
+  @ApiOperation({ summary: 'Update a dividend entry' })
+  updateDividend(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Body() body: UpdateDividendDto,
+  ) {
+    return this.journal.updateDividend(req.user.id, id, body);
+  }
+
+  @Delete('dividends/:id')
+  @ApiOperation({ summary: 'Delete a dividend entry' })
+  deleteDividend(@Req() req: { user: { id: string } }, @Param('id') id: string) {
+    return this.journal.deleteDividend(req.user.id, id);
+  }
+
+  @Get('dividends/yield-on-cost')
+  @ApiOperation({ summary: 'Trailing-12-month dividend yield on cost basis, per ticker' })
+  getYieldOnCost(@Req() req: { user: { id: string } }) {
+    return this.journal.getYieldOnCost(req.user.id);
   }
 }

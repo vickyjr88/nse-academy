@@ -8,6 +8,16 @@
 //   B17 FAIDA INVESTMENT BANK
 //   01-JUL-26 Balance Brought Forward 1000
 //   2026-07-14 Sale 1000 4000            <- optional movement lines
+//   2026-07-14 Dividend 4500             <- optional dividend line (unconfirmed
+//                                            exact format - only one real
+//                                            statement was available to test
+//                                            against, and it had none. Kept
+//                                            deliberately tolerant: matches any
+//                                            "Particulars" containing the word
+//                                            "Dividend" and takes the FIRST
+//                                            number after it, not the last, in
+//                                            case a trailing running-balance
+//                                            column follows the amount.)
 //   31-JUL-26 Balance Carried Forward 1000
 
 export interface ParsedHolding {
@@ -18,11 +28,19 @@ export interface ParsedHolding {
   closingBalance: number;
 }
 
+export interface ParsedDividend {
+  ticker: string;
+  cdaCode: string;
+  amountKes: number;
+  paymentDate: Date | null;
+}
+
 export interface ParsedStatement {
   accountNo: string | null;
   periodStart: Date | null;
   periodEnd: Date | null;
   holdings: ParsedHolding[];
+  dividends: ParsedDividend[];
 }
 
 // PDF text extractors vary in how they space this layout out - pdfplumber
@@ -37,6 +55,9 @@ const CUSTODIAN_LINE = /^(\S+)\s+(.+)$/;
 const BALANCE_LINE = /Balance\s*(?:Brought|Carried)\s*Forward\s*(-?[\d,]+)\s*$/;
 const ACCOUNT_NO_LINE = /Acount No:\s*(\S+)/i;
 const PERIOD_LINE = /Statement of Account between\s+([\d-A-Za-z]+)\s+and\s+([\d-A-Za-z]+)/i;
+// Movement lines start with either a "YYYY-MM-DD" or "DD-MMM-YY(YY)" date.
+const MOVEMENT_DATE_LINE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}-[A-Za-z]{3}-\d{2,4})\b/;
+const DIVIDEND_LINE = /Dividend.*?(-?[\d,]+(?:\.\d+)?)/i;
 
 function parseStatementDate(raw: string): Date | null {
   // CDSC dates look like "01-JUL-26" or "31-JUL-26"
@@ -51,6 +72,15 @@ function parseStatementDate(raw: string): Date | null {
   if (month === undefined) return null;
   const year = m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10);
   return new Date(Date.UTC(year, month, day));
+}
+
+// Movement lines (Sale/Purchase/Dividend) are dated "YYYY-MM-DD", distinct
+// from the "DD-MMM-YY" format used by the Balance Forward header dates.
+function parseMovementDate(raw: string): Date | null {
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return new Date(Date.UTC(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10)));
 }
 
 export function parseCdscStatement(text: string): ParsedStatement {
@@ -75,6 +105,7 @@ export function parseCdscStatement(text: string): ParsedStatement {
   }
 
   const holdings: ParsedHolding[] = [];
+  const dividends: ParsedDividend[] = [];
   let currentTicker: string | null = null;
   let currentCompany: string | null = null;
   let currentCda: string | null = null;
@@ -115,11 +146,30 @@ export function parseCdscStatement(text: string): ParsedStatement {
       continue;
     }
 
+    const isMovementLine = MOVEMENT_DATE_LINE.test(line);
+
+    // A dividend movement line, e.g. "2026-07-14 Dividend 4500" - only once
+    // the custodian for this block is known, since a dividend needs a CDA
+    // code to resolve a broker at import time.
+    if (isMovementLine && currentCda) {
+      const divMatch = line.match(DIVIDEND_LINE);
+      if (divMatch) {
+        const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})/);
+        dividends.push({
+          ticker: currentTicker,
+          cdaCode: currentCda,
+          amountKes: parseFloat(divMatch[1].replace(/,/g, '')),
+          paymentDate: dateMatch ? parseMovementDate(dateMatch[1]) : null,
+        });
+        continue;
+      }
+    }
+
     // A custodian/broker line follows the security header and precedes
     // balance lines, e.g. "EQBC EQUITY BANK LTD CUSTODY" or
     // "B12 AIB - AXYS AFRICA LIMITED". Skip lines already matched above
     // and lines that are clearly movement rows (start with a date).
-    if (currentCda === null && !/^\d{4}-\d{2}-\d{2}/.test(line) && !/^\d{1,2}-[A-Za-z]{3}-\d{2,4}/.test(line)) {
+    if (currentCda === null && !isMovementLine) {
       const custMatch = line.match(CUSTODIAN_LINE);
       if (custMatch) {
         currentCda = custMatch[1];
@@ -129,5 +179,5 @@ export function parseCdscStatement(text: string): ParsedStatement {
   }
   flush();
 
-  return { accountNo, periodStart, periodEnd, holdings };
+  return { accountNo, periodStart, periodEnd, holdings, dividends };
 }

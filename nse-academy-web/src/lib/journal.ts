@@ -33,11 +33,28 @@ export interface PortfolioPosition {
   quantity: number;
   avgCost: number | null;
   costBasisKes: number | null;
+  currentPrice: number | null;
+  marketValueKes: number | null;
+  unrealizedGainKes: number | null;
+}
+
+export interface ConsolidatedPosition {
+  ticker: string;
+  companyName: string | null;
+  quantity: number;
+  avgCost: number | null;
+  costBasisKes: number | null;
+  currentPrice: number | null;
+  marketValueKes: number | null;
+  unrealizedGainKes: number | null;
 }
 
 export interface Portfolio {
   positions: PortfolioPosition[];
+  consolidated: ConsolidatedPosition[];
   totalCostBasisKes: number;
+  totalMarketValueKes: number;
+  totalUnrealizedGainKes: number;
 }
 
 export interface StatementImportRecord {

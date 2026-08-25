@@ -27,6 +27,8 @@ model User {
   statementImports StatementImport[]
   priceAlerts      PriceAlert[]
   notifications    Notification[]
+  dividends        Dividend[]
+  realizedGains    RealizedGain[]
 }
 
 model EbookPurchase {
@@ -196,8 +198,10 @@ model Broker {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  trades   Trade[]
-  holdings Holding[]
+  trades        Trade[]
+  holdings      Holding[]
+  dividends     Dividend[]
+  realizedGains RealizedGain[]
 }
 
 model Holding {
@@ -218,22 +222,23 @@ model Holding {
 }
 
 model Trade {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
   brokerId      String
-  broker        Broker   @relation(fields: [brokerId], references: [id])
+  broker        Broker        @relation(fields: [brokerId], references: [id])
   ticker        String
   companyName   String?
   side          String // BUY | SELL
   quantity      Int
   pricePerShare Float
-  feesKes       Float    @default(0) // computed from broker.feePercent at entry time, editable
+  feesKes       Float         @default(0) // computed from broker.feePercent at entry time, editable
   totalKes      Float // quantity * pricePerShare (+/- feesKes depending on side)
   tradeDate     DateTime
   notes         String?
-  source        String   @default("MANUAL") // MANUAL | CDSC_IMPORT
-  createdAt     DateTime @default(now())
+  source        String        @default("MANUAL") // MANUAL | CDSC_IMPORT
+  createdAt     DateTime      @default(now())
+  gainRecord    RealizedGain?
 
   @@index([userId])
   @@index([userId, ticker])
@@ -283,4 +288,44 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+model Dividend {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  brokerId    String
+  broker      Broker   @relation(fields: [brokerId], references: [id])
+  ticker      String
+  companyName String?
+  amountKes   Float // net amount received, post-withholding-tax
+  paymentDate DateTime
+  source      String   @default("MANUAL") // MANUAL | CDSC_IMPORT
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, ticker])
+}
+
+model RealizedGain {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  tradeId         String   @unique
+  trade           Trade    @relation(fields: [tradeId], references: [id])
+  brokerId        String
+  broker          Broker   @relation(fields: [brokerId], references: [id])
+  ticker          String
+  companyName     String?
+  quantity        Int
+  proceedsKes     Float // quantity * sellPrice - sellFees
+  costBasisKes    Float // quantity * avgCost at time of sale
+  realizedGainKes Float // proceedsKes - costBasisKes
+  tradeDate       DateTime // denormalized from Trade.tradeDate for period queries
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, tradeDate])
+  @@index([userId, ticker])
 }

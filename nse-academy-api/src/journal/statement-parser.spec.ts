@@ -78,4 +78,59 @@ EQBC EQUITY BANK LTD CUSTODY
       { ticker: 'KCB', companyName: 'KCB BANK', cdaCode: 'EQBC', custodianName: 'EQUITY BANK LTD CUSTODY', closingBalance: 500 },
     ]);
   });
+
+  // NOTE: dividend line format is UNCONFIRMED against a real CDSC statement -
+  // only one real statement was available for testing and it had no
+  // dividend payments in its period. These fixtures are synthetic, built
+  // from the documented "Date* Particulars Debit Credit Balance" column
+  // format. Revisit if a real dividend-bearing statement becomes available.
+  it('extracts a dividend movement line with a simple trailing amount', () => {
+    const text = `
+SCOMO0000 [ SAFARICOM PLC ] [ ORDINARY ]
+EQBC EQUITY BANK LTD CUSTODY
+01-JUL-26 Balance Brought Forward 1000
+2026-07-14 Dividend 4500
+31-JUL-26 Balance Carried Forward 1000
+`;
+    const result = parseCdscStatement(text);
+    expect(result.dividends).toEqual([
+      { ticker: 'SCOM', cdaCode: 'EQBC', amountKes: 4500, paymentDate: new Date(Date.UTC(2026, 6, 14)) },
+    ]);
+  });
+
+  it('takes the first number after "Dividend", not a trailing running-balance column', () => {
+    const text = `
+KEGNO0000 [ KENGEN ] [ ORDINARY ]
+B17 FAIDA INVESTMENT BANK
+01-JUL-26 Balance Brought Forward 500
+2026-07-20 Dividend Payment 1250.50 45600
+31-JUL-26 Balance Carried Forward 500
+`;
+    const result = parseCdscStatement(text);
+    expect(result.dividends).toEqual([
+      { ticker: 'KEGN', cdaCode: 'B17', amountKes: 1250.5, paymentDate: new Date(Date.UTC(2026, 6, 20)) },
+    ]);
+  });
+
+  it('supports multiple dividend lines within the same security/custodian block', () => {
+    const text = `
+HAFRO0000 [ HOME AFRICA ] [ ORDINARY ]
+EQBC EQUITY BANK LTD CUSTODY
+01-JUL-26 Balance Brought Forward 2000
+2026-07-05 Dividend 1000
+2026-07-19 Dividend 800
+31-JUL-26 Balance Carried Forward 2000
+`;
+    const result = parseCdscStatement(text);
+    expect(result.dividends).toEqual([
+      { ticker: 'HAFR', cdaCode: 'EQBC', amountKes: 1000, paymentDate: new Date(Date.UTC(2026, 6, 5)) },
+      { ticker: 'HAFR', cdaCode: 'EQBC', amountKes: 800, paymentDate: new Date(Date.UTC(2026, 6, 19)) },
+    ]);
+  });
+
+  it('returns no dividends when the statement has none, without affecting holdings', () => {
+    const result = parseCdscStatement(SAMPLE_STATEMENT);
+    expect(result.dividends).toEqual([]);
+    expect(result.holdings.length).toBe(4);
+  });
 });

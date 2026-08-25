@@ -37,7 +37,11 @@ jobs:
             docker compose down
 
             echo "==> Building images"
-            docker compose build --pull
+            if ! docker compose build --pull; then
+              echo "==> Build failed, clearing BuildKit cache and retrying once"
+              docker builder prune -af
+              docker compose build --pull
+            fi
 
             echo "==> Starting stack"
             docker compose up -d

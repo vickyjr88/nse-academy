@@ -4,7 +4,7 @@ import posthog from 'posthog-js';
 
 /**
  * Thin guarded wrappers around posthog-js. Safe to call before init, on the
- * server, or when the key isn't configured — they no-op silently rather than
+ * server, or when the key isn't configured - they no-op silently rather than
  * throwing. All event capture should go through these so we have a single
  * place to add sampling / consent / mask logic later.
  */
@@ -45,7 +45,7 @@ export function identifyUser(
 
 /**
  * Clear identity on logout so the next anonymous session isn't conflated
- * with the previous user. Use sparingly — only on explicit logout.
+ * with the previous user. Use sparingly - only on explicit logout.
  */
 export function resetIdentity(): void {
   if (!isReady()) return;

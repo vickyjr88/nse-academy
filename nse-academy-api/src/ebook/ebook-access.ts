@@ -6,7 +6,7 @@
  * Encoding used by getStatus / the web app:
  *  - null      → all ebooks (active premium)
  *  - string[]  → those product IDs (active intermediary, or [] for none)
- * Never return JS `undefined` and never coalesce empty access to `null` —
+ * Never return JS `undefined` and never coalesce empty access to `null` -
  * the frontend treats `null` as "all products".
  */
 

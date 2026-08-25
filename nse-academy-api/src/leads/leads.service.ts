@@ -90,7 +90,7 @@ export class LeadsService {
       },
     });
 
-    // Fire-and-forget Brevo sync — must not block the capture response.
+    // Fire-and-forget Brevo sync - must not block the capture response.
     // The service handles missing API key + per-call errors internally.
     void this.syncToBrevo(lead, input.magnetSlug);
 
@@ -104,7 +104,7 @@ export class LeadsService {
   private async syncToBrevo(lead: Lead, magnetSlug: string): Promise<void> {
     if (!this.brevo.hasCredentials()) return;
 
-    // Brevo contact attributes — UPPERCASE keys, must match the contact
+    // Brevo contact attributes - UPPERCASE keys, must match the contact
     // attributes you've defined in your Brevo project. The standard ones
     // (FIRSTNAME, LASTNAME) live by default; the rest you create once in the
     // Brevo dashboard.
@@ -119,7 +119,7 @@ export class LeadsService {
       UTM_CAMPAIGN: lead.utmCampaign,
       REGISTERED: false,
     };
-    // Strip nulls — Brevo accepts them but they clutter the contact panel.
+    // Strip nulls - Brevo accepts them but they clutter the contact panel.
     for (const k of Object.keys(attributes)) {
       if (attributes[k] === null || attributes[k] === undefined) {
         delete attributes[k];
@@ -132,7 +132,7 @@ export class LeadsService {
     });
 
     // Send the PDF email. Prefer an admin-managed Brevo template if one is
-    // configured — otherwise fall back to a simple inline HTML email so this
+    // configured - otherwise fall back to a simple inline HTML email so this
     // works out of the box.
     const downloadUrl = `${this.siteUrl}/lead-magnet/${magnetSlug}`;
     if (this.brevoTemplateId) {
@@ -151,7 +151,7 @@ export class LeadsService {
       const firstName = (attributes.FIRSTNAME as string | undefined) ?? '';
       await this.brevo.sendTransactional({
         to: { email: lead.email, name: lead.name ?? undefined },
-        subject: 'Your free chapter — NSE Academy',
+        subject: 'Your free chapter - NSE Academy',
         htmlContent: this.renderDefaultMagnetEmail(firstName, downloadUrl),
         textContent: this.renderDefaultMagnetEmailText(firstName, downloadUrl),
         tags: ['lead-magnet', `magnet:${magnetSlug}`],
@@ -177,14 +177,14 @@ export class LeadsService {
   </p>
   <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
     Over the next few days we'll send you a short series with what we wish every Kenyan
-    investor knew before their first NSE trade — how CDS accounts work, which brokers to
+    investor knew before their first NSE trade - how CDS accounts work, which brokers to
     consider, and how to read company filings.
   </p>
   <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
     Reply to this email if you have any questions. We read every one.
   </p>
   <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    — The NSE Academy team<br/>
+    - The NSE Academy team<br/>
     <a href="${this.siteUrl}" style="color: #047857;">${this.siteUrl.replace(/^https?:\/\//, '')}</a>
   </p>
 </body></html>`;
@@ -202,12 +202,12 @@ Thanks for grabbing the free chapter of the Complete NSE Investor's Guide.
 Download: ${downloadUrl}
 
 Over the next few days we'll send you a short series with what we wish every
-Kenyan investor knew before their first NSE trade — how CDS accounts work,
+Kenyan investor knew before their first NSE trade - how CDS accounts work,
 which brokers to consider, and how to read company filings.
 
 Reply to this email if you have any questions. We read every one.
 
-— The NSE Academy team
+- The NSE Academy team
 ${this.siteUrl}
 `;
   }
@@ -230,7 +230,7 @@ ${this.siteUrl}
     });
   }
 
-  /** Tick the download counter — called from the success page on link click. */
+  /** Tick the download counter - called from the success page on link click. */
   async recordDownload(id: string): Promise<Lead> {
     const lead = await this.prisma.lead.findUnique({ where: { id } });
     if (!lead) throw new NotFoundException('Lead not found');

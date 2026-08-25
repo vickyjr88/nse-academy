@@ -52,7 +52,7 @@ export default function ContactPage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
 
-          {/* Left — info */}
+          {/* Left - info */}
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Get in touch</h1>
             <p className="text-gray-500 text-lg mb-10 leading-relaxed">
@@ -114,7 +114,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Right — form */}
+          {/* Right - form */}
           <div>
             {status === "success" ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-4 py-16">

@@ -86,7 +86,7 @@ interface CourseLesson {
 }
 
 // All lessons across every module of the course, ordered module.order → lesson.id.
-// We need this so prev/next can cross chapter boundaries — otherwise the last
+// We need this so prev/next can cross chapter boundaries - otherwise the last
 // lesson of a module is a dead-end for the reader.
 async function fetchCourseLessons(courseId: number): Promise<CourseLesson[]> {
   try {
@@ -122,7 +122,7 @@ export async function generateMetadata({
   const { lesson: lessonId } = await params;
   const lesson = await fetchLesson(lessonId);
   return {
-    title: lesson ? `${lesson.title} — NSE Academy` : "Lesson — NSE Academy",
+    title: lesson ? `${lesson.title} - NSE Academy` : "Lesson - NSE Academy",
   };
 }
 
@@ -213,7 +213,7 @@ export default async function LessonPage({
           </p>
         </div>
 
-        {/* Progress bar — shows position in module */}
+        {/* Progress bar - shows position in module */}
         {moduleLessons.length > 1 && currentIdx >= 0 && (
           <div className="mb-8">
             <div className="flex justify-between text-xs text-gray-400 mb-1">

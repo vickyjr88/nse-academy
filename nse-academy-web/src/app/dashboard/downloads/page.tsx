@@ -107,7 +107,7 @@ export default function DownloadsPage() {
           </p>
           <p className="text-xs text-emerald-600 mt-0.5">
             {status?.subscriberAccessProducts === null
-              ? "Download any guide below — no extra charge."
+              ? "Download any guide below - no extra charge."
               : "Upgrade to Premium for every guide."}
           </p>
         </div>
@@ -117,7 +117,7 @@ export default function DownloadsPage() {
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-8 py-5 border-b border-gray-50 bg-emerald-50/30">
             <h2 className="text-lg font-bold text-gray-900">Your library</h2>
-            <p className="text-xs text-gray-500">Click download — the PDF also lives in your inbox.</p>
+            <p className="text-xs text-gray-500">Click download - the PDF also lives in your inbox.</p>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             {downloadable.map((product) => {
@@ -172,7 +172,7 @@ export default function DownloadsPage() {
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
           <p className="text-lg font-medium text-gray-700">No downloads yet</p>
           <p className="text-sm text-gray-400 mt-1 mb-6">
-            Buy a guide as a guest or with your account — it will show up here after you log in.
+            Buy a guide as a guest or with your account - it will show up here after you log in.
           </p>
           <Link
             href="/store"

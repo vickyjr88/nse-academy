@@ -15,7 +15,7 @@ export class ReferralsService {
     const referrer = await this.prisma.user.findUnique({ where: { referralCode } });
     if (!referrer || referrer.id === newUserId) return;
 
-    // One referral per user — ignore if already recorded
+    // One referral per user - ignore if already recorded
     const existing = await this.prisma.referral.findUnique({ where: { referredId: newUserId } });
     if (existing) return;
 
@@ -65,7 +65,7 @@ export class ReferralsService {
         },
       });
     } else {
-      // User hasn't subscribed yet — bank the free month for when they do
+      // User hasn't subscribed yet - bank the free month for when they do
       await this.prisma.subscription.create({
         data: {
           userId,

@@ -37,14 +37,14 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
     oneLineSummary:
       "You want to protect your capital first and earn steady, predictable returns from the NSE.",
     upgradeHook:
-      "Conservative investors do best with the right banks, utilities, and dividend counters — and a written plan to stop panic-selling. That's chapters 3, 7 and 11 of the Complete Investor's Guide.",
+      "Conservative investors do best with the right banks, utilities, and dividend counters - and a written plan to stop panic-selling. That's chapters 3, 7 and 11 of the Complete Investor's Guide.",
     recommendedTier: "intermediary",
     recommendedTierPriceKes: 100,
     chapters: [
       {
         number: 3,
         title: "Low-Risk NSE Counters That Actually Preserve Capital",
-        hook: "The 11 NSE blue-chips with the lowest 5-year drawdowns — and why their balance sheets matter more than their price.",
+        hook: "The 11 NSE blue-chips with the lowest 5-year drawdowns - and why their balance sheets matter more than their price.",
       },
       {
         number: 7,
@@ -66,7 +66,7 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         ticker: "KCB",
         name: "KCB Group",
-        fitReason: "Sub-1.0 P/E with 8%+ dividend yield — capital protection with income.",
+        fitReason: "Sub-1.0 P/E with 8%+ dividend yield - capital protection with income.",
       },
       {
         ticker: "BAT",
@@ -84,14 +84,14 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
     oneLineSummary:
       "You want growth, but not at the cost of sleeping at night. A balanced NSE portfolio is your sweet spot.",
     upgradeHook:
-      "A balanced NSE portfolio is harder than it looks — too many investors hold 12 stocks that all move together. The Complete Guide's chapters 5, 8 and 10 show you how to actually diversify on a 60-stock market.",
+      "A balanced NSE portfolio is harder than it looks - too many investors hold 12 stocks that all move together. The Complete Guide's chapters 5, 8 and 10 show you how to actually diversify on a 60-stock market.",
     recommendedTier: "intermediary",
     recommendedTierPriceKes: 100,
     chapters: [
       {
         number: 5,
         title: "True Diversification on a 60-Stock Exchange",
-        hook: "Why holding KCB + EQTY + ABSA is one bet, not three — and the sector-rotation map for the NSE.",
+        hook: "Why holding KCB + EQTY + ABSA is one bet, not three - and the sector-rotation map for the NSE.",
       },
       {
         number: 8,
@@ -108,12 +108,12 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         ticker: "SCOM",
         name: "Safaricom",
-        fitReason: "Anchor growth + dividend — the textbook 'moderate' core holding.",
+        fitReason: "Anchor growth + dividend - the textbook 'moderate' core holding.",
       },
       {
         ticker: "EQTY",
         name: "Equity Group",
-        fitReason: "Regional growth story with capital discipline — diversifies the SCOM concentration.",
+        fitReason: "Regional growth story with capital discipline - diversifies the SCOM concentration.",
       },
       {
         ticker: "EABL",
@@ -124,12 +124,12 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
     ebookAngle:
       "Most moderate investors over-concentrate in banks because they're 'safe'. The ebook gives you the exact percentages that survive a banking-sector shock.",
     urgencyAngle:
-      "Q2 earnings season is loaded — Premium subscribers get the model portfolio update every Sunday.",
+      "Q2 earnings season is loaded - Premium subscribers get the model portfolio update every Sunday.",
   },
   aggressive: {
     label: "Aggressive Investor",
     oneLineSummary:
-      "You're willing to take real risk for outsized return — and you want the NSE counters that can deliver it.",
+      "You're willing to take real risk for outsized return - and you want the NSE counters that can deliver it.",
     upgradeHook:
       "Aggressive NSE positions work only when you size them correctly. Chapters 6, 9 and 12 of the Complete Guide are the position-sizing and small-cap framework you can't get from broker reports.",
     recommendedTier: "premium",
@@ -147,7 +147,7 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       },
       {
         number: 12,
-        title: "Catalyst Calendars — Earnings, AGMs & Corporate Actions",
+        title: "Catalyst Calendars - Earnings, AGMs & Corporate Actions",
         hook: "The NSE event calendar that subscribers trade off every quarter.",
       },
     ],
@@ -155,7 +155,7 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         ticker: "KQ",
         name: "Kenya Airways",
-        fitReason: "High-risk turnaround story with binary upside — sized correctly, it's an aggressive play.",
+        fitReason: "High-risk turnaround story with binary upside - sized correctly, it's an aggressive play.",
       },
       {
         ticker: "SASN",
@@ -171,12 +171,12 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
     ebookAngle:
       "Aggressive doesn't mean reckless. The ebook's position-sizing framework is what separates 'lost 80%' from 'one position blew up, portfolio still up'.",
     urgencyAngle:
-      "Premium subscribers got the small-cap catalyst report this week — three counters flagged with imminent re-rating triggers.",
+      "Premium subscribers got the small-cap catalyst report this week - three counters flagged with imminent re-rating triggers.",
   },
   growth: {
     label: "Growth Investor",
     oneLineSummary:
-      "You're not here for dividends — you want NSE counters that can double over the next 3-5 years.",
+      "You're not here for dividends - you want NSE counters that can double over the next 3-5 years.",
     upgradeHook:
       "Growth on the NSE is concentrated in a handful of counters. Miss them and your portfolio underperforms inflation. Chapters 4, 9 and 13 are the growth-pick framework you need.",
     recommendedTier: "premium",
@@ -194,7 +194,7 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       },
       {
         number: 13,
-        title: "Exit Strategy — When to Sell a Winner",
+        title: "Exit Strategy - When to Sell a Winner",
         hook: "The three signals that say 'take profits' before the rally ends.",
       },
     ],
@@ -202,7 +202,7 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         ticker: "SCOM",
         name: "Safaricom",
-        fitReason: "Still the NSE's compound machine — M-PESA, Ethiopia, and 5G all contributing.",
+        fitReason: "Still the NSE's compound machine - M-PESA, Ethiopia, and 5G all contributing.",
       },
       {
         ticker: "EQTY",
@@ -218,12 +218,12 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
     ebookAngle:
       "Growth investors who don't have a sell rule give back 60%+ of their gains. The ebook codifies the exit signals that subscribers use every quarter.",
     urgencyAngle:
-      "Growth picks of the quarter went out Monday — Premium subscribers got the updated screen and sizing recommendations.",
+      "Growth picks of the quarter went out Monday - Premium subscribers got the updated screen and sizing recommendations.",
   },
   dividend: {
     label: "Dividend Seeker",
     oneLineSummary:
-      "You want your NSE portfolio to pay you cash, reliably, every quarter — not just price appreciation.",
+      "You want your NSE portfolio to pay you cash, reliably, every quarter - not just price appreciation.",
     upgradeHook:
       "Building a real NSE dividend ladder takes more than picking high-yielders. Chapters 7, 11 and 13 of the Complete Guide are the dividend-engineer's manual for the NSE.",
     recommendedTier: "intermediary",
@@ -232,11 +232,11 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         number: 7,
         title: "Building a Dividend Ladder on the NSE",
-        hook: "Stack SCOM, KCB, EQTY, Co-op, BAT and ABSA so dividend payments land every quarter — not all in March.",
+        hook: "Stack SCOM, KCB, EQTY, Co-op, BAT and ABSA so dividend payments land every quarter - not all in March.",
       },
       {
         number: 11,
-        title: "Yield Trap Detection — When 12% Is Actually a Warning",
+        title: "Yield Trap Detection - When 12% Is Actually a Warning",
         hook: "The four signals that say 'this dividend is about to be cut'.",
       },
       {
@@ -249,12 +249,12 @@ export const INVESTOR_PERSONALIZATION: Record<InvestorTypeKey, InvestorPersonali
       {
         ticker: "BAT",
         name: "BAT Kenya",
-        fitReason: "30-year dividend track record — the gold standard for income on the NSE.",
+        fitReason: "30-year dividend track record - the gold standard for income on the NSE.",
       },
       {
         ticker: "KCB",
         name: "KCB Group",
-        fitReason: "8%+ yield with growing dividend cover — bankable income.",
+        fitReason: "8%+ yield with growing dividend cover - bankable income.",
       },
       {
         ticker: "SCOM",

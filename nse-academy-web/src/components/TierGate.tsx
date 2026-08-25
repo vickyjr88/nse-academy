@@ -84,7 +84,7 @@ export function TierGate({ required, currentTier, loading, featureName, children
           href="/dashboard/billing"
           className="inline-block bg-emerald-700 text-white font-bold px-8 py-4 rounded-2xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 w-full text-center"
         >
-          Upgrade to {TIER_NAMES[required]} — {TIER_PRICES[required]}
+          Upgrade to {TIER_NAMES[required]} - {TIER_PRICES[required]}
         </Link>
 
         {currentTier === "free" && required === "premium" && (

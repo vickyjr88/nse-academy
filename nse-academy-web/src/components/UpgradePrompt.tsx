@@ -36,7 +36,7 @@ export default function UpgradePrompt({
   const resolvedCtaLabel =
     ctaLabel ??
     (highlightTier
-      ? `Upgrade to ${highlightTier === "intermediary" ? "Intermediary" : "Premium"} — ${TIER_PRICE[highlightTier]}`
+      ? `Upgrade to ${highlightTier === "intermediary" ? "Intermediary" : "Premium"} - ${TIER_PRICE[highlightTier]}`
       : "Upgrade now →");
 
   if (variant === "banner") {

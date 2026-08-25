@@ -103,7 +103,7 @@ export default function ShareProfilePanel({
       });
       trackEvent('profile_share_native', { investor_type: investorType });
     } catch {
-      // user cancelled — ignore
+      // user cancelled - ignore
     }
   }
 

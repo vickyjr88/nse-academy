@@ -6,7 +6,7 @@ import type { LeadMagnet } from "@/lib/cms";
 
 interface Props {
   magnet: LeadMagnet;
-  /** Where on the site this form is rendered — used for attribution. */
+  /** Where on the site this form is rendered - used for attribution. */
   source?: string;
   /** Optional override for the surrounding wrapper style. */
   variant?: "card" | "inline";
@@ -92,7 +92,7 @@ export default function LeadMagnetForm({
   async function handleDownload() {
     if (!captured) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3011";
-    // Fire-and-forget — we don't want to block the download on the counter.
+    // Fire-and-forget - we don't want to block the download on the counter.
     fetch(`${apiUrl}/leads/${captured.id}/download`, { method: "POST" }).catch(
       () => {},
     );
@@ -225,7 +225,7 @@ export default function LeadMagnetForm({
             variant === "card" ? "text-emerald-200" : "text-gray-400"
           }`}
         >
-          We&apos;ll send the PDF to your email. No spam — unsubscribe anytime.
+          We&apos;ll send the PDF to your email. No spam - unsubscribe anytime.
         </p>
       </form>
     </div>

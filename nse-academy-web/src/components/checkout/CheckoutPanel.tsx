@@ -59,7 +59,7 @@ export default function CheckoutPanel({ product }: Props) {
         headers: { Authorization: `Bearer ${access}` },
       });
       if (res.status === 401) {
-        // Token rejected by the API — fall back to guest so the email
+        // Token rejected by the API - fall back to guest so the email
         // field appears instead of dead-ending on "Email is required".
         clearExpiredToken();
         setEbookStatus(null);
@@ -229,7 +229,7 @@ export default function CheckoutPanel({ product }: Props) {
       if (!isLoggedIn && payPath !== "ebook") {
         if (authMode === "guest") {
           setAuthMode("register");
-          setError("Subscriptions need an account — create one below, it takes 20 seconds.");
+          setError("Subscriptions need an account - create one below, it takes 20 seconds.");
           return;
         }
       }
@@ -280,7 +280,7 @@ export default function CheckoutPanel({ product }: Props) {
               <span className="capitalize font-bold">
                 {ebookStatus?.subscriptionTier}
               </span>{" "}
-              subscription — download free.
+              subscription - download free.
             </span>
           </div>
         )}
@@ -323,9 +323,9 @@ export default function CheckoutPanel({ product }: Props) {
 
   const ctaLabel = (() => {
     if (busy) return "Please wait…";
-    if (payPath === "premium") return "Subscribe Premium — KSh 500/mo →";
-    if (payPath === "intermediary") return "Subscribe Intermediary — KSh 300/mo →";
-    return `Buy now — KSh ${product.price.toLocaleString("en-KE")} →`;
+    if (payPath === "premium") return "Subscribe Premium - KSh 500/mo →";
+    if (payPath === "intermediary") return "Subscribe Intermediary - KSh 300/mo →";
+    return `Buy now - KSh ${product.price.toLocaleString("en-KE")} →`;
   })();
 
   return (
@@ -468,7 +468,7 @@ export default function CheckoutPanel({ product }: Props) {
 
       {isLoggedIn && (
         <p className="text-xs text-gray-500 text-center">
-          Logged in — the PDF lands in{" "}
+          Logged in - the PDF lands in{" "}
           <Link href="/dashboard/downloads" className="text-emerald-700 font-semibold">
             your library
           </Link>{" "}

@@ -436,7 +436,7 @@ async function main() {
     ebookProfiles = parseCompanyProfiles(ch13Lines);
     console.log(`Parsed ${ebookProfiles.length} profiles from ebook.\n`);
   } else {
-    console.warn(`Ebook not found at ${EBOOK_PATH} — skipping ebook parse, using supplement only.\n`);
+    console.warn(`Ebook not found at ${EBOOK_PATH} - skipping ebook parse, using supplement only.\n`);
   }
 
   // 3. Merge: ebook profiles first, then supplement any not already covered
@@ -468,15 +468,15 @@ async function main() {
 
     if (existingId) {
       if (UPSERT) {
-        process.stdout.write(`  [UPDATE] ${profile.ticker} — ${profile.company_name.slice(0, 35)}... `);
+        process.stdout.write(`  [UPDATE] ${profile.ticker} - ${profile.company_name.slice(0, 35)}... `);
         const res = await strapiPut("stock-profiles", existingId, payload);
         if (res?.data?.id) { console.log("ok"); updated++; }
         else { console.log("FAILED"); failed++; }
       } else {
-        console.log(`  [SKIP]   ${profile.ticker} — already exists (id=${existingId})`);
+        console.log(`  [SKIP]   ${profile.ticker} - already exists (id=${existingId})`);
       }
     } else {
-      process.stdout.write(`  [CREATE] ${profile.ticker} — ${profile.company_name.slice(0, 35)}... `);
+      process.stdout.write(`  [CREATE] ${profile.ticker} - ${profile.company_name.slice(0, 35)}... `);
       const res = await strapiPost("stock-profiles", payload);
       if (res?.data?.id) {
         console.log(`ok (id=${res.data.id}, risk=${profile.risk_level})`);

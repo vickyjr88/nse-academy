@@ -5,7 +5,7 @@
     "singularName": "article",
     "pluralName": "articles",
     "displayName": "Article",
-    "description": "NSE Academy blog articles — news, analysis, roundups"
+    "description": "NSE Academy blog articles - news, analysis, roundups"
   },
   "options": { "draftAndPublish": true },
   "attributes": {

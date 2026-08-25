@@ -41,7 +41,7 @@ function makeService(prisma: ReturnType<typeof mockPrisma>) {
 }
 
 describe('EbookService.getStatus', () => {
-  it('returns [] subscriber access for free / inactive users — never null', async () => {
+  it('returns [] subscriber access for free / inactive users - never null', async () => {
     const prisma = mockPrisma();
     const service = makeService(prisma);
     const status = await service.getStatus('u1');

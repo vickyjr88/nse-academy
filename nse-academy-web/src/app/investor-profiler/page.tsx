@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   },
 };
 
-// See landing page for context — same kill switch.
+// See landing page for context - same kill switch.
 const LEAD_CAPTURE_ENABLED =
   process.env.NEXT_PUBLIC_LEAD_CAPTURE_ENABLED === "true";
 

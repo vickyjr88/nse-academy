@@ -4,7 +4,7 @@ import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /**
- * Legacy ebook callback — redirects to the unified /payment/callback page
+ * Legacy ebook callback - redirects to the unified /payment/callback page
  * so all payment verification goes through one path.
  */
 function RedirectHandler() {

@@ -122,7 +122,7 @@ export default function EbookBuyPage() {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-          {/* Left column — Product details */}
+          {/* Left column - Product details */}
           <div className="lg:col-span-3 space-y-6">
             {product.thumbnail && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -153,7 +153,7 @@ export default function EbookBuyPage() {
                   "Step-by-step stock analysis methodology",
                   "Risk management strategies",
                   "Real case studies from NSE-listed companies",
-                  "Downloadable PDF — read anytime, anywhere",
+                  "Downloadable PDF - read anytime, anywhere",
                 ].map((item) => (
                   <li
                     key={item}
@@ -167,7 +167,7 @@ export default function EbookBuyPage() {
             </div>
           </div>
 
-          {/* Right column — Purchase card */}
+          {/* Right column - Purchase card */}
           <div className="lg:col-span-2">
             <div className="sticky top-24 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-100 bg-gray-50/50">
@@ -205,11 +205,11 @@ export default function EbookBuyPage() {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>👤</span>
-                    <span>Guest checkout — no account required</span>
+                    <span>Guest checkout - no account required</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>♾️</span>
-                    <span>Lifetime access — download anytime</span>
+                    <span>Lifetime access - download anytime</span>
                   </div>
                 </div>
               </div>

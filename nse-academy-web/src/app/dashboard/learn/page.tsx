@@ -220,7 +220,7 @@ function CourseCard({ course, tier }: { course: StrapiCourse; tier: Tier }) {
 }
 
 // ---------------------------------------------------------------------------
-// Investor's Guide — Free preview card (first 3 modules free)
+// Investor's Guide - Free preview card (first 3 modules free)
 // ---------------------------------------------------------------------------
 
 function InvestorsGuideFreeCard({ course, tier }: { course: StrapiCourse; tier: Tier }) {
@@ -276,7 +276,7 @@ function InvestorsGuideFreeCard({ course, tier }: { course: StrapiCourse; tier: 
               href="/dashboard/billing"
               className="inline-block bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors"
             >
-              Upgrade to Premium — KSh 500/mo →
+              Upgrade to Premium - KSh 500/mo →
             </Link>
           </div>
         )}
@@ -328,7 +328,7 @@ export default function LearnPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Course Library</h1>
         <p className="text-gray-500 mt-1">
-          From your first trade to a fully diversified NSE portfolio — learn at your own pace.
+          From your first trade to a fully diversified NSE portfolio - learn at your own pace.
         </p>
       </div>
 

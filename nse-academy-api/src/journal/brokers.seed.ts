@@ -8,7 +8,7 @@ export interface BrokerSeed {
 // CDA/agent codes match the codes CDSC prints on statements of account
 // (e.g. "B12 AIB - AXYS AFRICA LIMITED"), so statement import can match
 // holdings to a broker automatically. feePercent is an all-in flat rate
-// (commission + CDSC + NSE + IPRF levies) — approximate, editable by admins.
+// (commission + CDSC + NSE + IPRF levies) - approximate, editable by admins.
 export const BROKER_SEED: BrokerSeed[] = [
   { name: 'AIB - AXYS Africa Limited', cdaCode: 'B12', feePercent: 1.9, cdsRequired: true },
   { name: 'Faida Investment Bank', cdaCode: 'B17', feePercent: 1.9, cdsRequired: true },

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 
 export const runtime = "edge";
-export const alt = "Contact NSE Academy — We'd love to hear from you";
+export const alt = "Contact NSE Academy - We'd love to hear from you";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -28,7 +28,7 @@ export default function Image() {
         Get in touch
       </div>
       <div style={{ color: "#a7f3d0", fontSize: 24, maxWidth: 600 }}>
-        Questions, feedback, or corporate licensing enquiries — we&apos;d love to hear from you.
+        Questions, feedback, or corporate licensing enquiries - we&apos;d love to hear from you.
       </div>
       <div
         style={{

@@ -326,7 +326,7 @@ export class EbookService {
     }
 
     this.logger.log(
-      `Product ${params.productId} purchased by ${email}${userId ? ` (user ${userId})` : ' (guest)'} — ref ${params.reference}`,
+      `Product ${params.productId} purchased by ${email}${userId ? ` (user ${userId})` : ' (guest)'} - ref ${params.reference}`,
     );
     void this.ensureEbookEmailed(purchase.id);
     return {
@@ -378,7 +378,7 @@ export class EbookService {
    * Access is granted if:
    *  - The user has purchased the ebook, OR
    *  - The user's subscription tier grants access to this product.
-   * Unpaid requests return 403 with a checkout path — never a generic error.
+   * Unpaid requests return 403 with a checkout path - never a generic error.
    */
   async download(userId: string, productId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -488,7 +488,7 @@ export class EbookService {
     try {
       file = await this.fetchDexterDownload(purchase.productId);
     } catch (err) {
-      // The file never reached the buyer — give the slot back rather than
+      // The file never reached the buyer - give the slot back rather than
       // charging them a download for our own outage.
       await this.prisma.ebookPurchase
         .update({
@@ -500,7 +500,7 @@ export class EbookService {
     }
 
     this.logger.log(
-      `Guest download ${downloadCount}/${MAX_GUEST_DOWNLOADS} for ${purchase.email} — product ${purchase.productId}`,
+      `Guest download ${downloadCount}/${MAX_GUEST_DOWNLOADS} for ${purchase.email} - product ${purchase.productId}`,
     );
 
     return {
@@ -522,7 +522,7 @@ export class EbookService {
       {
         statusCode: HttpStatus.FORBIDDEN,
         code: 'DOWNLOAD_LIMIT_REACHED',
-        message: `This link has reached its limit of ${MAX_GUEST_DOWNLOADS} downloads. Log in — or create a free account — with ${purchase.email} to download your copy anytime.`,
+        message: `This link has reached its limit of ${MAX_GUEST_DOWNLOADS} downloads. Log in - or create a free account - with ${purchase.email} to download your copy anytime.`,
         productId: purchase.productId,
         email: purchase.email,
         downloadCount: purchase.downloadCount,
@@ -707,7 +707,7 @@ export class EbookService {
   }): string {
     const accountLine = opts.hasAccount
       ? `<p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-           Your account has unlimited downloads — grab it anytime from
+           Your account has unlimited downloads - grab it anytime from
            <a href="${opts.libraryUrl}" style="color: #047857;">your library</a>.
          </p>`
       : `<p style="font-size: 14px; line-height: 1.6; color: #52525b;">
@@ -722,7 +722,7 @@ export class EbookService {
   <p style="font-size: 16px; line-height: 1.6;">
     Thanks for your purchase. Download <strong>${opts.productName}</strong> using the button below.
     This link is tied to your order and works for
-    <strong>${MAX_GUEST_DOWNLOADS} downloads</strong> — keep this email so you can come back to it.
+    <strong>${MAX_GUEST_DOWNLOADS} downloads</strong> - keep this email so you can come back to it.
   </p>
   <p style="margin: 28px 0;">
     <a href="${opts.accessUrl}"
@@ -733,7 +733,7 @@ export class EbookService {
   </p>
   ${accountLine}
   <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    — The NSE Academy team<br/>
+    - The NSE Academy team<br/>
     <a href="${this.webUrl()}" style="color: #047857;">${this.webUrl().replace(/^https?:\/\//, '')}</a>
   </p>
 </body></html>`;
@@ -747,7 +747,7 @@ export class EbookService {
     hasAccount: boolean;
   }): string {
     const accountLine = opts.hasAccount
-      ? `Your account has unlimited downloads — grab it anytime from your library: ${opts.libraryUrl}`
+      ? `Your account has unlimited downloads - grab it anytime from your library: ${opts.libraryUrl}`
       : `Need more than ${MAX_GUEST_DOWNLOADS} downloads? Create a free account with this email and this ebook is yours to download anytime: ${opts.registerUrl}`;
     return `Your ebook is ready: ${opts.productName}
 
@@ -757,7 +757,7 @@ This link works for ${MAX_GUEST_DOWNLOADS} downloads, so keep this email.
 
 ${accountLine}
 
-— The NSE Academy team
+- The NSE Academy team
 ${this.webUrl()}
 `;
   }

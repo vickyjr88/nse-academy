@@ -12,11 +12,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldi
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "NSE Blog — Market News, Analysis & Weekly Roundups | NSE Academy",
+  title: "NSE Blog - Market News, Analysis & Weekly Roundups | NSE Academy",
   description:
     "Stay ahead of the Nairobi Securities Exchange with our daily updates, weekly market roundups, stock analysis, and investor education articles. Free for all Kenyan investors.",
   openGraph: {
-    title: "NSE Blog — Market News, Analysis & Weekly Roundups",
+    title: "NSE Blog - Market News, Analysis & Weekly Roundups",
     description:
       "Daily NSE updates, weekly roundups, stock deep dives, and investor education from NSE Academy.",
     type: "website",
@@ -57,7 +57,7 @@ function formatDate(iso: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Page (Server Component — ISR 60s)
+// Page (Server Component - ISR 60s)
 // ---------------------------------------------------------------------------
 
 export default async function BlogPage({
@@ -87,7 +87,7 @@ export default async function BlogPage({
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">NSE Academy Blog</h1>
           <p className="text-gray-500 text-lg max-w-2xl">
-            Daily market updates, weekly roundups, stock analysis, and investor education — everything you need to navigate the Nairobi Securities Exchange.
+            Daily market updates, weekly roundups, stock analysis, and investor education - everything you need to navigate the Nairobi Securities Exchange.
           </p>
         </div>
 

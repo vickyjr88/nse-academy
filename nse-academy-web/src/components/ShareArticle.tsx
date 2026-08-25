@@ -29,7 +29,7 @@ export default function ShareArticle({
     setSupportsWebShare(typeof navigator !== 'undefined' && 'share' in navigator);
   }, []);
 
-  const shareText = excerpt ? `${title} — ${excerpt}` : title;
+  const shareText = excerpt ? `${title} - ${excerpt}` : title;
 
   async function copyLink() {
     try {
@@ -38,7 +38,7 @@ export default function ShareArticle({
       trackEvent('article_share_link_copied', { article_slug: slug, article_category: category });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard may be blocked (insecure context or permission denied) — ignore silently.
+      // Clipboard may be blocked (insecure context or permission denied) - ignore silently.
     }
   }
 
@@ -47,7 +47,7 @@ export default function ShareArticle({
       await navigator.share({ title, text: shareText, url });
       trackEvent('article_share_native', { article_slug: slug, article_category: category });
     } catch {
-      // user cancelled — ignore
+      // user cancelled - ignore
     }
   }
 

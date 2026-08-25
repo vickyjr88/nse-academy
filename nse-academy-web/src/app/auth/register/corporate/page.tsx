@@ -122,9 +122,9 @@ function CorporateRegisterForm() {
                 onChange={(e) => setPlan(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               >
-                <option value="starter">Starter — 5 seats / KSh 1,500/month</option>
-                <option value="team">Team — 15 seats / KSh 3,500/month</option>
-                <option value="sacco">SACCO — 50 seats / KSh 10,000/month</option>
+                <option value="starter">Starter - 5 seats / KSh 1,500/month</option>
+                <option value="team">Team - 15 seats / KSh 3,500/month</option>
+                <option value="sacco">SACCO - 50 seats / KSh 10,000/month</option>
               </select>
             </div>
 

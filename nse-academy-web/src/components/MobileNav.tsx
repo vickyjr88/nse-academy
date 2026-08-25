@@ -48,7 +48,7 @@ export default function MobileNav({
 
   return (
     <>
-      {/* Hamburger button — mobile only */}
+      {/* Hamburger button - mobile only */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close menu" : "Open menu"}

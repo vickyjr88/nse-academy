@@ -62,7 +62,7 @@ export class PaymentsController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Unified verify — auto-detects subscription vs ebook. Auth optional for guest ebook purchases.',
+      'Unified verify - auto-detects subscription vs ebook. Auth optional for guest ebook purchases.',
   })
   async verifyAny(
     @Req() req: { user?: { id: string } },

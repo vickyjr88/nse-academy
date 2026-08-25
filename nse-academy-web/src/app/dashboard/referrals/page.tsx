@@ -61,7 +61,7 @@ export default function ReferralsPage() {
     if (!stats) return;
     const link = `${SITE_URL}/auth/register?ref=${stats.referralCode}`;
     const text = encodeURIComponent(
-      `Join me on NSE Academy — the best way to learn how to invest on the Nairobi Securities Exchange. Sign up free and we both get 1 month free when you subscribe! 🎁\n\n${link}`
+      `Join me on NSE Academy - the best way to learn how to invest on the Nairobi Securities Exchange. Sign up free and we both get 1 month free when you subscribe! 🎁\n\n${link}`
     );
     trackEvent("referral_link_shared", {
       referral_code: stats.referralCode,
@@ -88,7 +88,7 @@ export default function ReferralsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
         {[
           { step: "1", icon: "🔗", title: "Share your link", desc: "Copy your unique referral link and send it to anyone interested in NSE investing." },
-          { step: "2", icon: "👤", title: "Friend signs up", desc: "They register using your link. The referral is recorded automatically — no manual steps." },
+          { step: "2", icon: "👤", title: "Friend signs up", desc: "They register using your link. The referral is recorded automatically - no manual steps." },
           { step: "3", icon: "🎁", title: "Both get rewarded", desc: "When they subscribe to any paid plan, you both get 1 month of Intermediary access free." },
         ].map((s) => (
           <div key={s.step} className="bg-white border border-gray-100 rounded-2xl p-6">
@@ -202,7 +202,7 @@ export default function ReferralsPage() {
       <div className="mt-8 text-xs text-gray-400 space-y-1">
         <p>• Reward is granted when the referred user makes their first paid subscription (Intermediary or Premium).</p>
         <p>• Free month is applied as a 30-day extension to your current subscription period.</p>
-        <p>• There is no cap — refer as many friends as you like and earn a free month for each successful referral.</p>
+        <p>• There is no cap - refer as many friends as you like and earn a free month for each successful referral.</p>
         <p>• Self-referrals are not permitted. Abuse of the referral programme will result in reward forfeiture.</p>
       </div>
     </div>

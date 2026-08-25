@@ -13,7 +13,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('NSE Academy API')
-    .setDescription('REST API for NSE Academy — investor education platform')
+    .setDescription('REST API for NSE Academy - investor education platform')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

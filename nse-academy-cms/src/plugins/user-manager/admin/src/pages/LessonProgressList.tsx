@@ -152,7 +152,7 @@ export function LessonProgressList() {
               </Td>
               <Td>
                 <Typography>
-                  {progress.completedAt ? new Date(progress.completedAt).toLocaleString() : '—'}
+                  {progress.completedAt ? new Date(progress.completedAt).toLocaleString() : '-'}
                 </Typography>
               </Td>
             </Tr>

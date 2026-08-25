@@ -253,7 +253,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               )}
             </div>
 
-            {/* Share — top */}
+            {/* Share - top */}
             <ShareArticle
               url={shareUrl}
               title={article.title}
@@ -270,7 +270,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </ReactMarkdown>
             </article>
 
-            {/* Share — bottom */}
+            {/* Share - bottom */}
             <div className="mt-10">
               <ShareArticle
                 url={shareUrl}
@@ -314,7 +314,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                       }}
                       className="bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl hover:bg-emerald-800 transition-colors text-sm w-full sm:w-auto text-center"
                     >
-                      Buy now — KSh {featuredEbook.price.toLocaleString("en-KE")} →
+                      Buy now - KSh {featuredEbook.price.toLocaleString("en-KE")} →
                     </TrackedLink>
                     <TrackedLink
                       href="/auth/register?plan=premium"
@@ -360,7 +360,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </h2>
               <p className="text-emerald-100 mb-7 max-w-xl mx-auto">
                 {featuredEbook
-                  ? `${featuredEbook.name} — 13 chapters covering stock picking, dividend laddering, position sizing and exit strategy on the NSE.`
+                  ? `${featuredEbook.name} - 13 chapters covering stock picking, dividend laddering, position sizing and exit strategy on the NSE.`
                   : "Subscribe from KSh 300/mo for weekly NSE research, deep-dive company analysis, and personalised stock picks."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -375,7 +375,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     }}
                     className="inline-block bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-md"
                   >
-                    Buy the Complete Guide — KSh {featuredEbook.price.toLocaleString("en-KE")} →
+                    Buy the Complete Guide - KSh {featuredEbook.price.toLocaleString("en-KE")} →
                   </TrackedLink>
                 ) : (
                   <TrackedLink
@@ -387,7 +387,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     }}
                     className="inline-block bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-md"
                   >
-                    Start Premium — KSh 500/mo →
+                    Start Premium - KSh 500/mo →
                   </TrackedLink>
                 )}
                 <TrackedLink

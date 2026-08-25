@@ -165,7 +165,7 @@ model Lead {
   convertedAt   DateTime?
   createdAt     DateTime  @default(now())
 
-  // A given email captures once per magnet — re-submitting just updates the
+  // A given email captures once per magnet - re-submitting just updates the
   // existing record (avoids duplicate rows when users hit refresh / retry).
   @@unique([email, magnetSlug])
   @@index([magnetSlug, createdAt])

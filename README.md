@@ -4,7 +4,7 @@ The official learning and analysis platform for the Nairobi Securities Exchange 
 
 [Production Deployment Guide](./PRODUCTION.md) | [Local Setup](./README.md#local-development)
 
-> Personalized NSE investor education — discover your investor type, get a matched learning path, and build your Nairobi Stock Exchange portfolio with confidence.
+> Personalized NSE investor education - discover your investor type, get a matched learning path, and build your Nairobi Stock Exchange portfolio with confidence.
 
 **Domain:** https://nseacademy.vitaldigitalmedia.net  
 **Owner:** Victor Karanja / Infinity Digital Works
@@ -19,7 +19,7 @@ nse-academy/
 ├── nse-academy-cms/   # Strapi v5 CMS (articles, courses, lessons, glossary)
 ├── nse-academy-web/   # Next.js 16 frontend
 ├── docker-compose.yml # Local dev orchestration
-└── init-db.sql        # PostgreSQL init — creates both databases
+└── init-db.sql        # PostgreSQL init - creates both databases
 ```
 
 ---
@@ -123,10 +123,10 @@ Full interactive docs at `/api` (Swagger UI).
 See `.env.example` / `.env.local.example` in each sub-repo for required variables.
 
 **Key secrets to set in production:**
-- `JWT_SECRET` — API JWT signing key
-- `STRAPI_APP_KEYS` — 4 random keys for Strapi
-- `NEXTAUTH_SECRET` — NextAuth signing secret
-- `PAYSTACK_SECRET_KEY` — Paystack live key
+- `JWT_SECRET` - API JWT signing key
+- `STRAPI_APP_KEYS` - 4 random keys for Strapi
+- `NEXTAUTH_SECRET` - NextAuth signing secret
+- `PAYSTACK_SECRET_KEY` - Paystack live key
 
 ---
 
@@ -140,30 +140,30 @@ See `.env.example` / `.env.local.example` in each sub-repo for required variable
 
 ## Build Phases
 
-- [x] **Phase 1** — Foundation: API + CMS + Web scaffolded, auth, Docker
-- [x] **Phase 2** — Investor Profiler quiz engine + UI
-- [x] **Phase 3** — Content seeding from ebook (13 chapters → Strapi) + `/learn` + `/glossary` pages
-- [x] **Phase 4** — Stock Advisor + Paystack payments (3-tier: Free / Intermediary KSh 100 / Premium KSh 500)
-- [x] **Phase 5** — Polish + deploy to nseacademy.vitaldigitalmedia.net
+- [x] **Phase 1** - Foundation: API + CMS + Web scaffolded, auth, Docker
+- [x] **Phase 2** - Investor Profiler quiz engine + UI
+- [x] **Phase 3** - Content seeding from ebook (13 chapters → Strapi) + `/learn` + `/glossary` pages
+- [x] **Phase 4** - Stock Advisor + Paystack payments (3-tier: Free / Intermediary KSh 100 / Premium KSh 500)
+- [x] **Phase 5** - Polish + deploy to nseacademy.vitaldigitalmedia.net
 
 ---
 
 ## Seed Scripts
 
 ```bash
-# From project root — requires CMS_URL + CMS_API_TOKEN (from Strapi admin panel)
+# From project root - requires CMS_URL + CMS_API_TOKEN (from Strapi admin panel)
 npm install
 
-# Investor's Guide — 1 Course + 13 Modules + ~100 Lessons (Premium tier)
+# Investor's Guide - 1 Course + 13 Modules + ~100 Lessons (Premium tier)
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-ebook.ts
 
-# NSE Glossary — ~60 terms from Ch 2 of Investor's Guide
+# NSE Glossary - ~60 terms from Ch 2 of Investor's Guide
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-glossary.ts
 
-# Company Stock Profiles — 62 NSE companies from Ch 13+
+# Company Stock Profiles - 62 NSE companies from Ch 13+
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-stocks.ts
 
-# Trading Guide — 7 chapters + lessons (Intermediary tier)
+# Trading Guide - 7 chapters + lessons (Intermediary tier)
 CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project scripts/tsconfig.json scripts/seed-trading-guide.ts
 ```
 
@@ -171,6 +171,6 @@ CMS_URL=http://localhost:1337 CMS_API_TOKEN=<token> npx ts-node --project script
 
 | Path | Description |
 |------|-------------|
-| `/learn` | Course catalogue — modules, lessons, free/premium badges |
-| `/learn/[courseId]/[lessonId]` | Lesson viewer — markdown body, Mark Complete, prev/next |
+| `/learn` | Course catalogue - modules, lessons, free/premium badges |
+| `/learn/[courseId]/[lessonId]` | Lesson viewer - markdown body, Mark Complete, prev/next |
 | `/glossary` | A-Z glossary with client-side search |

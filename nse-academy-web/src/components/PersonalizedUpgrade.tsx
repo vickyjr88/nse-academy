@@ -86,7 +86,7 @@ export default function PersonalizedUpgrade({
               Subscribe
             </p>
             <p className="font-bold text-gray-900 text-lg leading-snug">
-              {TIER_LABELS[p.recommendedTier]} — KSh{" "}
+              {TIER_LABELS[p.recommendedTier]} - KSh{" "}
               {p.recommendedTierPriceKes.toLocaleString("en-KE")}/mo
             </p>
             <p className="text-sm text-gray-500 mt-1 mb-4">
@@ -113,7 +113,7 @@ export default function PersonalizedUpgrade({
               Or own it forever
             </p>
             <p className="font-bold text-gray-900 text-lg leading-snug">
-              Complete Investor&apos;s Guide — KSh 999
+              Complete Investor&apos;s Guide - KSh 999
             </p>
             <p className="text-sm text-gray-500 mt-1 mb-4">{p.ebookAngle}</p>
             <TrackedLink
@@ -179,7 +179,7 @@ export default function PersonalizedUpgrade({
             }}
             className="inline-block bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-800 transition-colors text-sm"
           >
-            Unlock these chapters — KSh{" "}
+            Unlock these chapters - KSh{" "}
             {p.recommendedTierPriceKes.toLocaleString("en-KE")}/mo
           </TrackedLink>
         </div>

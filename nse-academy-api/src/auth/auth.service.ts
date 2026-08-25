@@ -33,7 +33,7 @@ export class AuthService {
     }
 
     // Mark any matching lead as converted + flag in Brevo so the welcome
-    // drip can branch on REGISTERED=true. Fire-and-forget — register flow
+    // drip can branch on REGISTERED=true. Fire-and-forget - register flow
     // must not block on Brevo.
     void this.leads.markConverted(email);
     void this.ebooks.claimPurchasesForEmail(user.id, user.email);

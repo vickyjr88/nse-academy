@@ -14,7 +14,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       capture_pageview: false,
       capture_pageleave: true,
       person_profiles: 'identified_only',
-      // Session replay — sampling is configured server-side in the PostHog
+      // Session replay - sampling is configured server-side in the PostHog
       // project. We mask all <input> values and any element marked .ph-mask
       // so we never record passwords, emails, M-Pesa numbers, KRA PINs, etc.
       session_recording: {

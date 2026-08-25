@@ -173,7 +173,7 @@ export default function BillingPage() {
                   disabled={initLoading === plan}
                   className="w-full bg-emerald-700 text-white font-bold py-4 rounded-2xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
                 >
-                  {initLoading === plan ? "Redirecting…" : `Upgrade to ${label} — ${price}`}
+                  {initLoading === plan ? "Redirecting…" : `Upgrade to ${label} - ${price}`}
                 </button>
               </div>
             ))}

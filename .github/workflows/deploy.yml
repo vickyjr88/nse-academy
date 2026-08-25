@@ -67,7 +67,7 @@ jobs:
               cat /tmp/health.json
               exit 0
             fi
-            echo "Attempt $i/$attempts — got $code, retrying in 5s"
+            echo "Attempt $i/$attempts - got $code, retrying in 5s"
             sleep 5
           done
 

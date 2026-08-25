@@ -196,7 +196,7 @@ export default function ResearchPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Company Research</h1>
         <p className="text-gray-500 mt-2">
-          Select any NSE-listed company to see which investor types should consider it — and how it fits your profile.
+          Select any NSE-listed company to see which investor types should consider it - and how it fits your profile.
         </p>
       </div>
 

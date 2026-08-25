@@ -38,7 +38,7 @@ const UNLOCK_EVENT = "nse-ebook-unlock";
 /**
  * True when the JWT is structurally valid and not past its `exp`.
  * Tokens last 7 days, so a stale one is common on a returning visit.
- * A token we can't decode is treated as unusable rather than trusted —
+ * A token we can't decode is treated as unusable rather than trusted -
  * the API's optional-auth guard would treat it as anonymous anyway, and
  * trusting it here hides the guest email field and dead-ends checkout.
  */
@@ -197,7 +197,7 @@ export interface GuestAccessInfo {
 
 /**
  * Read a guest link's state WITHOUT spending one of its downloads.
- * Page loads must use this — only an explicit click may call
+ * Page loads must use this - only an explicit click may call
  * fetchGuestDownload / downloadGuestEbook, which consume a download.
  */
 export async function fetchGuestAccessInfo(

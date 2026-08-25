@@ -4,7 +4,7 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export const metadata: Metadata = {
-  title: "Pricing — NSE Academy",
+  title: "Pricing - NSE Academy",
   description: "Simple, transparent pricing for every Kenyan investor.",
 };
 

@@ -9,11 +9,11 @@ import PublicFooter from "@/components/PublicFooter";
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "FAQ — NSE Academy | Frequently Asked Questions",
+  title: "FAQ - NSE Academy | Frequently Asked Questions",
   description:
-    "Answers to your questions about NSE Academy — investor profiling, courses, pricing, stock advisor, calculators, and how to start investing on the Nairobi Securities Exchange.",
+    "Answers to your questions about NSE Academy - investor profiling, courses, pricing, stock advisor, calculators, and how to start investing on the Nairobi Securities Exchange.",
   openGraph: {
-    title: "NSE Academy FAQ — Everything You Need to Know",
+    title: "NSE Academy FAQ - Everything You Need to Know",
     description: "Comprehensive answers about NSE Academy, pricing, investor profiling, courses, and Nairobi Stock Exchange investing.",
     type: "website",
     url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/faq`,
@@ -35,11 +35,11 @@ const CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "What is NSE Academy?",
-        a: "NSE Academy is a personalized investor education platform built specifically for Kenyan investors who want to participate in the Nairobi Securities Exchange (NSE). We help you discover your investor type through a profiling quiz, then give you a tailored learning path, stock recommendations, and tools — all designed around how you invest, not a generic template.",
+        a: "NSE Academy is a personalized investor education platform built specifically for Kenyan investors who want to participate in the Nairobi Securities Exchange (NSE). We help you discover your investor type through a profiling quiz, then give you a tailored learning path, stock recommendations, and tools - all designed around how you invest, not a generic template.",
       },
       {
         q: "Who is NSE Academy for?",
-        a: "NSE Academy is for anyone interested in investing on the Nairobi Securities Exchange — whether you are a complete beginner who has never bought a share, an intermediate investor wanting to deepen your knowledge, or an experienced investor looking for a structured framework and research tools. We have content and tools for all levels.",
+        a: "NSE Academy is for anyone interested in investing on the Nairobi Securities Exchange - whether you are a complete beginner who has never bought a share, an intermediate investor wanting to deepen your knowledge, or an experienced investor looking for a structured framework and research tools. We have content and tools for all levels.",
       },
       {
         q: "Is NSE Academy officially affiliated with the Nairobi Securities Exchange?",
@@ -51,7 +51,7 @@ const CATEGORIES: FaqCategory[] = [
       },
       {
         q: "Is my personal and financial data safe?",
-        a: "Yes. We do not store any of your actual bank or brokerage account details. Your quiz responses and investor profile are stored securely in our database. Payments are processed entirely by Paystack — a PCI-DSS compliant payment processor — and we never see your card details. We do not sell your data to third parties.",
+        a: "Yes. We do not store any of your actual bank or brokerage account details. Your quiz responses and investor profile are stored securely in our database. Payments are processed entirely by Paystack - a PCI-DSS compliant payment processor - and we never see your card details. We do not sell your data to third parties.",
       },
     ],
   },
@@ -68,15 +68,15 @@ const CATEGORIES: FaqCategory[] = [
         q: "What are the investor types and what do they mean?",
         a: `NSE Academy identifies five investor types:
 
-• Conservative — You prioritise capital preservation above all else. Low-risk, dividend-paying stocks and bonds suit you best. You cannot stomach large losses.
+• Conservative - You prioritise capital preservation above all else. Low-risk, dividend-paying stocks and bonds suit you best. You cannot stomach large losses.
 
-• Moderate — You want a balance between growth and income. You accept some volatility in exchange for better long-term returns.
+• Moderate - You want a balance between growth and income. You accept some volatility in exchange for better long-term returns.
 
-• Aggressive — You are focused on maximum capital appreciation and accept significant short-term swings. Long time horizon, high risk tolerance.
+• Aggressive - You are focused on maximum capital appreciation and accept significant short-term swings. Long time horizon, high risk tolerance.
 
-• Dividend Seeker — Your primary goal is passive income through regular dividend payments. You focus on dividend yield, payout ratios, and consistency.
+• Dividend Seeker - Your primary goal is passive income through regular dividend payments. You focus on dividend yield, payout ratios, and consistency.
 
-• Growth Investor — You target companies with strong earnings growth potential. Capital appreciation over income. You often invest in emerging sectors and leaders.`,
+• Growth Investor - You target companies with strong earnings growth potential. Capital appreciation over income. You often invest in emerging sectors and leaders.`,
       },
       {
         q: "Can I retake the profiler quiz?",
@@ -84,7 +84,7 @@ const CATEGORIES: FaqCategory[] = [
       },
       {
         q: "How does my investor type affect what I see on the platform?",
-        a: "Your investor type drives three things: (1) your personalised course learning path — conservative investors see bond and dividend content first, while aggressive investors are directed toward growth and analysis modules; (2) your stock recommendations on the Stock Advisor page; and (3) your personal fit score in the Company Research tool, which shows how well any specific NSE company matches your profile.",
+        a: "Your investor type drives three things: (1) your personalised course learning path - conservative investors see bond and dividend content first, while aggressive investors are directed toward growth and analysis modules; (2) your stock recommendations on the Stock Advisor page; and (3) your personal fit score in the Company Research tool, which shows how well any specific NSE company matches your profile.",
       },
     ],
   },
@@ -97,15 +97,15 @@ const CATEGORIES: FaqCategory[] = [
         q: "What courses are available on NSE Academy?",
         a: `We currently have two full courses:
 
-1. NSE Complete Trading Guide (Intermediary tier) — 7 chapters covering stock trading basics, step-by-step account opening, all 62 NSE-listed companies by sector, licensed stockbrokers, NSE market indices, investment strategies, and top dividend stocks.
+1. NSE Complete Trading Guide (Intermediary tier) - 7 chapters covering stock trading basics, step-by-step account opening, all 62 NSE-listed companies by sector, licensed stockbrokers, NSE market indices, investment strategies, and top dividend stocks.
 
-2. NSE Complete Investor's Guide (Premium tier) — 13 chapters covering everything from NSE fundamentals to fundamental analysis, technical analysis, taxation, bonds, IPOs, three model portfolios, risk management, and detailed company profiles.
+2. NSE Complete Investor's Guide (Premium tier) - 13 chapters covering everything from NSE fundamentals to fundamental analysis, technical analysis, taxation, bonds, IPOs, three model portfolios, risk management, and detailed company profiles.
 
 Free users get access to the first 3 modules of the Investor's Guide covering NSE basics and account opening.`,
       },
       {
         q: "What chapters are available for free?",
-        a: "Free users can access: Introduction (Why Invest in the NSE), Chapter 1 (Understanding Stock Trading Basics), and Chapter 2 (Getting Started — Your Step-by-Step Guide). This gives you a solid foundation before deciding whether to upgrade.",
+        a: "Free users can access: Introduction (Why Invest in the NSE), Chapter 1 (Understanding Stock Trading Basics), and Chapter 2 (Getting Started - Your Step-by-Step Guide). This gives you a solid foundation before deciding whether to upgrade.",
       },
       {
         q: "How does the learning path work?",
@@ -121,7 +121,7 @@ Free users get access to the first 3 modules of the Investor's Guide covering NS
       },
       {
         q: "Is the NSE Glossary available for free?",
-        a: "Yes. The full NSE Glossary — covering 200+ Kenyan capital markets terms — is available to all users including free accounts. You can search alphabetically or by keyword from the Glossary page.",
+        a: "Yes. The full NSE Glossary - covering 200+ Kenyan capital markets terms - is available to all users including free accounts. You can search alphabetically or by keyword from the Glossary page.",
       },
     ],
   },
@@ -134,11 +134,11 @@ Free users get access to the first 3 modules of the Investor's Guide covering NS
         q: "What are the subscription tiers?",
         a: `NSE Academy has three tiers:
 
-Free (KSh 0) — Investor profiler quiz, first 3 course modules, NSE glossary, basic stock profiles. No credit card required.
+Free (KSh 0) - Investor profiler quiz, first 3 course modules, NSE glossary, basic stock profiles. No credit card required.
 
-Intermediary (KSh 300/month) — Everything in Free plus the full NSE Complete Trading Guide course (7 chapters, all 62 companies, brokers, strategies), Trading Guide PDF download.
+Intermediary (KSh 300/month) - Everything in Free plus the full NSE Complete Trading Guide course (7 chapters, all 62 companies, brokers, strategies), Trading Guide PDF download.
 
-Premium (KSh 500/month) — Everything in Intermediary plus the full 13-chapter NSE Investor's Guide, personalized stock advisor, company research tool, both ebook PDFs, and priority support.`,
+Premium (KSh 500/month) - Everything in Intermediary plus the full 13-chapter NSE Investor's Guide, personalized stock advisor, company research tool, both ebook PDFs, and priority support.`,
       },
       {
         q: "How do I pay? What payment methods are accepted?",
@@ -146,7 +146,7 @@ Premium (KSh 500/month) — Everything in Intermediary plus the full 13-chapter 
       },
       {
         q: "Is this a monthly subscription? Can I cancel?",
-        a: "Yes, subscriptions are monthly and you can cancel at any time. Your access continues until the end of your paid period. We do not offer refunds for partial months, but there is no lock-in — cancel with one click from your Account settings.",
+        a: "Yes, subscriptions are monthly and you can cancel at any time. Your access continues until the end of your paid period. We do not offer refunds for partial months, but there is no lock-in - cancel with one click from your Account settings.",
       },
       {
         q: "Is there an annual plan?",
@@ -173,7 +173,7 @@ Premium (KSh 500/month) — Everything in Intermediary plus the full 13-chapter 
       },
       {
         q: "Are the stock recommendations financial advice?",
-        a: "No. Stock recommendations on NSE Academy are for educational and research purposes only. They are generated by an algorithm based on your investor profile and publicly available company data — not by a licensed financial advisor. Always conduct your own research and consult a licensed investment professional before making any investment decisions.",
+        a: "No. Stock recommendations on NSE Academy are for educational and research purposes only. They are generated by an algorithm based on your investor profile and publicly available company data - not by a licensed financial advisor. Always conduct your own research and consult a licensed investment professional before making any investment decisions.",
       },
       {
         q: "What is the Company Research Tool?",
@@ -202,15 +202,15 @@ Premium (KSh 500/month) — Everything in Intermediary plus the full 13-chapter 
         q: "What calculators are available?",
         a: `NSE Academy offers 5 free calculators at /calculators:
 
-• Broker Fee Estimator — See the exact breakdown of NSE transaction costs (brokerage, CDS fee, NSE levy, CMA levy) for any trade value.
+• Broker Fee Estimator - See the exact breakdown of NSE transaction costs (brokerage, CDS fee, NSE levy, CMA levy) for any trade value.
 
-• Dividend Yield Calculator — Calculate dividend yield, annual income, and monthly income for any NSE stock.
+• Dividend Yield Calculator - Calculate dividend yield, annual income, and monthly income for any NSE stock.
 
-• Compound Growth Calculator — Project how your NSE investments grow over time with optional monthly contributions and year-by-year milestones.
+• Compound Growth Calculator - Project how your NSE investments grow over time with optional monthly contributions and year-by-year milestones.
 
-• DCA Calculator — Model a dollar-cost averaging strategy and compare it to a lump sum investment.
+• DCA Calculator - Model a dollar-cost averaging strategy and compare it to a lump sum investment.
 
-• Dividend Income Target — Calculate exactly how many shares and how much capital you need to reach a target monthly passive income.`,
+• Dividend Income Target - Calculate exactly how many shares and how much capital you need to reach a target monthly passive income.`,
       },
       {
         q: "What are the actual NSE transaction costs when buying shares?",
@@ -225,7 +225,7 @@ Total: approximately 1.8–2.4% of the trade value. Use our Broker Fee Estimator
       },
       {
         q: "Are the calculator results guaranteed to be accurate?",
-        a: "Calculators use standard financial formulas and publicly known NSE fee schedules. Results are estimates for planning purposes only. Actual broker fees may vary slightly — always confirm with your specific broker. Investment returns are hypothetical; past NSE performance does not guarantee future results.",
+        a: "Calculators use standard financial formulas and publicly known NSE fee schedules. Results are estimates for planning purposes only. Actual broker fees may vary slightly - always confirm with your specific broker. Investment returns are hypothetical; past NSE performance does not guarantee future results.",
       },
     ],
   },
@@ -240,11 +240,11 @@ Total: approximately 1.8–2.4% of the trade value. Use our Broker Fee Estimator
       },
       {
         q: "Is the blog content free?",
-        a: "Yes. All blog articles are publicly available — no account or subscription required. We believe an informed investor community benefits everyone. Share any article freely.",
+        a: "Yes. All blog articles are publicly available - no account or subscription required. We believe an informed investor community benefits everyone. Share any article freely.",
       },
       {
         q: "How do I get notified of new articles?",
-        a: "You can subscribe to our RSS feed at /blog/rss.xml and add it to any RSS reader. Email newsletter notifications are on our roadmap — follow the blog for updates.",
+        a: "You can subscribe to our RSS feed at /blog/rss.xml and add it to any RSS reader. Email newsletter notifications are on our roadmap - follow the blog for updates.",
       },
       {
         q: "Can I submit a guest article or market analysis?",
@@ -279,7 +279,7 @@ Total: approximately 1.8–2.4% of the trade value. Use our Broker Fee Estimator
       },
       {
         q: "How do I cancel my subscription?",
-        a: "Go to Dashboard → Subscription. You will see a cancel option. Cancellation takes effect at the end of your current billing period — you retain full access until then. Your data and course progress are preserved if you choose to resubscribe.",
+        a: "Go to Dashboard → Subscription. You will see a cancel option. Cancellation takes effect at the end of your current billing period - you retain full access until then. Your data and course progress are preserved if you choose to resubscribe.",
       },
       {
         q: "How do I delete my account?",
@@ -313,22 +313,22 @@ Our Intermediary course covers this step-by-step. Free users can access Chapters
       },
       {
         q: "What is a CDS account and do I need one?",
-        a: "A CDS (Central Depository System) account is a mandatory electronic account where your NSE shares are held. It is opened automatically when you register with a stockbroker. Every NSE investor must have a CDS account — shares are not held in paper form. Your CDS account number is unique to you and your shares remain safe even if your broker closes down.",
+        a: "A CDS (Central Depository System) account is a mandatory electronic account where your NSE shares are held. It is opened automatically when you register with a stockbroker. Every NSE investor must have a CDS account - shares are not held in paper form. Your CDS account number is unique to you and your shares remain safe even if your broker closes down.",
       },
       {
         q: "How are NSE share prices determined?",
-        a: "NSE share prices are determined by supply and demand — the price at which a willing buyer and seller agree to transact. Prices fluctuate throughout the trading day (9:00 AM–3:00 PM EAT). Factors that influence prices include company earnings, dividends, economic news, sector trends, and overall market sentiment.",
+        a: "NSE share prices are determined by supply and demand - the price at which a willing buyer and seller agree to transact. Prices fluctuate throughout the trading day (9:00 AM–3:00 PM EAT). Factors that influence prices include company earnings, dividends, economic news, sector trends, and overall market sentiment.",
       },
       {
         q: "What is the settlement period on the NSE?",
-        a: "The NSE operates on a T+3 settlement cycle — trades settle three business days after the transaction date. This means if you buy shares on Monday, the shares appear in your CDS account and payment is debited by Thursday.",
+        a: "The NSE operates on a T+3 settlement cycle - trades settle three business days after the transaction date. This means if you buy shares on Monday, the shares appear in your CDS account and payment is debited by Thursday.",
       },
       {
         q: "What taxes do I pay on NSE investments?",
         a: `NSE-related taxes in Kenya:
 
 • Capital Gains Tax (CGT): 15% on profits when you sell shares (introduced in 2023).
-• Withholding Tax on Dividends: 5% for Kenyan residents, 10% for non-residents — deducted automatically before dividends are paid to you.
+• Withholding Tax on Dividends: 5% for Kenyan residents, 10% for non-residents - deducted automatically before dividends are paid to you.
 • No wealth tax or annual holding tax on shares.
 
 Our Premium course (Chapter 8) covers NSE taxation in full detail.`,
@@ -342,7 +342,7 @@ Our Premium course (Chapter 8) covers NSE taxation in full detail.`,
 ];
 
 // ---------------------------------------------------------------------------
-// JSON-LD — all Q&As for Google rich results
+// JSON-LD - all Q&As for Google rich results
 // ---------------------------------------------------------------------------
 
 const jsonLd = {
@@ -380,7 +380,7 @@ export default function FaqPage() {
           <div className="max-w-2xl mx-auto">
             <h1 className="text-4xl font-bold text-gray-900 mb-3">Frequently Asked Questions</h1>
             <p className="text-gray-500 text-lg">
-              {totalQuestions} answers across {CATEGORIES.length} topics — search or browse by category.
+              {totalQuestions} answers across {CATEGORIES.length} topics - search or browse by category.
             </p>
           </div>
         </div>

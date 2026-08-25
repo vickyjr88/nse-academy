@@ -35,7 +35,7 @@ const CMS_URL = process.env.CMS_URL || rootEnv.CMS_URL || "http://localhost:1337
 const CMS_API_TOKEN = process.env.CMS_API_TOKEN || rootEnv.CMS_API_TOKEN || "";
 
 // ---------------------------------------------------------------------------
-// Chapter definitions — manually authored from PDF TOC
+// Chapter definitions - manually authored from PDF TOC
 // All content is tagged tier: "intermediary"
 // ---------------------------------------------------------------------------
 
@@ -99,12 +99,12 @@ With single-share trading introduced in August 2025, you can start investing wit
 
 ## What Are Stocks?
 
-A stock (also called a share or equity) represents a unit of ownership in a company. When you buy a stock, you become a shareholder — a partial owner of that business.
+A stock (also called a share or equity) represents a unit of ownership in a company. When you buy a stock, you become a shareholder - a partial owner of that business.
 
 **Why Companies Issue Stocks**
 Companies sell shares to raise capital for expansion, debt repayment, or operations. In return, shareholders may receive:
-- **Dividends** — a share of the company's profits
-- **Capital gains** — profit from selling shares at a higher price than you paid
+- **Dividends** - a share of the company's profits
+- **Capital gains** - profit from selling shares at a higher price than you paid
 
 ## How the Stock Market Works
 
@@ -123,7 +123,7 @@ The NSE is a regulated marketplace where:
 | Dividend | Share of company profits paid to shareholders |
 | Capital Gain | Profit from selling a share above purchase price |
 | Market Cap | Total value of a company's outstanding shares |
-| P/E Ratio | Price-to-Earnings ratio — measures valuation |
+| P/E Ratio | Price-to-Earnings ratio - measures valuation |
 | Blue Chip | Large, stable, well-established company |
 | Portfolio | Collection of all your investments |
 | Liquidity | How easily a share can be bought or sold |
@@ -147,7 +147,7 @@ Track a market index (like NASI) through ETFs for broad market exposure at low c
     ],
   },
   {
-    title: "Chapter 2: Getting Started — Your Step-by-Step Guide",
+    title: "Chapter 2: Getting Started - Your Step-by-Step Guide",
     description: "How to open a CDS account, choose a broker, fund your account, and place your first trade.",
     investorTypes: ["conservative", "moderate", "aggressive", "dividend", "growth"],
     sections: [
@@ -160,8 +160,8 @@ Track a market index (like NASI) through ETFs for broad market exposure at low c
 To invest in the NSE you need:
 - **Age:** 18+ (minors can invest through a guardian)
 - **ID:** National ID or Passport
-- **KRA PIN** — obtain free at itax.kra.go.ke
-- **Bank Account** — for receiving dividends and withdrawals
+- **KRA PIN** - obtain free at itax.kra.go.ke
+- **Bank Account** - for receiving dividends and withdrawals
 - **Email Address & Phone Number**
 
 ## Step 2: Open a CDS Account
@@ -169,7 +169,7 @@ To invest in the NSE you need:
 A **Central Depository System (CDS) Account** is where your shares are held electronically. It is opened through a licensed stockbroker.
 
 - The CDS is managed by the **Central Depository & Settlement Corporation (CDSC)**
-- Your shares are held securely — even if your broker closes, your shares are safe
+- Your shares are held securely - even if your broker closes, your shares are safe
 - Each investor gets a unique **CDS Account Number**
 
 ## Step 3: Choose and Register with a Stockbroker
@@ -192,7 +192,7 @@ Only **licensed NSE stockbrokers** can execute trades on your behalf. You must r
 ## Step 4: Fund Your Trading Account
 
 - Transfer funds to your broker's client account via M-Pesa, bank transfer, or cheque
-- Funds are held in a **segregated client account** — separate from the broker's own funds
+- Funds are held in a **segregated client account** - separate from the broker's own funds
 - Minimum investment: As low as KSh 100 with single-share trading (since August 2025)`,
         duration: 10,
       },
@@ -211,7 +211,7 @@ Before buying any stock, research it thoroughly:
 - Assess debt levels and cash flow
 
 **Where to find information:**
-- NSE website (nse.co.ke) — price data, company announcements
+- NSE website (nse.co.ke) - price data, company announcements
 - Company annual reports (investor relations pages)
 - Stockbroker research reports
 - Business Daily and other financial media
@@ -228,7 +228,7 @@ Before buying any stock, research it thoroughly:
 2. Search for the company by ticker (e.g., SCOM for Safaricom)
 3. Enter: number of shares, order type (market or limit), and price
 4. Review and confirm the order
-5. Receive confirmation — your broker executes the trade
+5. Receive confirmation - your broker executes the trade
 
 **Order Types:**
 - **Market Order:** Execute immediately at current market price
@@ -243,7 +243,7 @@ Before buying any stock, research it thoroughly:
 
 ## Step 7: Monitor and Manage Your Investments
 
-- Check your portfolio regularly — but avoid obsessing over daily movements
+- Check your portfolio regularly - but avoid obsessing over daily movements
 - Reinvest dividends to compound your returns
 - Rebalance annually to maintain target allocation
 - Stay informed: follow company announcements on the NSE website`,
@@ -292,10 +292,10 @@ Before buying any stock, research it thoroughly:
 
 Always verify before depositing any money:
 
-1. **Check the CMA website** — cma.or.ke → Licensed Market Intermediaries
-2. **Confirm NSE membership** — nse.co.ke → Members
-3. **Look for physical offices** — legitimate brokers have registered offices
-4. **Check reviews** — ask in investment communities and forums
+1. **Check the CMA website** - cma.or.ke → Licensed Market Intermediaries
+2. **Confirm NSE membership** - nse.co.ke → Members
+3. **Look for physical offices** - legitimate brokers have registered offices
+4. **Check reviews** - ask in investment communities and forums
 
 **Red Flags to Avoid:**
 - No CMA license
@@ -335,7 +335,7 @@ A market index tracks the performance of a selected group of stocks, giving inve
 - Tracks the **top 20 blue-chip companies** listed on the NSE
 - Oldest NSE index, established in 1964 (base value: 100)
 - Companies selected based on: market cap, liquidity, and earnings quality
-- Reviewed periodically — poorly performing companies can be removed
+- Reviewed periodically - poorly performing companies can be removed
 
 **Current composition includes:** Safaricom, Equity Group, KCB Group, EABL, BAT Kenya, Bamburi Cement, and others.
 
@@ -344,7 +344,7 @@ A market index tracks the performance of a selected group of stocks, giving inve
 ## NSE All-Share Index (NASI)
 
 - Tracks **all listed companies** on the NSE
-- More comprehensive than NSE 20 — reflects the entire market
+- More comprehensive than NSE 20 - reflects the entire market
 - Weighted by market capitalization
 - Better indicator of overall market health
 
@@ -366,10 +366,10 @@ A market index tracks the performance of a selected group of stocks, giving inve
 
 ## How to Use Indices in Your Investment Strategy
 
-1. **Benchmark your portfolio** — compare your returns against NASI
-2. **Gauge market sentiment** — rising indices = bullish; falling = bearish
-3. **ETF investing** — invest in the whole index cheaply through NSE ETFs
-4. **Sector rotation** — use sector indices to spot outperforming industries`,
+1. **Benchmark your portfolio** - compare your returns against NASI
+2. **Gauge market sentiment** - rising indices = bullish; falling = bearish
+3. **ETF investing** - invest in the whole index cheaply through NSE ETFs
+4. **Sector rotation** - use sector indices to spot outperforming industries`,
         duration: 10,
       },
     ],
@@ -414,15 +414,15 @@ Invest a fixed amount at regular intervals (monthly or quarterly) regardless of 
 - Automatically buys more shares when prices are low
 - Smooths out price volatility over time
 
-**Example:** Invest KSh 5,000 every month in Safaricom — you'll buy more shares when the price dips.
+**Example:** Invest KSh 5,000 every month in Safaricom - you'll buy more shares when the price dips.
 
 ## 5. Focus on Blue-Chips Initially
 
 Blue-chip companies are large, well-established, and financially stable:
-- **Safaricom (SCOM)** — Kenya's largest company by market cap
-- **Equity Group (EQTY)** — Largest bank by customer base
-- **KCB Group (KCB)** — Largest bank by assets
-- **East African Breweries (EABL)** — Dominant FMCG brand
+- **Safaricom (SCOM)** - Kenya's largest company by market cap
+- **Equity Group (EQTY)** - Largest bank by customer base
+- **KCB Group (KCB)** - Largest bank by assets
+- **East African Breweries (EABL)** - Dominant FMCG brand
 
 ## 6. Prioritize Dividend Stocks
 
@@ -478,9 +478,9 @@ Check your portfolio monthly, not daily. Set price alerts for major moves. Revie
 
 Dividends provide:
 - **Regular income** regardless of share price movements
-- **Signal of financial health** — only profitable companies sustain dividends
-- **Compounding power** — reinvesting dividends accelerates wealth building
-- **Inflation protection** — growing dividends maintain purchasing power
+- **Signal of financial health** - only profitable companies sustain dividends
+- **Compounding power** - reinvesting dividends accelerates wealth building
+- **Inflation protection** - growing dividends maintain purchasing power
 
 ## Top 10 Dividend Stocks (2025–2026)
 
@@ -509,7 +509,7 @@ Payout Ratio = (Dividend per Share ÷ Earnings per Share) × 100
 
 - Below 50%: Very sustainable
 - 50–75%: Sustainable
-- Above 80%: Risky — may not be maintained
+- Above 80%: Risky - may not be maintained
 
 ### Step 3: Dividend Reinvestment
 Automatically reinvest dividends to buy more shares. Over 20 years, this compounding effect can double or triple your returns.
@@ -536,14 +536,14 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 
 | Company | Ticker | Notes |
 |---------|--------|-------|
-| Kakuzi | KUKZ | Tea, avocado, macadamia — strong export earnings |
+| Kakuzi | KUKZ | Tea, avocado, macadamia - strong export earnings |
 | Kapchorua Tea | KAPC | Tea production in Nandi Hills |
 | Limuru Tea | LIMT | Small-cap; consistent dividends |
 | Rea Vipingo Plantations | RVPL | Sisal production |
-| Sasini | SASN | Tea, coffee, avocado — diversified agri |
+| Sasini | SASN | Tea, coffee, avocado - diversified agri |
 | Williamson Tea | WTK | Large tea producer; consistent dividends |
 
-**Investor note:** Agricultural stocks are cyclical — performance tied to weather, global commodity prices, and currency. Suit long-term, patient investors.
+**Investor note:** Agricultural stocks are cyclical - performance tied to weather, global commodity prices, and currency. Suit long-term, patient investors.
 
 ## Automobiles & Accessories (1 Company)
 
@@ -579,7 +579,7 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 | Nairobi Business Ventures | NBV | Micro-cap |
 | Nation Media Group | NMG | Print, digital media across East Africa |
 | Scangroup | SCAN | Marketing/advertising |
-| Standard Group | SGL | Media — TV, radio, print |
+| Standard Group | SGL | Media - TV, radio, print |
 | TPS Serena | TPSE | Premium hotels across East Africa |
 | Uchumi Supermarkets | UCHM | Under reconstruction; high risk |
 | WPP ScanGroup | WPP | Merged marketing entity |
@@ -597,7 +597,7 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 |---------|--------|-------|
 | ARM Cement | ARM | Under administration |
 | Bamburi Cement | BAMB | Holcim subsidiary; dominant market share |
-| Crown Paints | BERG | Paints, coatings — steady compounder |
+| Crown Paints | BERG | Paints, coatings - steady compounder |
 | East African Portland Cement | EAPC | Government-linked; underperforming |
 | Kenya Power | KPLC | Electricity distribution; government influence |
 
@@ -623,7 +623,7 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 | Sanlam Kenya | SLAM | South African insurer |
 | CIC Insurance Group | CIC | Co-op movement insurer |
 
-**Investor note:** Jubilee Holdings is the standout in this sector — consistent profitability and dividends.
+**Investor note:** Jubilee Holdings is the standout in this sector - consistent profitability and dividends.
 
 ## Investment Sector (5 Companies)
 
@@ -639,13 +639,13 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 
 | Company | Ticker | Notes |
 |---------|--------|-------|
-| NSE (exchange itself) | NSE | Listed exchange — unique investment in market infrastructure |
+| NSE (exchange itself) | NSE | Listed exchange - unique investment in market infrastructure |
 
 ## Manufacturing & Allied (8 Companies)
 
 | Company | Ticker | Notes |
 |---------|--------|-------|
-| BAT Kenya | BATK | Tobacco — very high dividend yield (8–10%) |
+| BAT Kenya | BATK | Tobacco - very high dividend yield (8–10%) |
 | BOC Kenya | BOC | Industrial gases |
 | Carbacid Investments | CARB | CO₂ manufacturing; stable compounder |
 | EABL | EABL | Diageo subsidiary; premium spirits brands |
@@ -660,13 +660,13 @@ A dividend cut often follows weak earnings. Watch half-year and full-year result
 |---------|--------|-------|
 | Safaricom | SCOM | Kenya's most valuable company; M-Pesa, data, voice |
 
-**Investor note:** Safaricom is in a class of its own on the NSE — largest market cap, most liquid, and a reliable dividend payer.
+**Investor note:** Safaricom is in a class of its own on the NSE - largest market cap, most liquid, and a reliable dividend payer.
 
 ## REIT (1 Company)
 
 | Company | Ticker | Notes |
 |---------|--------|-------|
-| ILAM Fahari I-REIT | FAHR | Income REIT — real estate income fund |
+| ILAM Fahari I-REIT | FAHR | Income REIT - real estate income fund |
 
 ## Exchange Traded Funds (1 Product)
 

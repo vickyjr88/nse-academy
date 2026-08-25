@@ -171,14 +171,14 @@ export function UsersList() {
             <Tr key={user.id}>
               <Td><Typography>{user.name}</Typography></Td>
               <Td><Typography>{user.email}</Typography></Td>
-              <Td><Typography>{user.phone ?? '—'}</Typography></Td>
-              <Td><Typography>{user.subscription?.tier ?? '—'}</Typography></Td>
-              <Td><Typography>{user.subscription?.status ?? '—'}</Typography></Td>
+              <Td><Typography>{user.phone ?? '-'}</Typography></Td>
+              <Td><Typography>{user.subscription?.tier ?? '-'}</Typography></Td>
+              <Td><Typography>{user.subscription?.status ?? '-'}</Typography></Td>
               <Td>
                 <Typography>
                   {user.subscription?.currentPeriodEnd
                     ? new Date(user.subscription.currentPeriodEnd).toLocaleDateString()
-                    : '—'}
+                    : '-'}
                 </Typography>
               </Td>
               <Td>

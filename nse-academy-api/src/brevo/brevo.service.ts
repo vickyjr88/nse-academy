@@ -3,12 +3,12 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Thin HTTP wrapper over the Brevo (formerly Sendinblue) v3 REST API. We
- * deliberately avoid the SDK to keep the dependency surface tiny — Node 22
+ * deliberately avoid the SDK to keep the dependency surface tiny - Node 22
  * fetch handles the few calls we need.
  *
  * Every method silently no-ops with a single warning when BREVO_API_KEY is
  * missing, so local dev and CI work without a Brevo account. Errors during
- * sync are logged but never thrown — analytics must not break the user flow.
+ * sync are logged but never thrown - analytics must not break the user flow.
  */
 
 const BASE_URL = 'https://api.brevo.com/v3';
@@ -59,7 +59,7 @@ export class BrevoService {
     if (!this.warnedMissingKey) {
       this.warnedMissingKey = true;
       this.log.warn(
-        'BREVO_API_KEY is not set — Brevo sync + transactional emails are disabled. ' +
+        'BREVO_API_KEY is not set - Brevo sync + transactional emails are disabled. ' +
           'Set BREVO_API_KEY in the API env to enable.',
       );
     }
@@ -104,7 +104,7 @@ export class BrevoService {
         { attributes },
       );
     } catch (err) {
-      // 404 on a missing contact is fine — they just never opted in. Warn.
+      // 404 on a missing contact is fine - they just never opted in. Warn.
       this.log.warn(
         `Brevo updateContact failed for ${email}: ${(err as Error).message}`,
       );

@@ -28,7 +28,7 @@ export default function GuestAccessPage() {
 
   useEffect(() => {
     let cancelled = false;
-    // Probe only — this must never consume one of the link's downloads.
+    // Probe only - this must never consume one of the link's downloads.
     fetchGuestAccessInfo(token)
       .then((result) => {
         if (cancelled) return;
@@ -92,7 +92,7 @@ export default function GuestAccessPage() {
             <p className="text-gray-600 mb-6">
               {email
                 ? `We also sent a copy to ${email}.`
-                : "Download the PDF now — we also emailed it to you."}
+                : "Download the PDF now - we also emailed it to you."}
             </p>
 
             <p className="inline-block text-sm font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full px-4 py-1.5 mb-6">
@@ -149,7 +149,7 @@ export default function GuestAccessPage() {
             </h1>
             <p className="text-gray-600 mb-8">
               {error ||
-                `This link has been used for all ${info?.maxDownloads ?? 2} of its downloads. You still own this ebook — ${
+                `This link has been used for all ${info?.maxDownloads ?? 2} of its downloads. You still own this ebook - ${
                   email ? `log in with ${email}` : "log in with your purchase email"
                 } to download it anytime.`}
             </p>

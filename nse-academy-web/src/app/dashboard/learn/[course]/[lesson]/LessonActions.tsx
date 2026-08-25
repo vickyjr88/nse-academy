@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * Renders the upgrade-prompt when a free-tier (or anonymous) user lands on a
- * premium lesson. Fires premium_lock_seen on mount — strong upgrade-intent
+ * premium lesson. Fires premium_lock_seen on mount - strong upgrade-intent
  * signal we want to feed into PostHog funnels.
  */
 function PremiumLock({ lessonId, hasToken }: { lessonId: number; hasToken: boolean }) {
@@ -128,7 +128,7 @@ export default function LessonActions({
         router.push(nextHref);
       }
     } catch {
-      // silently ignore — progress will sync next load
+      // silently ignore - progress will sync next load
     } finally {
       setMarking(false);
     }

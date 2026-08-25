@@ -30,7 +30,7 @@ interface CaptureBody {
 export class LeadsController {
   constructor(private service: LeadsService) {}
 
-  // Public capture — returns the persisted lead so the client can call the
+  // Public capture - returns the persisted lead so the client can call the
   // download-tracker with its id.
   @Post()
   async capture(@Body() body: CaptureBody) {
@@ -43,7 +43,7 @@ export class LeadsController {
     };
   }
 
-  // Public — fired from the success screen when the user clicks the download
+  // Public - fired from the success screen when the user clicks the download
   // button. Idempotent counter increment + downloadedAt timestamp.
   @Post(':id/download')
   recordDownload(@Param('id') id: string) {

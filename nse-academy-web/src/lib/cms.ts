@@ -136,7 +136,7 @@ export async function getAllArticleSlugs(): Promise<string[]> {
 }
 
 // =============================================================================
-// Lead magnets — Strapi-managed PDFs offered as email-capture incentives.
+// Lead magnets - Strapi-managed PDFs offered as email-capture incentives.
 // =============================================================================
 
 export interface LeadMagnet {

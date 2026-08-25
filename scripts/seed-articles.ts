@@ -5,16 +5,16 @@
  *   1. Fetches all StockProfiles from Strapi (already seeded)
  *   2. Generates 10 article types per company via Gemini gemini-1.5-flash
  *   3. POSTs each article to Strapi as published
- *   4. Saves progress to .seed-articles-progress.json — fully resumable
+ *   4. Saves progress to .seed-articles-progress.json - fully resumable
  *
  * Usage:
  *   CMS_URL=http://localhost:1337 CMS_API_TOKEN=xxx GEMINI_API_KEY=xxx \
  *     npx ts-node --project scripts/tsconfig.json scripts/seed-articles.ts
  *
  * Optional:
- *   TARGET=600          — how many articles to generate (default 600)
- *   DELAY_MS=1200       — ms between Gemini calls (default 1200)
- *   DRY_RUN=true        — generate but don't upload
+ *   TARGET=600          - how many articles to generate (default 600)
+ *   DELAY_MS=1200       - ms between Gemini calls (default 1200)
+ *   DRY_RUN=true        - generate but don't upload
  */
 
 import fs from "fs";
@@ -95,7 +95,7 @@ interface ArticleTemplate {
 }
 
 // ---------------------------------------------------------------------------
-// Article templates — 10 per company
+// Article templates - 10 per company
 // ---------------------------------------------------------------------------
 
 const TEMPLATES: ArticleTemplate[] = [
@@ -114,7 +114,7 @@ Cover:
 - Geographic footprint (Kenya, East Africa, Africa)
 - Leadership and governance overview
 
-Write in a clear, educational tone for Kenyan retail investors. Use markdown formatting with headings (##), bullet points, and a brief summary at the end. Approximately 600-800 words. Do not make up specific financial figures — use ranges or qualitative descriptions if unsure.`,
+Write in a clear, educational tone for Kenyan retail investors. Use markdown formatting with headings (##), bullet points, and a brief summary at the end. Approximately 600-800 words. Do not make up specific financial figures - use ranges or qualitative descriptions if unsure.`,
   },
   {
     type: "financials",
@@ -194,7 +194,7 @@ Explore:
 - Why long-term investors could be rewarded
 - Historical performance during past bull markets
 
-Keep it balanced — acknowledge it's one scenario, not a guarantee. ~550 words. Engaging, forward-looking tone. Markdown.`,
+Keep it balanced - acknowledge it's one scenario, not a guarantee. ~550 words. Engaging, forward-looking tone. Markdown.`,
   },
   {
     type: "bear-case",
@@ -211,7 +211,7 @@ Cover:
 - Scenarios where the stock could underperform
 - Red flags to watch in upcoming results
 
-Balanced, honest tone — not alarmist but clear about risks. ~550 words. Markdown.`,
+Balanced, honest tone - not alarmist but clear about risks. ~550 words. Markdown.`,
   },
   {
     type: "performance-review",
@@ -302,7 +302,7 @@ function loadProgress(): Progress {
         totalUploaded: raw.totalUploaded || 0,
       };
     } catch {
-      // corrupted file — start fresh
+      // corrupted file - start fresh
     }
   }
   return { completed: new Set(), totalUploaded: 0 };
@@ -408,7 +408,7 @@ function sleep(ms: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("🚀 NSE Academy — Article Seeder");
+  console.log("🚀 NSE Academy - Article Seeder");
   console.log(`   Target: ${TARGET} articles | Delay: ${DELAY_MS}ms | DRY_RUN: ${DRY_RUN}`);
   console.log(`   CMS: ${CMS_URL}\n`);
 
@@ -439,7 +439,7 @@ async function main() {
 
       const title = template.titleFn(stock);
       const slug = slugify(title);
-      process.stdout.write(`  [${generated + 1}/${TARGET}] ${stock.ticker} — ${template.type}... `);
+      process.stdout.write(`  [${generated + 1}/${TARGET}] ${stock.ticker} - ${template.type}... `);
 
       try {
         const body = await generateArticle(template.promptFn(stock));
@@ -465,7 +465,7 @@ async function main() {
           const res = await strapiRequest("POST", "articles", payload);
           if (res?.error || !res?.data) {
             const errMsg = res?.error?.message || JSON.stringify(res?.error) || "unknown";
-            // Duplicate slug — skip gracefully
+            // Duplicate slug - skip gracefully
             if (errMsg.includes("unique") || errMsg.includes("duplicate")) {
               console.log(`⚠️  duplicate slug, skipping`);
               progress.completed.add(key);

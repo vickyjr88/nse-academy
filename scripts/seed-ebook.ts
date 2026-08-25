@@ -200,7 +200,7 @@ async function main() {
     data: {
       title: "The Complete Investor's Guide to the NSE (2026 Edition)",
       description:
-        "A comprehensive guide to investing in Kenya's Nairobi Securities Exchange — from opening your first account to building a fully diversified portfolio.",
+        "A comprehensive guide to investing in Kenya's Nairobi Securities Exchange - from opening your first account to building a fully diversified portfolio.",
       investor_types: ["conservative", "moderate", "aggressive", "dividend", "growth"],
       tier: "premium",
       is_premium: true,
@@ -262,7 +262,7 @@ async function main() {
       });
 
       const lessonId = lessonRes?.data?.id;
-      console.log(`    Lesson ${i + 1}/${sections.length}: "${title.slice(0, 50)}" — ${isPremium ? "premium" : "free"} id=${lessonId}`);
+      console.log(`    Lesson ${i + 1}/${sections.length}: "${title.slice(0, 50)}" - ${isPremium ? "premium" : "free"} id=${lessonId}`);
 
       // Small delay to avoid overwhelming Strapi
       await new Promise((r) => setTimeout(r, 80));

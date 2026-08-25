@@ -147,7 +147,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Free-tier banner — visible immediately, before the fold of cards */}
+          {/* Free-tier banner - visible immediately, before the fold of cards */}
           {tier === "free" && user?.investorProfile && (() => {
             const p = getPersonalization(user.investorProfile.type);
             return (
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                   highlightTier={p.recommendedTier}
                   headline={`${p.label}? You're leaving NSE returns on the table.`}
                   subline={p.urgencyAngle}
-                  ctaLabel={`Unlock ${p.recommendedTier === "intermediary" ? "Intermediary — KSh 300/mo" : "Premium — KSh 500/mo"}`}
+                  ctaLabel={`Unlock ${p.recommendedTier === "intermediary" ? "Intermediary - KSh 300/mo" : "Premium - KSh 500/mo"}`}
                 />
               </div>
             );
@@ -229,7 +229,7 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Upgrade nudge for free users — personalized if profile exists */}
+          {/* Upgrade nudge for free users - personalized if profile exists */}
           {tier === "free" && user?.investorProfile && (
             <div className="mt-8">
               <PersonalizedUpgrade
@@ -243,7 +243,7 @@ export default function DashboardPage() {
               <div>
                 <h3 className="text-xl font-bold mb-1">Unlock the full NSE Academy</h3>
                 <p className="text-emerald-200 text-sm">
-                  Stock Advisor, Company Research, Trading Guide &amp; Investor&apos;s Guide — from KSh 300/mo.
+                  Stock Advisor, Company Research, Trading Guide &amp; Investor&apos;s Guide - from KSh 300/mo.
                 </p>
               </div>
               <Link
@@ -255,7 +255,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Intermediary users — soft Premium nudge */}
+          {/* Intermediary users - soft Premium nudge */}
           {tier === "intermediary" && (
             <div className="mt-8">
               <UpgradePrompt
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                 location="dashboard_intermediary_to_premium"
                 highlightTier="premium"
                 headline="Going from Intermediary to Premium pays for itself."
-                subline="Stock Advisor, Company Research, the full 13-chapter Investor's Guide, and the ebook (worth KSh 999) — included."
+                subline="Stock Advisor, Company Research, the full 13-chapter Investor's Guide, and the ebook (worth KSh 999) - included."
               />
             </div>
           )}

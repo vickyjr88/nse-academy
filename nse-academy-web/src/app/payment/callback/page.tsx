@@ -59,7 +59,7 @@ function CallbackHandler() {
           if (data.guestToken) {
             setGuestToken(data.guestToken);
             if (data.productId) saveGuestUnlock(data.productId, data.guestToken);
-            // Probe only — never spend a download just by landing here.
+            // Probe only - never spend a download just by landing here.
             fetchGuestAccessInfo(data.guestToken).then((result) => {
               if (result.ok) {
                 setGuestInfo(result.info);
@@ -158,7 +158,7 @@ function CallbackHandler() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 py-16">
         <div className="text-6xl mb-6">{isEbook ? "📚" : "🎉"}</div>
         <h1 className="text-3xl font-bold text-gray-900 mb-3">
-          {isEbook ? "Thank you — your ebook is ready" : "You're all set!"}
+          {isEbook ? "Thank you - your ebook is ready" : "You're all set!"}
         </h1>
         <p className="text-lg text-gray-600 max-w-md mx-auto">
           {isEbook ? (
@@ -197,7 +197,7 @@ function CallbackHandler() {
                 href={accessHref!}
                 className="block w-full bg-emerald-700 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-800"
               >
-                Download limit reached — get unlimited access
+                Download limit reached - get unlimited access
               </Link>
             ) : loggedIn && productId ? (
               <button

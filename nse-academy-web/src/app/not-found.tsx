@@ -4,7 +4,7 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export const metadata: Metadata = {
-  title: "Page Not Found — NSE Academy",
+  title: "Page Not Found - NSE Academy",
   description:
     "The page you're looking for doesn't exist. Explore NSE Academy's investor tools, courses, and resources.",
 };
@@ -13,7 +13,7 @@ const navigationCards = [
   {
     icon: "🏠",
     title: "Home",
-    description: "Back to the main page — discover your investor type and start your NSE journey.",
+    description: "Back to the main page - discover your investor type and start your NSE journey.",
     href: "/",
     color: "from-emerald-50 to-teal-50",
     border: "border-emerald-100 hover:border-emerald-300",
@@ -49,7 +49,7 @@ const navigationCards = [
   {
     icon: "📚",
     title: "Learning Courses",
-    description: "Structured courses from NSE basics to advanced stock analysis — mapped to your profile.",
+    description: "Structured courses from NSE basics to advanced stock analysis - mapped to your profile.",
     href: "/dashboard/learn",
     color: "from-teal-50 to-cyan-50",
     border: "border-teal-100 hover:border-teal-300",
@@ -103,7 +103,7 @@ const navigationCards = [
   {
     icon: "📊",
     title: "Dashboard",
-    description: "Access your personalized dashboard — stock advisor, courses, billing, and more.",
+    description: "Access your personalized dashboard - stock advisor, courses, billing, and more.",
     href: "/dashboard",
     color: "from-cyan-50 to-teal-50",
     border: "border-cyan-100 hover:border-cyan-300",
@@ -143,7 +143,7 @@ export default function NotFoundPage() {
           </h1>
           <p className="text-lg text-gray-500 max-w-lg mx-auto mb-2">
             The page you&apos;re looking for may have been moved or removed.
-            But don&apos;t worry — there&apos;s plenty to explore.
+            But don&apos;t worry - there&apos;s plenty to explore.
           </p>
           <Link
             href="/"

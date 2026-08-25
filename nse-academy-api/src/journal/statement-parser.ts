@@ -1,6 +1,6 @@
 // Parses a CDSC "Statement of Account" PDF text dump into per-broker,
 // per-ticker closing balances. CDSC statements are custody ledgers: they show
-// share quantity movements per custodian/agent, not prices — so this only
+// share quantity movements per custodian/agent, not prices - so this only
 // recovers holdings (ticker, quantity, CDA code), never cost/price.
 //
 // Statement layout (repeats per security x custodian block):
@@ -25,7 +25,7 @@ export interface ParsedStatement {
   holdings: ParsedHolding[];
 }
 
-// PDF text extractors vary in how they space this layout out — pdfplumber
+// PDF text extractors vary in how they space this layout out - pdfplumber
 // inserts a space before "[", pdf-parse doesn't; some glue "Forward" and the
 // balance number together with no separator. Every pattern below tolerates
 // zero-or-more whitespace wherever a real PDF renderer might collapse it.

@@ -7,7 +7,7 @@ import { getDigitalProducts } from "@/lib/dexter";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NSE Investment Store — NSE Academy",
+  title: "NSE Investment Store - NSE Academy",
   description:
     "Comprehensive guides and ebooks to help you master the Nairobi Securities Exchange. Start building your portfolio today.",
 };
@@ -105,7 +105,7 @@ export default async function StorePage() {
         <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-12">
           {[
             { icon: "🎓", title: "Expert Curated", text: "Written by NSE veterans with decades of experience in Kenyan capital markets." },
-            { icon: "📱", title: "Mobile Ready", text: "Downloadable PDF format that reads beautifully on any device — phone, tablet, or laptop." },
+            { icon: "📱", title: "Mobile Ready", text: "Downloadable PDF format that reads beautifully on any device - phone, tablet, or laptop." },
             { icon: "♻️", title: "Free Updates", text: "Buy once and get free lifetime updates as market regulations and data change." }
           ].map(f => (
             <div key={f.title} className="text-center">

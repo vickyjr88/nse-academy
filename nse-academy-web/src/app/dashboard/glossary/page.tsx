@@ -5,9 +5,9 @@ import GlossaryClient, { type GlossaryTerm } from "./GlossaryClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NSE Glossary — NSE Academy",
+  title: "NSE Glossary - NSE Academy",
   description:
-    "Searchable A-Z glossary of Kenyan capital markets terms — from A/P ratio to yield curve.",
+    "Searchable A-Z glossary of Kenyan capital markets terms - from A/P ratio to yield curve.",
 };
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ export default async function GlossaryPage() {
         <h1 className="text-3xl font-bold text-gray-900">NSE Glossary</h1>
         <p className="text-gray-500 mt-2">
           {terms.length > 0
-            ? `${terms.length} terms — search or browse A-Z.`
+            ? `${terms.length} terms - search or browse A-Z.`
             : "All the capital markets terms you need to invest with confidence."}
         </p>
       </div>

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "NSE Academy — Shared Investor Profile";
+export const alt = "NSE Academy - Shared Investor Profile";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -64,7 +64,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
   const displayName = profile?.displayName ?? "NSE Investor";
   const riskScore = profile?.riskScore ?? 50;
   const horizonYears = profile?.horizonYears ?? 5;
-  const capitalRange = profile?.capitalRange ?? "—";
+  const capitalRange = profile?.capitalRange ?? "-";
 
   const radar = radarPoints(riskScore, 990, 330, 150);
 

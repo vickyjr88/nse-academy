@@ -7,17 +7,17 @@ import { useState } from "react";
 // ---------------------------------------------------------------------------
 
 function fmt(n: number, decimals = 2) {
-  if (!isFinite(n)) return "—";
+  if (!isFinite(n)) return "-";
   return n.toLocaleString("en-KE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function ksh(n: number) {
-  if (!isFinite(n)) return "—";
+  if (!isFinite(n)) return "-";
   return `KSh ${fmt(n)}`;
 }
 
 function pct(n: number) {
-  if (!isFinite(n)) return "—";
+  if (!isFinite(n)) return "-";
   return `${fmt(n)}%`;
 }
 
@@ -190,7 +190,7 @@ function BrokerFeeCalc() {
         <ResultRow label="Total Transaction Costs" value={ksh(total)} highlight />
         <ResultRow label={side === "buy" ? "Total you pay" : "Net proceeds"} value={ksh(netPay)} highlight />
         <p className="text-xs text-gray-400 mt-4">
-          Effective cost rate: {tv > 0 ? pct((total / tv) * 100) : "—"}
+          Effective cost rate: {tv > 0 ? pct((total / tv) * 100) : "-"}
         </p>
       </ResultCard>
     </div>
@@ -371,7 +371,7 @@ function DCACalc() {
         <ResultRow label="Gain / Loss" value={`${gainDCA >= 0 ? "+" : ""}${ksh(gainDCA)} (${gainDCA >= 0 ? "+" : ""}${pct(gainPct)})`} highlight />
         {cp > 0 && abp > 0 && (
           <p className="text-xs text-gray-400 mt-4">
-            vs. lump sum at start: {ksh(currentValueLump)} — DCA {currentValueDCA >= currentValueLump ? "outperformed" : "underperformed"} by {ksh(Math.abs(currentValueDCA - currentValueLump))}.
+            vs. lump sum at start: {ksh(currentValueLump)} - DCA {currentValueDCA >= currentValueLump ? "outperformed" : "underperformed"} by {ksh(Math.abs(currentValueDCA - currentValueLump))}.
           </p>
         )}
       </ResultCard>
@@ -466,11 +466,11 @@ const TABS = [
 ];
 
 const DESCRIPTIONS: Record<string, string> = {
-  broker: "See the exact breakdown of NSE transaction costs before you trade — brokerage, CDS, NSE levy, and CMA levy.",
+  broker: "See the exact breakdown of NSE transaction costs before you trade - brokerage, CDS, NSE levy, and CMA levy.",
   yield: "Calculate the dividend yield for any NSE stock and project your annual income based on how many shares you hold.",
-  compound: "See how your NSE investments grow over time with compound returns — including monthly contributions.",
+  compound: "See how your NSE investments grow over time with compound returns - including monthly contributions.",
   dca: "Model your Dollar-Cost Averaging (DCA) strategy: how many shares you accumulate and your current gain or loss.",
-  income: "Find out exactly how many shares — and how much capital — you need to hit your passive income target.",
+  income: "Find out exactly how many shares - and how much capital - you need to hit your passive income target.",
 };
 
 export default function CalculatorsClient() {

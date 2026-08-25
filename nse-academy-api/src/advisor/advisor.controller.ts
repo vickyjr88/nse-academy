@@ -18,7 +18,7 @@ export class AdvisorController {
 
   @UseGuards(JwtAuthGuard)
   @Get('research')
-  @ApiOperation({ summary: 'Research a specific NSE company — fit analysis by investor type' })
+  @ApiOperation({ summary: 'Research a specific NSE company - fit analysis by investor type' })
   @ApiQuery({ name: 'ticker', required: true, description: 'NSE ticker symbol e.g. SCOM, EQTY, KCB' })
   async research(@Req() req: any, @Query('ticker') ticker: string) {
     return this.advisorService.researchCompany(req.user.id, ticker);

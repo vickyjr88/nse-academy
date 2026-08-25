@@ -285,13 +285,13 @@ export default function JournalPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Avg cost</span>
                   <span className="font-semibold text-gray-900">
-                    {p.avgCost != null ? `KES ${KES.format(p.avgCost)}` : "—"}
+                    {p.avgCost != null ? `KES ${KES.format(p.avgCost)}` : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Cost basis</span>
                   <span className="font-semibold text-gray-900">
-                    {p.costBasisKes != null ? `KES ${KES.format(p.costBasisKes)}` : "—"}
+                    {p.costBasisKes != null ? `KES ${KES.format(p.costBasisKes)}` : "-"}
                   </span>
                 </div>
               </div>

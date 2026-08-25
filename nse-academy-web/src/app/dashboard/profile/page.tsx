@@ -20,14 +20,14 @@ const QUESTIONS = [
       'Sell everything immediately',
       'Sell some to reduce risk',
       'Hold and wait for recovery',
-      'Buy more — it is a discount',
+      'Buy more - it is a discount',
     ],
   },
   {
     id: 3,
     question: 'What is your primary investment goal?',
     options: [
-      'Preserve my capital — I cannot afford losses',
+      'Preserve my capital - I cannot afford losses',
       'Generate regular income (dividends)',
       'Balanced growth and income',
       'Maximise long-term capital growth',
@@ -47,7 +47,7 @@ const QUESTIONS = [
     id: 5,
     question: 'How much experience do you have investing in stocks?',
     options: [
-      'None — I am just starting',
+      'None - I am just starting',
       'Less than 2 years',
       '2–5 years',
       'More than 5 years',
@@ -57,10 +57,10 @@ const QUESTIONS = [
     id: 6,
     question: 'Do you need this money to generate monthly income?',
     options: [
-      'Yes — I depend on it',
-      'Somewhat — a supplement would help',
-      'Not really — it would be nice',
-      'No — this is purely for growth',
+      'Yes - I depend on it',
+      'Somewhat - a supplement would help',
+      'Not really - it would be nice',
+      'No - this is purely for growth',
     ],
   },
   {
@@ -80,26 +80,26 @@ const QUESTIONS = [
       'High dividend yield, slow price growth',
       'Moderate dividends and steady growth',
       'Low dividends but strong price appreciation',
-      'No dividends — maximum capital gain',
+      'No dividends - maximum capital gain',
     ],
   },
   {
     id: 9,
     question: 'Do you have an emergency fund (6+ months expenses) separate from this investment?',
     options: [
-      'No — this is my only savings',
-      'Partial — about 1–3 months',
-      'Yes — about 3–6 months',
-      'Yes — fully funded 6+ months',
+      'No - this is my only savings',
+      'Partial - about 1–3 months',
+      'Yes - about 3–6 months',
+      'Yes - fully funded 6+ months',
     ],
   },
   {
     id: 10,
     question: 'Which sector interests you most?',
     options: [
-      'Banking and Telecoms — stable and liquid',
-      'Consumer goods and utilities — defensive',
-      'Energy and infrastructure — growth',
+      'Banking and Telecoms - stable and liquid',
+      'Consumer goods and utilities - defensive',
+      'Energy and infrastructure - growth',
       'I want exposure across all sectors',
     ],
   },
@@ -136,7 +136,7 @@ export default function ProfilePage() {
         if (data?.investorProfile) {
           setExistingProfile(data.investorProfile);
         } else {
-          setStep(0); // no profile yet — go straight to quiz
+          setStep(0); // no profile yet - go straight to quiz
         }
       })
       .catch(() => setStep(0))
@@ -144,7 +144,7 @@ export default function ProfilePage() {
   }, [router]);
 
   async function handleAnswer(optionIndex: number) {
-    // First answer doubles as "quiz started" — captures the moment a user
+    // First answer doubles as "quiz started" - captures the moment a user
     // commits past the intro screen.
     if (answers.length === 0) {
       trackEvent('profiler_quiz_started', { location: 'dashboard_profile' });

@@ -10,13 +10,13 @@ import LeadMagnetForm from "@/components/LeadMagnetForm";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "NSE Academy — The Complete Investor's Guide to the Nairobi Securities Exchange",
+  title: "NSE Academy - The Complete Investor's Guide to the Nairobi Securities Exchange",
   description:
     "Build a real NSE portfolio with the Complete Investor's Guide (KSh 999) or subscribe from KSh 300/mo. Stock picks, deep-dive research, dividend laddering, and a personalised learning path for Kenyan investors.",
   openGraph: {
-    title: "NSE Academy — Build Your NSE Portfolio With Confidence",
+    title: "NSE Academy - Build Your NSE Portfolio With Confidence",
     description:
-      "The Complete Investor's Guide ebook, personalised stock picks, and weekly NSE research — for Kenyan investors.",
+      "The Complete Investor's Guide ebook, personalised stock picks, and weekly NSE research - for Kenyan investors.",
     type: "website",
     url:
       process.env.NEXT_PUBLIC_SITE_URL ||
@@ -48,7 +48,7 @@ const features = [
     icon: "📚",
     title: "Guided Learning Paths",
     description:
-      "Courses mapped to your investor type — from NSE basics to fundamental analysis, taxation, and portfolio construction.",
+      "Courses mapped to your investor type - from NSE basics to fundamental analysis, taxation, and portfolio construction.",
   },
   {
     icon: "📈",
@@ -60,7 +60,7 @@ const features = [
     icon: "🔬",
     title: "Company Research Tool",
     description:
-      "Research any of the 62 NSE-listed companies and see exactly how they fit your profile — with a fit score and detailed analysis.",
+      "Research any of the 62 NSE-listed companies and see exactly how they fit your profile - with a fit score and detailed analysis.",
   },
 ];
 
@@ -77,7 +77,7 @@ const pricingTiers = [
       "Trading Guide PDF",
       "Cancel anytime",
     ],
-    cta: "Start Intermediary — KSh 300/mo",
+    cta: "Start Intermediary - KSh 300/mo",
     href: "/auth/register?plan=intermediary",
     highlighted: false,
   },
@@ -91,10 +91,10 @@ const pricingTiers = [
       "Full 13-chapter Investor's Guide",
       "Personalised stock advisor",
       "Company research & fit scores",
-      "Complete Investor's Guide PDF (worth KSh 999) — included",
+      "Complete Investor's Guide PDF (worth KSh 999) - included",
       "Priority support",
     ],
-    cta: "Start Premium — KSh 500/mo",
+    cta: "Start Premium - KSh 500/mo",
     href: "/auth/register?plan=premium",
     highlighted: true,
   },
@@ -176,7 +176,7 @@ export default async function LandingPage() {
       />
       <PublicHeader />
 
-      {/* Hero — paid offer is primary, free quiz is secondary */}
+      {/* Hero - paid offer is primary, free quiz is secondary */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7">
@@ -187,7 +187,7 @@ export default async function LandingPage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-5">
               Build a real NSE portfolio
               <br />
-              <span className="text-emerald-700">in 30 days — not 3 years.</span>
+              <span className="text-emerald-700">in 30 days - not 3 years.</span>
             </h1>
             <p className="max-w-2xl text-lg text-gray-600 mb-8">
               The Complete Investor&apos;s Guide gives you a tested framework for picking NSE
@@ -207,7 +207,7 @@ export default async function LandingPage() {
                   }}
                   className="inline-flex items-center justify-center gap-2 bg-emerald-700 text-white text-base font-bold px-7 py-4 rounded-xl hover:bg-emerald-800 transition-colors shadow-lg shadow-emerald-100"
                 >
-                  Get the Complete Guide — KSh {headlineEbook.price.toLocaleString("en-KE")} →
+                  Get the Complete Guide - KSh {headlineEbook.price.toLocaleString("en-KE")} →
                 </TrackedLink>
               ) : (
                 <TrackedLink
@@ -216,7 +216,7 @@ export default async function LandingPage() {
                   eventProps={{ intent: "premium" }}
                   className="inline-flex items-center justify-center gap-2 bg-emerald-700 text-white text-base font-bold px-7 py-4 rounded-xl hover:bg-emerald-800 transition-colors shadow-lg shadow-emerald-100"
                 >
-                  Start Premium — KSh 500/mo →
+                  Start Premium - KSh 500/mo →
                 </TrackedLink>
               )}
               <TrackedLink
@@ -323,7 +323,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Ebooks — moved up, second priority after hero */}
+      {/* Ebooks - moved up, second priority after hero */}
       {ebooks.length > 0 && (
         <section id="ebooks" className="py-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -400,7 +400,7 @@ export default async function LandingPage() {
         </section>
       )}
 
-      {/* Pricing — paid tiers first, free demoted */}
+      {/* Pricing - paid tiers first, free demoted */}
       <section id="pricing" className="py-20 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2">
@@ -410,7 +410,7 @@ export default async function LandingPage() {
             Subscribe and keep getting better
           </h2>
           <p className="text-center text-gray-500 mb-12 max-w-xl mx-auto">
-            New NSE research every week. Cancel anytime — no Kenyan bank shenanigans.
+            New NSE research every week. Cancel anytime - no Kenyan bank shenanigans.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {pricingTiers.map((tier) => (
@@ -500,7 +500,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Lead magnet — kept but moved below the paid offers */}
+      {/* Lead magnet - kept but moved below the paid offers */}
       {leadMagnet && (
         <section className="bg-emerald-50/40 py-16">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -622,14 +622,14 @@ export default async function LandingPage() {
                 Open your NSE account today.
               </h2>
               <p className="text-emerald-100 mb-6 max-w-lg">
-                Partner with <strong>AIB AXYS Africa</strong> — a CMA-regulated stockbroker
+                Partner with <strong>AIB AXYS Africa</strong> - a CMA-regulated stockbroker
                 trusted since 1995. Open a CDS account 100% online in under 10 minutes and
                 start buying NSE shares.
               </p>
               <ul className="space-y-2 mb-8">
                 {[
                   "CMA regulated & trusted since 1995",
-                  "100% online account opening — no paperwork",
+                  "100% online account opening - no paperwork",
                   "Trade equities, bonds & ETFs from your phone",
                   "Competitive brokerage rates",
                 ].map((f) => (
@@ -692,17 +692,17 @@ export default async function LandingPage() {
                 eventProps={{ productId: headlineEbook.id }}
                 className="inline-block text-center bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl hover:bg-emerald-800 transition-colors"
               >
-                Buy now — KSh {headlineEbook.price.toLocaleString("en-KE")} →
+                Buy now - KSh {headlineEbook.price.toLocaleString("en-KE")} →
               </TrackedLink>
             </div>
           )}
           <div className="bg-gradient-to-br from-[#25D366] to-[#128C7E] rounded-3xl p-7 text-white shadow-sm flex flex-col">
             <p className="text-xs font-bold uppercase tracking-widest text-white/80 mb-2">
-              Stay close to the market — free
+              Stay close to the market - free
             </p>
             <h3 className="text-2xl font-bold mb-2">NSE Daily Brief on WhatsApp</h3>
             <p className="text-white/90 text-sm mb-5 flex-1">
-              Post-market wrap at 8pm EAT — indices, named gainers/losers, turnover. Free
+              Post-market wrap at 8pm EAT - indices, named gainers/losers, turnover. Free
               channel. No DMs.
             </p>
             <TrackedAnchor

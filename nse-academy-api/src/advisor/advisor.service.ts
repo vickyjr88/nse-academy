@@ -38,13 +38,13 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
 
   switch (type) {
     case 'conservative': {
-      if (risk === 'low') { score += 30; reasons.push('Low risk profile — ideal for your capital preservation goals'); }
-      else if (risk === 'medium') { score += 10; reasons.push('Medium risk — slightly above your preferred conservative threshold'); }
-      else { score -= 20; reasons.push('High risk — volatile price action may conflict with your safety-first approach'); }
+      if (risk === 'low') { score += 30; reasons.push('Low risk profile - ideal for your capital preservation goals'); }
+      else if (risk === 'medium') { score += 10; reasons.push('Medium risk - slightly above your preferred conservative threshold'); }
+      else { score -= 20; reasons.push('High risk - volatile price action may conflict with your safety-first approach'); }
 
       if (dy >= 5) { score += 20; reasons.push(`Strong dividend yield (~${dy}%) provides reliable income`); }
       else if (dy >= 3) { score += 10; reasons.push(`Moderate dividend (~${dy}%) adds steady income`); }
-      else if (dy === 0) { reasons.push('No dividend — less suitable for income-focused conservative investors'); }
+      else if (dy === 0) { reasons.push('No dividend - less suitable for income-focused conservative investors'); }
 
       if (['Banking', 'Telecommunications', 'Manufacturing'].includes(stock.sector)) {
         score += 10; reasons.push(`${stock.sector} sector is typically stable and well-regulated`);
@@ -54,8 +54,8 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
 
     case 'moderate': {
       if (risk === 'medium') { score += 30; reasons.push('Balanced risk-reward ratio aligns with your moderate appetite'); }
-      else if (risk === 'low') { score += 20; reasons.push('Low risk — provides a stable foundation for your diversified portfolio'); }
-      else { score += 5; reasons.push('High risk — restrict this to a small portion of your growth allocation'); }
+      else if (risk === 'low') { score += 20; reasons.push('Low risk - provides a stable foundation for your diversified portfolio'); }
+      else { score += 5; reasons.push('High risk - restrict this to a small portion of your growth allocation'); }
 
       if (dy >= 3) { score += 15; reasons.push(`Dividend (~${dy}%) provides income while you wait for growth`); }
 
@@ -65,8 +65,8 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
 
     case 'aggressive': {
       if (risk === 'high') { score += 35; reasons.push('High volatility potential matches your aggressive risk appetite'); }
-      else if (risk === 'medium') { score += 20; reasons.push('Medium risk — offers strong upside with manageable day-to-day fluctuation'); }
-      else { score += 5; reasons.push('Low risk — likely too slow-moving for your aggressive return targets'); }
+      else if (risk === 'medium') { score += 20; reasons.push('Medium risk - offers strong upside with manageable day-to-day fluctuation'); }
+      else { score += 5; reasons.push('Low risk - likely too slow-moving for your aggressive return targets'); }
 
       if (dy < 3) { score += 5; reasons.push('Low dividend payout suggests earnings are reinvested for growth'); }
       reasons.push('Aggressive investors seek maximum capital appreciation over income');
@@ -74,11 +74,11 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
     }
 
     case 'dividend': {
-      if (dy >= 7) { score += 40; reasons.push(`Excellent yield (~${dy}%) — top-tier income stock`); }
-      else if (dy >= 5) { score += 30; reasons.push(`Strong yield (~${dy}%) — well above average for NSE`); }
-      else if (dy >= 3) { score += 15; reasons.push(`Moderate yield (~${dy}%) — acceptable for diversified income portfolio`); }
-      else if (dy > 0) { score += 5; reasons.push(`Low yield (~${dy}%) — marginal income contribution`); }
-      else { score -= 15; reasons.push('No dividend — not suitable as a core dividend holding'); }
+      if (dy >= 7) { score += 40; reasons.push(`Excellent yield (~${dy}%) - top-tier income stock`); }
+      else if (dy >= 5) { score += 30; reasons.push(`Strong yield (~${dy}%) - well above average for NSE`); }
+      else if (dy >= 3) { score += 15; reasons.push(`Moderate yield (~${dy}%) - acceptable for diversified income portfolio`); }
+      else if (dy > 0) { score += 5; reasons.push(`Low yield (~${dy}%) - marginal income contribution`); }
+      else { score -= 15; reasons.push('No dividend - not suitable as a core dividend holding'); }
 
       if (risk === 'low') { score += 10; reasons.push('Low risk supports sustainable long-term income'); }
       if (risk === 'high') { score -= 10; reasons.push('High risk may threaten dividend sustainability during downturns'); }
@@ -87,7 +87,7 @@ function analyseForType(type: InvestorType, stock: StockProfile): { rating: FitR
 
     case 'growth': {
       if (risk === 'high') { score += 30; reasons.push('High risk signals high growth potential'); }
-      else if (risk === 'medium') { score += 20; reasons.push('Medium risk — steady grower with upside'); }
+      else if (risk === 'medium') { score += 20; reasons.push('Medium risk - steady grower with upside'); }
 
       if (['Telecommunications', 'Banking', 'Energy & Petroleum'].includes(stock.sector)) {
         score += 15; reasons.push(`${stock.sector} is a high-growth sector on the NSE`);
@@ -264,11 +264,11 @@ export class AdvisorService {
 
     const profileContext = profile
       ? `The investor is a ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score: ${profile.riskScore}/100. Investment horizon: ${profile.horizonYears} years. Capital range: ${profile.capitalRange}.`
-      : 'The investor has not completed a profile yet — provide general analysis.';
+      : 'The investor has not completed a profile yet - provide general analysis.';
 
     const prompt = `You are a senior NSE (Nairobi Securities Exchange) investment analyst providing real-time personalised advice to a Kenyan retail investor.
 
-COMPANY: ${stock.company_name} (${stock.ticker}) — ${stock.sector} sector
+COMPANY: ${stock.company_name} (${stock.ticker}) - ${stock.sector} sector
 INVESTOR PROFILE: ${profileContext}
 
 Use Google Search to find the latest available information about ${stock.company_name} (${stock.ticker}) on the NSE, including:

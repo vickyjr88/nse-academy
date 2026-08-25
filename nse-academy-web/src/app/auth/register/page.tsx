@@ -145,7 +145,7 @@ function RegisterForm() {
               />
             </div>
 
-            {/* Referral code field — pre-filled if from URL, otherwise manually enterable */}
+            {/* Referral code field - pre-filled if from URL, otherwise manually enterable */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Referral code <span className="text-gray-400 font-normal">(optional)</span>

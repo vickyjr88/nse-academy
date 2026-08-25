@@ -90,7 +90,7 @@ export default function MarketTicker() {
                       : "text-gray-400"
                   }`}
               >
-                {isPositive ? "▲" : isNegative ? "▼" : "—"} {stock.change}
+                {isPositive ? "▲" : isNegative ? "▼" : "-"} {stock.change}
               </span>
             </div>
           );

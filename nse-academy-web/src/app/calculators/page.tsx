@@ -9,7 +9,7 @@ import PublicFooter from "@/components/PublicFooter";
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "NSE Calculators — Broker Fees, Dividend Yield, Compound Growth | NSE Academy",
+  title: "NSE Calculators - Broker Fees, Dividend Yield, Compound Growth | NSE Academy",
   description:
     "Free NSE investment calculators for Kenyan investors. Calculate broker fees, dividend yield, compound growth, DCA returns, and how many shares you need for your income target.",
   keywords: [
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "dividend income calculator Kenya",
   ],
   openGraph: {
-    title: "NSE Calculators — Free Tools for Kenyan Investors",
+    title: "NSE Calculators - Free Tools for Kenyan Investors",
     description:
       "Calculate broker fees, dividend yield, compound growth, DCA returns and dividend income targets for NSE investments.",
     type: "website",
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "NSE Investment Calculators | NSE Academy",
-    description: "Free calculators for Kenyan NSE investors — fees, dividends, compounding, DCA.",
+    description: "Free calculators for Kenyan NSE investors - fees, dividends, compounding, DCA.",
   },
   alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/calculators` },
 };
 
 // ---------------------------------------------------------------------------
-// JSON-LD — FAQ targeting high-value search queries
+// JSON-LD - FAQ targeting high-value search queries
 // ---------------------------------------------------------------------------
 
 const jsonLd = {
@@ -74,7 +74,7 @@ const jsonLd = {
       name: "How many NSE shares do I need to earn a target monthly income from dividends?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Use our Dividend Income Target calculator. Enter your target monthly income, the stock's dividend per share, and dividend frequency. We'll calculate exactly how many shares — and how much capital — you need.",
+        text: "Use our Dividend Income Target calculator. Enter your target monthly income, the stock's dividend per share, and dividend frequency. We'll calculate exactly how many shares - and how much capital - you need.",
       },
     },
   ],
@@ -101,7 +101,7 @@ export default function CalculatorsPage() {
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold text-gray-900 mb-3">NSE Investment Calculators</h1>
             <p className="text-gray-500 text-lg">
-              Free tools to estimate broker fees, dividend yields, compound growth, and income targets — built for Kenyan NSE investors.
+              Free tools to estimate broker fees, dividend yields, compound growth, and income targets - built for Kenyan NSE investors.
             </p>
           </div>
         </div>

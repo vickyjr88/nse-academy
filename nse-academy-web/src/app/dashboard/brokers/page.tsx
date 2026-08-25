@@ -11,7 +11,7 @@ const BROKERS = [
       "AIB AXYS Africa offers a fully digital account opening experience. Trade NSE equities, bonds, and ETFs from your phone or desktop. Regulated by the Capital Markets Authority (CMA).",
     highlights: [
       "CMA regulated & trusted since 1995",
-      "100% online account opening — no paperwork",
+      "100% online account opening - no paperwork",
       "Trade equities, bonds & ETFs",
       "Mobile app + web trading platform",
       "Competitive brokerage rates",
@@ -36,7 +36,7 @@ export default function BrokersPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Open a Brokerage Account</h1>
         <p className="text-gray-500">
           Ready to invest? Open a CDS account with one of our trusted broker partners and start buying NSE shares today.
-          Your NSE Academy profile has already identified the right stocks for you — now it's time to act.
+          Your NSE Academy profile has already identified the right stocks for you - now it's time to act.
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export default function BrokersPage() {
         <h2 className="font-semibold text-emerald-900 mb-3">How to get started in 3 steps</h2>
         <ol className="space-y-2 text-sm text-emerald-800">
           <li className="flex gap-3"><span className="font-bold shrink-0">1.</span> Click the referral link below to open your account online</li>
-          <li className="flex gap-3"><span className="font-bold shrink-0">2.</span> Complete KYC (National ID + phone number — takes ~10 minutes)</li>
+          <li className="flex gap-3"><span className="font-bold shrink-0">2.</span> Complete KYC (National ID + phone number - takes ~10 minutes)</li>
           <li className="flex gap-3"><span className="font-bold shrink-0">3.</span> Fund your account via M-Pesa or bank transfer and start trading</li>
         </ol>
       </div>

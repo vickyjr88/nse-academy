@@ -52,7 +52,7 @@ export async function generateMetadata({
   }
   const label = TYPE_LABEL[profile.type] ?? "NSE Investor";
   const title = `${profile.displayName} is a ${label} | NSE Academy`;
-  const description = `${profile.displayName} took the NSE Academy investor profiler quiz — risk score ${profile.riskScore}/100, ${profile.horizonYears}-year horizon. Discover your own investor type for free.`;
+  const description = `${profile.displayName} took the NSE Academy investor profiler quiz - risk score ${profile.riskScore}/100, ${profile.horizonYears}-year horizon. Discover your own investor type for free.`;
   const url = `${siteUrl()}/p/${slug}`;
   return {
     title,

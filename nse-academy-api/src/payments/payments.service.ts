@@ -145,7 +145,7 @@ export class PaymentsService {
   }
 
   /**
-   * Unified verify endpoint — inspects Paystack metadata.type to determine
+   * Unified verify endpoint - inspects Paystack metadata.type to determine
    * whether this is a subscription or ebook payment, then delegates accordingly.
    */
   async verifyAny(userId: string | null, reference: string) {
@@ -227,7 +227,7 @@ export class PaymentsService {
       },
     });
 
-    this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify — ref ${reference}`);
+    this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify - ref ${reference}`);
     await this.referrals.completeReferral(userId);
 
     return { success: true, tier: plan, type: 'subscription' };

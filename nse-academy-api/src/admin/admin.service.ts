@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { ConfigService } from '@nestjs/config';
+import { BrevoService } from '../brevo/brevo.service';
 import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
 
 type MonthRow = { month: string };
@@ -15,6 +16,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private brevo: BrevoService,
   ) {
     const propertyId = this.configService.get<string>('GA_PROPERTY_ID');
     const clientEmail = this.configService.get<string>('GA_CLIENT_EMAIL');
@@ -628,6 +630,7 @@ export class AdminService {
       subscriptionTrend,
       googleAnalytics, // Added GA data
       journalFeatures,
+      brevoConfigured: this.brevo.hasCredentials(),
       lessonProgress: {
         totalCompletions,
         uniqueLearners: Number(uniqueLearnersRaw[0].count),

@@ -8,27 +8,28 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
-  passwordHash     String
-  name             String
-  phone            String?
-  referralCode     String            @unique @default(cuid())
-  investorProfile  InvestorProfile?
-  subscription     Subscription?
-  ebookPurchase    EbookPurchase[]
-  progress         LessonProgress[]
-  referralsMade    Referral[]        @relation("ReferralsMade")
-  referralReceived Referral?         @relation("ReferralReceived")
-  orgMembership    OrgMember?
-  createdAt        DateTime          @default(now())
-  trades           Trade[]
-  holdings         Holding[]
-  statementImports StatementImport[]
-  priceAlerts      PriceAlert[]
-  notifications    Notification[]
-  dividends        Dividend[]
-  realizedGains    RealizedGain[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  passwordHash        String
+  name                String
+  phone               String?
+  referralCode        String               @unique @default(cuid())
+  investorProfile     InvestorProfile?
+  subscription        Subscription?
+  ebookPurchase       EbookPurchase[]
+  progress            LessonProgress[]
+  referralsMade       Referral[]           @relation("ReferralsMade")
+  referralReceived    Referral?            @relation("ReferralReceived")
+  orgMembership       OrgMember?
+  createdAt           DateTime             @default(now())
+  trades              Trade[]
+  holdings            Holding[]
+  statementImports    StatementImport[]
+  priceAlerts         PriceAlert[]
+  notifications       Notification[]
+  dividends           Dividend[]
+  realizedGains       RealizedGain[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model EbookPurchase {
@@ -328,4 +329,17 @@ model RealizedGain {
   @@index([userId])
   @@index([userId, tradeDate])
   @@index([userId, ticker])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
 }

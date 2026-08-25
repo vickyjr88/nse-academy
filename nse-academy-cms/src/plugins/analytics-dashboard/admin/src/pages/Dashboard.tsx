@@ -130,6 +130,7 @@ interface AnalyticsData {
   investorProfiles: InvestorProfiles;
   googleAnalytics: GoogleAnalytics | null; // Added GA
   journalFeatures: JournalFeatures;
+  brevoConfigured: boolean;
 }
 
 const COLORS = ['#4945FF', '#7B79FF', '#66B7F1', '#0C75AF', '#AC73E5'];
@@ -240,7 +241,7 @@ export function Dashboard() {
     );
   }
 
-  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures } = data;
+  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures, brevoConfigured } = data;
 
   const tierPieData = [
     { name: 'Free', value: overview.tierBreakdown.free },
@@ -271,15 +272,27 @@ export function Dashboard() {
 
   return (
     <Box padding={8}>
-      <Box paddingBottom={6} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box paddingBottom={4} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="alpha">Analytics Dashboard</Typography>
-        <Button 
-          variant="secondary" 
-          loading={syncing} 
+        <Button
+          variant="secondary"
+          loading={syncing}
           onClick={handleSyncMarketData}
         >
           🔄 Sync Market Data
         </Button>
+      </Box>
+
+      <Box paddingBottom={6}>
+        {brevoConfigured ? (
+          <Typography variant="pi" textColor="success600">
+            ✓ Email sending configured
+          </Typography>
+        ) : (
+          <Typography variant="pi" textColor="danger600">
+            ⚠ BREVO_API_KEY not set — no transactional emails (welcome, password reset, receipts, alerts) are being sent
+          </Typography>
+        )}
       </Box>
 
       {/* Overview Cards */}

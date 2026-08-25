@@ -115,6 +115,19 @@ export class AuthService {
     });
     if (!user) return AuthService.GENERIC_FORGOT_PASSWORD_RESPONSE;
 
+    await this.issuePasswordReset(user);
+
+    return AuthService.GENERIC_FORGOT_PASSWORD_RESPONSE;
+  }
+
+  /**
+   * Creates a fresh reset token and emails it to the user. Shared by the
+   * self-service forgot-password flow and any admin-driven flow that needs
+   * to give a newly-created user a way to set their own password (e.g.
+   * an org admin account created inline while setting up a corporate
+   * license) - same operation either way, just a different trigger.
+   */
+  async issuePasswordReset(user: { id: string; email: string; name: string }): Promise<void> {
     // Invalidate any still-unused tokens from earlier requests so an old
     // leaked link stops working once a new one is issued.
     await this.prisma.passwordResetToken.updateMany({
@@ -132,8 +145,6 @@ export class AuthService {
     });
 
     void this.sendResetPasswordEmail(user.email, user.name, token);
-
-    return AuthService.GENERIC_FORGOT_PASSWORD_RESPONSE;
   }
 
   async resetPassword(dto: ResetPasswordDto) {

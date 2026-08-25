@@ -100,9 +100,12 @@ export function OrganizationsList() {
 
   return (
     <Box padding={8}>
-      <Box paddingBottom={4}>
+      <Flex justifyContent="space-between" alignItems="center" paddingBottom={4}>
         <Typography variant="alpha">Organizations</Typography>
-      </Box>
+        <Button onClick={() => navigate('/plugins/user-manager/organizations/new')}>
+          + Create Organization
+        </Button>
+      </Flex>
 
       <Box paddingBottom={4}>
         <Flex gap={4}>

@@ -117,7 +117,9 @@ model CorporateLicense {
   seatsUsed         Int          @default(0)
   status            String       @default("active")
   currentPeriodEnd  DateTime
-  paystackReference String
+  paymentMethod     String       @default("paystack") // paystack | offline
+  paystackReference String? // set only when paymentMethod = paystack
+  offlineReference  String? // invoice #, bank txn ref, etc - set only when paymentMethod = offline
   amountKes         Int
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt

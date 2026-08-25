@@ -131,6 +131,11 @@ export default {
     });
 
     app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/organizations/new`,
+      Component: React.lazy(() => import('./pages/CreateOrganization').then((m) => ({ default: m.CreateOrganization }))),
+    });
+
+    app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/referrals`,
       Component: React.lazy(() => import('./pages/ReferralsList').then((m) => ({ default: m.ReferralsList }))),
     });

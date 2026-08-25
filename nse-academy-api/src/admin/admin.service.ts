@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
+import { AuthService } from '../auth/auth.service';
+import { CorporateService } from '../corporate/corporate.service';
 import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpsertLicenseDto } from './dto/upsert-license.dto';
 
 type MonthRow = { month: string };
 type GrowthRow = MonthRow & { count: bigint };
@@ -17,6 +23,8 @@ export class AdminService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private brevo: BrevoService,
+    private auth: AuthService,
+    private corporate: CorporateService,
   ) {
     const propertyId = this.configService.get<string>('GA_PROPERTY_ID');
     const clientEmail = this.configService.get<string>('GA_CLIENT_EMAIL');
@@ -294,6 +302,83 @@ export class AdminService {
     });
     if (!org) throw new NotFoundException('Organization not found');
     return org;
+  }
+
+  /**
+   * Admin-driven org setup for offline (bank transfer / invoice) deals with
+   * an arbitrary seat count, bypassing the self-serve Paystack flow
+   * entirely. Looks up the admin-to-be by email; creates a new account for
+   * them (with a password-reset email so they can log in) if none exists.
+   */
+  async createOrganizationWithLicense(dto: CreateOrganizationDto) {
+    const adminEmail = dto.adminEmail.trim().toLowerCase();
+    let adminUser = await this.prisma.user.findFirst({
+      where: { email: { equals: adminEmail, mode: 'insensitive' } },
+    });
+
+    if (!adminUser) {
+      const tempPassword = randomBytes(24).toString('hex');
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
+      adminUser = await this.prisma.user.create({
+        data: { name: dto.adminName, email: adminEmail, passwordHash },
+      });
+      await this.auth.issuePasswordReset(adminUser);
+    }
+
+    const existingMembership = await this.prisma.orgMember.findUnique({
+      where: { userId: adminUser.id },
+    });
+    if (existingMembership) {
+      throw new BadRequestException('This user already belongs to an organization');
+    }
+
+    const org = await this.corporate.createOrganization(adminUser.id, {
+      name: dto.name,
+      type: dto.type,
+      email: dto.orgEmail,
+    });
+
+    await this.upsertOrganizationLicense(org.id, dto.license);
+
+    return this.getOrganization(org.id);
+  }
+
+  async upsertOrganizationLicense(orgId: string, dto: UpsertLicenseDto) {
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const referenceFields =
+      dto.paymentMethod === 'offline'
+        ? { paystackReference: null, offlineReference: dto.offlineReference ?? null }
+        : { offlineReference: null };
+
+    const existing = await this.prisma.corporateLicense.findUnique({ where: { orgId } });
+    const seatsUsed = existing
+      ? undefined
+      : await this.prisma.orgMember.count({ where: { orgId, inviteAccepted: true } });
+
+    return this.prisma.corporateLicense.upsert({
+      where: { orgId },
+      create: {
+        orgId,
+        tier: 'premium',
+        seats: dto.seats,
+        seatsUsed: seatsUsed ?? 0,
+        status: dto.status ?? 'active',
+        currentPeriodEnd: new Date(dto.currentPeriodEnd),
+        paymentMethod: dto.paymentMethod,
+        amountKes: dto.amountKes,
+        ...referenceFields,
+      },
+      update: {
+        seats: dto.seats,
+        status: dto.status ?? 'active',
+        currentPeriodEnd: new Date(dto.currentPeriodEnd),
+        paymentMethod: dto.paymentMethod,
+        amountKes: dto.amountKes,
+        ...referenceFields,
+      },
+    });
   }
 
   async listReferrals(params: {

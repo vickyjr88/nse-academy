@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { AdminAuthGuard } from './admin-auth.guard';
 import { AdminService } from './admin.service';
 import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpsertLicenseDto } from './dto/upsert-license.dto';
 
 @ApiTags('admin')
 @ApiHeader({ name: 'x-admin-key', required: true, description: 'Admin API key' })
@@ -136,6 +138,18 @@ export class AdminController {
   @ApiOperation({ summary: 'Get full organization detail including license and members' })
   getOrganization(@Param('id') id: string) {
     return this.admin.getOrganization(id);
+  }
+
+  @Post('organizations')
+  @ApiOperation({ summary: 'Create an organization with an offline (or paystack) seat-pack license' })
+  createOrganization(@Body() dto: CreateOrganizationDto) {
+    return this.admin.createOrganizationWithLicense(dto);
+  }
+
+  @Put('organizations/:id/license')
+  @ApiOperation({ summary: "Create or update an organization's license (seats, price, payment method)" })
+  upsertOrganizationLicense(@Param('id') id: string, @Body() dto: UpsertLicenseDto) {
+    return this.admin.upsertOrganizationLicense(id, dto);
   }
 
   @Get('referrals')

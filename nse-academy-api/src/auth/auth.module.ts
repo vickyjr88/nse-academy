@@ -22,6 +22,6 @@ import { EbookModule } from '../ebook/ebook.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, TierGuard],
-  exports: [JwtModule, TierGuard],
+  exports: [JwtModule, TierGuard, AuthService],
 })
 export class AuthModule {}

@@ -31,6 +31,9 @@ const navItems = [
   { label: "Account", href: "/dashboard/account", icon: "⚙️" },
   { label: "Subscription", href: "/dashboard/billing", icon: "💳" },
   { label: "Corporate", href: "/dashboard/corporate", icon: "🏢" },
+  { label: "Financial Advisors", href: "/dashboard/advisors", icon: "🧑‍💼" },
+  { label: "Insights", href: "/dashboard/insights", icon: "💡" },
+  { label: "Advisor Workspace", href: "/dashboard/advisor", icon: "🗂️" },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -48,6 +51,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/account": "Account",
   "/dashboard/billing": "Subscription",
   "/dashboard/corporate": "Corporate",
+  "/dashboard/advisors": "Financial Advisors",
+  "/dashboard/insights": "Insights",
+  "/dashboard/advisor": "Advisor Workspace",
 };
 
 interface User {

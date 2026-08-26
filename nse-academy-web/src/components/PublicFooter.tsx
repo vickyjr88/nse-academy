@@ -4,7 +4,17 @@ export default function PublicFooter() {
   return (
     <footer className="border-t border-gray-100 py-10">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
-        <span>© 2026 NSE Academy - Infinity Digital Works</span>
+        <span>
+          © 2026 NSE Academy -{" "}
+          <a
+            href="https://vitaldigitalmedia.net/infinity-digital-works/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-600 transition-colors"
+          >
+            Infinity Digital Works
+          </a>
+        </span>
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
           <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
           <Link href="/companies" className="hover:text-gray-600 transition-colors">Companies</Link>

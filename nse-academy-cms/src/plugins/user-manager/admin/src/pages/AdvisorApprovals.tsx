@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -39,6 +40,7 @@ interface AdvisorsResponse {
 const STATUS_BADGE: Record<string, string> = { pending: 'warning', approved: 'success', suspended: 'danger' };
 
 export function AdvisorApprovals() {
+  const navigate = useNavigate();
   const [advisors, setAdvisors] = useState<Advisor[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -160,7 +162,11 @@ export function AdvisorApprovals() {
         </Thead>
         <Tbody>
           {advisors.map((a) => (
-            <Tr key={a.id}>
+            <Tr
+              key={a.id}
+              onClick={() => navigate(`/plugins/user-manager/advisor-approvals/${a.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td>
                 <Typography fontWeight="semiBold">{a.user.name}</Typography>
                 <Typography variant="pi" textColor="neutral600">{a.user.email}</Typography>
@@ -173,7 +179,7 @@ export function AdvisorApprovals() {
                   {a.approvalStatus}
                 </Badge>
               </Td>
-              <Td>
+              <Td onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                 <Flex gap={2}>
                   {a.approvalStatus !== 'approved' && (
                     <Button size="S" onClick={() => handleAction(a.id, 'approve')} loading={actingId === a.id}>

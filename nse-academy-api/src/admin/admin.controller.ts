@@ -190,6 +190,12 @@ export class AdminController {
     });
   }
 
+  @Get('advisors/:id')
+  @ApiOperation({ summary: 'Get full advisor detail including client/query/insight/alert counts' })
+  getAdvisor(@Param('id') id: string) {
+    return this.admin.getAdvisor(id);
+  }
+
   @Post('advisors/:id/approve')
   @ApiOperation({ summary: 'Approve a pending or suspended advisor profile' })
   approveAdvisor(@Param('id') id: string) {

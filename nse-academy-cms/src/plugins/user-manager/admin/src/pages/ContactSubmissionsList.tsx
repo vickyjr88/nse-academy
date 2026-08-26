@@ -131,8 +131,8 @@ export function ContactSubmissionsList() {
               onClear={() => { setStatus(''); setPage(1); }}
             >
               <SingleSelectOption value="new">New</SingleSelectOption>
-              <SingleSelectOption value="in_progress">In Progress</SingleSelectOption>
-              <SingleSelectOption value="resolved">Resolved</SingleSelectOption>
+              <SingleSelectOption value="read">Read</SingleSelectOption>
+              <SingleSelectOption value="replied">Replied</SingleSelectOption>
             </SingleSelect>
           </Box>
         </Flex>

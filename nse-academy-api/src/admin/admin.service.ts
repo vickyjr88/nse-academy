@@ -512,6 +512,33 @@ export class AdminService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async getAdvisor(id: string) {
+    const advisor = await this.prisma.advisorProfile.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        org: { select: { id: true, name: true } },
+        _count: { select: { clients: true, queries: true, insights: true, alerts: true } },
+        clients: {
+          take: 10,
+          orderBy: { requestedAt: 'desc' },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        queries: {
+          take: 10,
+          orderBy: { updatedAt: 'desc' },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        insights: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+    if (!advisor) throw new NotFoundException('Advisor not found');
+    return advisor;
+  }
+
   async approveAdvisor(id: string) {
     const advisor = await this.prisma.advisorProfile.findUnique({
       where: { id },

@@ -206,6 +206,11 @@ export default {
     });
 
     app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/advisor-approvals/:id`,
+      Component: React.lazy(() => import('./pages/AdvisorDetail').then((m) => ({ default: m.AdvisorDetail }))),
+    });
+
+    app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/:id`,
       Component: React.lazy(() => import('./pages/UserDetail').then((m) => ({ default: m.UserDetail }))),
     });

@@ -268,7 +268,7 @@ export function listInsightsFeed(params?: { page?: number; limit?: number }): Pr
   return fetch(apiUrl(`/financial-advisor/insights/feed?${qs.toString()}`), { headers: authHeaders() }).then((r) => handle(r));
 }
 
-export function sendAlert(input: { ticker: string; action: "BUY" | "SELL"; message: string }): Promise<AdvisorAlert> {
+export function sendAlert(input: { ticker: string; action: "BUY" | "SELL"; message: string; userId?: string }): Promise<AdvisorAlert> {
   return fetch(apiUrl("/financial-advisor/alerts"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

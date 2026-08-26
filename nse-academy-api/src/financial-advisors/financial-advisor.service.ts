@@ -386,9 +386,15 @@ export class FinancialAdvisorService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  /**
+   * Alerts only ever reach this advisor's own accepted clients - either one
+   * specific client (dto.userId, used from a client's profile page) or all
+   * of them (dto.userId omitted, used from the advisor's general alerts
+   * tab). There is no platform-wide fan-out here: systemwide messaging is
+   * an admin-only capability (BroadcastService / admin/broadcast/send).
+   */
   async sendAlert(advisorUserId: string, dto: SendAlertDto) {
     const advisor = await this.getAdvisorProfileOrThrow(advisorUserId);
-    const advisorUser = await this.prisma.user.findUnique({ where: { id: advisorUserId }, select: { name: true } });
     const ticker = dto.ticker.toUpperCase().trim();
 
     const clients = await this.prisma.advisorClient.findMany({
@@ -397,51 +403,36 @@ export class FinancialAdvisorService {
     });
     let clientIds = clients.map((c) => c.userId);
 
-    // Free-tier platform users get the same call as a taste of advisor
-    // value (and a nudge toward the advisor's public profile) - excludes
-    // anyone already an accepted client so they aren't notified twice.
-    const freeTierUsers = await this.prisma.user.findMany({
-      where: {
-        id: { notIn: clientIds.length > 0 ? clientIds : undefined },
-        OR: [{ subscription: null }, { subscription: { tier: 'free' } }],
-      },
-      select: { id: true },
-    });
-    let freeTierIds = freeTierUsers.map((u) => u.id);
+    if (dto.userId) {
+      if (!clientIds.includes(dto.userId)) {
+        throw new ForbiddenException('That user is not an accepted client of yours');
+      }
+      clientIds = [dto.userId];
+    }
 
-    if (dto.action === 'SELL') {
-      const allCandidateIds = [...clientIds, ...freeTierIds];
-      const holders = allCandidateIds.length > 0
-        ? await this.prisma.holding.findMany({
-            where: { userId: { in: allCandidateIds }, ticker, quantity: { gt: 0 } },
-            select: { userId: true },
-          })
-        : [];
+    if (dto.action === 'SELL' && clientIds.length > 0) {
+      const holders = await this.prisma.holding.findMany({
+        where: { userId: { in: clientIds }, ticker, quantity: { gt: 0 } },
+        select: { userId: true },
+      });
       const holderIds = new Set(holders.map((h) => h.userId));
       clientIds = clientIds.filter((id) => holderIds.has(id));
-      freeTierIds = freeTierIds.filter((id) => holderIds.has(id));
     }
 
     const title = `${dto.action === 'BUY' ? 'Buy' : 'Sell'} alert: ${ticker}`;
     const clientLink = `${this.webUrl()}/dashboard/advisor`;
-    const freeTierLink = `${this.webUrl()}/advisors/${advisor.id}`;
-    const freeTierSubject = advisorUser ? `${title} - from ${advisorUser.name}` : title;
 
     for (const userId of clientIds) {
       void this.notifyAndEmail(userId, 'ADVISOR_ALERT', title, dto.message, clientLink);
     }
-    for (const userId of freeTierIds) {
-      void this.notifyAndEmail(userId, 'ADVISOR_ALERT', title, dto.message, freeTierLink, freeTierSubject);
-    }
 
-    const recipientCount = clientIds.length + freeTierIds.length;
     return this.prisma.advisorAlert.create({
       data: {
         advisorId: advisor.id,
         ticker,
         action: dto.action,
         message: dto.message,
-        recipientCount,
+        recipientCount: clientIds.length,
       },
     });
   }

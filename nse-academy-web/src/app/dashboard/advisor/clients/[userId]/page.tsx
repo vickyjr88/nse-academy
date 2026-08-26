@@ -55,7 +55,12 @@ export default function ClientProfilePage() {
     setSending(true);
     setSent(false);
     try {
-      await sendAlert({ ticker: alertTicker.toUpperCase(), action: alertAction, message: alertMessage });
+      await sendAlert({
+        ticker: alertTicker.toUpperCase(),
+        action: alertAction,
+        message: alertMessage,
+        userId: params.userId,
+      });
       setSent(true);
       setAlertTicker("");
       setAlertMessage("");
@@ -206,10 +211,10 @@ export default function ClientProfilePage() {
 
       {/* Quick alert */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6">
-        <h3 className="font-semibold text-gray-900 mb-2">Send an alert</h3>
+        <h3 className="font-semibold text-gray-900 mb-2">Send an alert to {client.name}</h3>
         <p className="text-sm text-gray-500 mb-4">
-          This still broadcasts to every eligible client for a sell alert (only holders of the ticker
-          receive it) or all accepted clients for a buy alert — it is not limited to {client.name} alone.
+          This goes only to {client.name}. For a sell alert, it's only sent if they currently hold this
+          ticker in their portfolio.
         </p>
         <form onSubmit={handleQuickAlert} className="space-y-3">
           <div className="flex gap-3">

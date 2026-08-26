@@ -86,6 +86,8 @@ model LessonProgress {
   lessonId    String // Strapi lesson ID
   completed   Boolean   @default(false)
   completedAt DateTime?
+
+  @@unique([userId, lessonId])
 }
 
 model Referral {

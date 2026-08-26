@@ -237,14 +237,20 @@ Accept your invite: ${inviteLink}
     const member = await this.prisma.orgMember.findUnique({ where: { inviteToken: token } });
     if (!member) throw new NotFoundException('Invalid or expired invite token');
 
-    await this.prisma.orgMember.update({
-      where: { id: member.id },
-      data: { userId, inviteAccepted: true, inviteToken: null },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.$executeRaw`
+        UPDATE "CorporateLicense"
+        SET "seatsUsed" = "seatsUsed" + 1
+        WHERE "orgId" = ${member.orgId} AND "seatsUsed" < "seats"
+      `;
+      if (claimed === 0) {
+        throw new BadRequestException('No seats available. Upgrade your plan.');
+      }
 
-    await this.prisma.corporateLicense.update({
-      where: { orgId: member.orgId },
-      data: { seatsUsed: { increment: 1 } },
+      await tx.orgMember.update({
+        where: { id: member.id },
+        data: { userId, inviteAccepted: true, inviteToken: null },
+      });
     });
 
     return { success: true };

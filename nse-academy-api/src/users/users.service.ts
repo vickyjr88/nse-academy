@@ -37,7 +37,7 @@ export class UsersService {
 
   async markLessonComplete(userId: string, lessonId: string) {
     return this.prisma.lessonProgress.upsert({
-      where: { id: `${userId}_${lessonId}` },
+      where: { userId_lessonId: { userId, lessonId } },
       update: { completed: true, completedAt: new Date() },
       create: { userId, lessonId, completed: true, completedAt: new Date() },
     });

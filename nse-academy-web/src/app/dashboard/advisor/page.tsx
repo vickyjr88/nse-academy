@@ -60,8 +60,9 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
+            <label htmlFor="advisor-register-headline" className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
             <input
+              id="advisor-register-headline"
               required
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
@@ -70,8 +71,9 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <label htmlFor="advisor-register-bio" className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
             <textarea
+              id="advisor-register-bio"
               required
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -81,8 +83,9 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Specialties (comma separated)</label>
+            <label htmlFor="advisor-register-specialties" className="block text-sm font-medium text-gray-700 mb-1">Specialties (comma separated)</label>
             <input
+              id="advisor-register-specialties"
               value={specialties}
               onChange={(e) => setSpecialties(e.target.value)}
               placeholder="Retirement Planning, Dividend Investing"
@@ -90,8 +93,9 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Credentials (optional)</label>
+            <label htmlFor="advisor-register-credentials" className="block text-sm font-medium text-gray-700 mb-1">Credentials (optional)</label>
             <input
+              id="advisor-register-credentials"
               value={credentials}
               onChange={(e) => setCredentials(e.target.value)}
               placeholder="CFA, CISI"

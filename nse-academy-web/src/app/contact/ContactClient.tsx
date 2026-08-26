@@ -129,8 +129,9 @@ export default function ContactClient() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
+                    <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
                     <input
+                      id="contact-name"
                       type="text"
                       required
                       value={form.name}
@@ -140,8 +141,9 @@ export default function ContactClient() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                    <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
                     <input
+                      id="contact-email"
                       type="email"
                       required
                       value={form.email}
@@ -153,8 +155,9 @@ export default function ContactClient() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
+                  <label htmlFor="contact-subject" className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
                   <select
+                    id="contact-subject"
                     value={form.subject}
                     onChange={(e) => set("subject", e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
@@ -166,8 +169,9 @@ export default function ContactClient() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
+                  <label htmlFor="contact-message" className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
                   <textarea
+                    id="contact-message"
                     required
                     rows={6}
                     value={form.message}

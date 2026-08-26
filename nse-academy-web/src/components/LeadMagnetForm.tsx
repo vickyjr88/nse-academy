@@ -178,10 +178,11 @@ export default function LeadMagnetForm({
       )}
       <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
         <div>
-          <label className={`text-sm font-medium ${labelText}`}>
+          <label htmlFor="lead-magnet-name" className={`text-sm font-medium ${labelText}`}>
             Your name <span className="opacity-60">(optional)</span>
           </label>
           <input
+            id="lead-magnet-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -190,8 +191,9 @@ export default function LeadMagnetForm({
           />
         </div>
         <div>
-          <label className={`text-sm font-medium ${labelText}`}>Email</label>
+          <label htmlFor="lead-magnet-email" className={`text-sm font-medium ${labelText}`}>Email</label>
           <input
+            id="lead-magnet-email"
             type="email"
             required
             value={email}

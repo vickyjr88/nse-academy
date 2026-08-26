@@ -66,8 +66,9 @@ function CorporateRegisterForm() {
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Organization name</label>
+              <label htmlFor="corporate-register-name" className="block text-sm font-medium text-gray-700 mb-1">Organization name</label>
               <input
+                id="corporate-register-name"
                 type="text"
                 required
                 value={name}
@@ -78,6 +79,7 @@ function CorporateRegisterForm() {
             </div>
 
             <div>
+              {/* Section label for the radio group below - each radio option has its own wrapping <label>, so this heading is intentionally not paired to a single control. */}
               <label className="block text-sm font-medium text-gray-700 mb-2">Organization type</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -104,8 +106,9 @@ function CorporateRegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Work email</label>
+              <label htmlFor="corporate-register-email" className="block text-sm font-medium text-gray-700 mb-1">Work email</label>
               <input
+                id="corporate-register-email"
                 type="email"
                 required
                 value={email}
@@ -116,8 +119,9 @@ function CorporateRegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+              <label htmlFor="corporate-register-plan" className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
               <select
+                id="corporate-register-plan"
                 value={plan}
                 onChange={(e) => setPlan(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"

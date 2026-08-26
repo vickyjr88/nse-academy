@@ -431,10 +431,11 @@ export default function CheckoutPanel({ product }: Props) {
             )}
             {authMode === "register" && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="checkout-register-name" className="block text-xs font-medium text-gray-500 mb-1">
                   Full name
                 </label>
                 <input
+                  id="checkout-register-name"
                   type="text"
                   required
                   value={name}
@@ -446,10 +447,11 @@ export default function CheckoutPanel({ product }: Props) {
             )}
             {authMode === "guest" && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="checkout-guest-name" className="block text-xs font-medium text-gray-500 mb-1">
                   Name <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
+                  id="checkout-guest-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -459,8 +461,9 @@ export default function CheckoutPanel({ product }: Props) {
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+              <label htmlFor="checkout-email" className="block text-xs font-medium text-gray-500 mb-1">Email</label>
               <input
+                id="checkout-email"
                 type="email"
                 required
                 value={email}
@@ -471,10 +474,11 @@ export default function CheckoutPanel({ product }: Props) {
             </div>
             {authMode !== "guest" && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="checkout-password" className="block text-xs font-medium text-gray-500 mb-1">
                   Password
                 </label>
                 <input
+                  id="checkout-password"
                   type="password"
                   required
                   minLength={authMode === "register" ? 8 : undefined}

@@ -89,8 +89,9 @@ function AccountPageContent() {
         <form onSubmit={handleSaveProfile} className="p-6 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Full Name</label>
+              <label htmlFor="account-full-name" className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Full Name</label>
               <input
+                id="account-full-name"
                 type="text"
                 required
                 value={editName}
@@ -99,8 +100,9 @@ function AccountPageContent() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Email Address</label>
+              <label htmlFor="account-email" className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Email Address</label>
               <input
+                id="account-email"
                 type="email"
                 value={user?.email ?? ""}
                 disabled
@@ -109,8 +111,9 @@ function AccountPageContent() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Mobile Number</label>
+            <label htmlFor="account-phone" className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Mobile Number</label>
             <input
+              id="account-phone"
               type="tel"
               value={editPhone}
               onChange={(e) => setEditPhone(e.target.value.trim())}

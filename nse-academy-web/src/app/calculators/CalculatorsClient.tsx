@@ -33,15 +33,17 @@ function num(s: string) {
 function Field({
   label,
   hint,
+  htmlFor,
   children,
 }: {
   label: string;
   hint?: string;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1">
+      <label htmlFor={htmlFor} className="block text-sm font-semibold text-gray-700 mb-1">
         {label}
         {hint && <span className="ml-1 text-xs text-gray-400 font-normal">({hint})</span>}
       </label>
@@ -51,6 +53,7 @@ function Field({
 }
 
 function Input({
+  id,
   value,
   onChange,
   prefix,
@@ -59,6 +62,7 @@ function Input({
   min = "0",
   step = "any",
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   prefix?: string;
@@ -75,6 +79,7 @@ function Input({
         </span>
       )}
       <input
+        id={id}
         type="number"
         min={min}
         step={step}
@@ -140,8 +145,8 @@ function BrokerFeeCalc() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="space-y-5">
-        <Field label="Trade Value" hint="total value of shares bought or sold">
-          <Input value={tradeValue} onChange={setTradeValue} prefix="KSh" placeholder="50,000" />
+        <Field label="Trade Value" hint="total value of shares bought or sold" htmlFor="calc-broker-trade-value">
+          <Input id="calc-broker-trade-value" value={tradeValue} onChange={setTradeValue} prefix="KSh" placeholder="50,000" />
         </Field>
 
         <Field label="Side">
@@ -217,14 +222,14 @@ function DividendYieldCalc() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="space-y-5">
-        <Field label="Current Share Price" hint="today's market price">
-          <Input value={sharePrice} onChange={setSharePrice} prefix="KSh" placeholder="40.00" step="0.01" />
+        <Field label="Current Share Price" hint="today's market price" htmlFor="calc-yield-share-price">
+          <Input id="calc-yield-share-price" value={sharePrice} onChange={setSharePrice} prefix="KSh" placeholder="40.00" step="0.01" />
         </Field>
-        <Field label="Annual Dividend per Share" hint="last declared annual DPS">
-          <Input value={dividendPerShare} onChange={setDividendPerShare} prefix="KSh" placeholder="2.00" step="0.01" />
+        <Field label="Annual Dividend per Share" hint="last declared annual DPS" htmlFor="calc-yield-dps">
+          <Input id="calc-yield-dps" value={dividendPerShare} onChange={setDividendPerShare} prefix="KSh" placeholder="2.00" step="0.01" />
         </Field>
-        <Field label="Number of Shares" hint="how many shares you own or plan to buy">
-          <Input value={shares} onChange={setShares} placeholder="1,000" step="1" />
+        <Field label="Number of Shares" hint="how many shares you own or plan to buy" htmlFor="calc-yield-shares">
+          <Input id="calc-yield-shares" value={shares} onChange={setShares} placeholder="1,000" step="1" />
         </Field>
       </div>
 
@@ -275,17 +280,17 @@ function CompoundGrowthCalc() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="space-y-5">
-        <Field label="Initial Investment">
-          <Input value={initial} onChange={setInitial} prefix="KSh" placeholder="100,000" />
+        <Field label="Initial Investment" htmlFor="calc-compound-initial">
+          <Input id="calc-compound-initial" value={initial} onChange={setInitial} prefix="KSh" placeholder="100,000" />
         </Field>
-        <Field label="Monthly Contribution" hint="optional">
-          <Input value={monthly} onChange={setMonthly} prefix="KSh" placeholder="5,000" />
+        <Field label="Monthly Contribution" hint="optional" htmlFor="calc-compound-monthly">
+          <Input id="calc-compound-monthly" value={monthly} onChange={setMonthly} prefix="KSh" placeholder="5,000" />
         </Field>
-        <Field label="Expected Annual Return">
-          <Input value={annualReturn} onChange={setAnnualReturn} suffix="%" placeholder="12" step="0.5" />
+        <Field label="Expected Annual Return" htmlFor="calc-compound-return">
+          <Input id="calc-compound-return" value={annualReturn} onChange={setAnnualReturn} suffix="%" placeholder="12" step="0.5" />
         </Field>
-        <Field label="Time Horizon">
-          <Input value={years} onChange={setYears} suffix="years" placeholder="10" min="1" step="1" />
+        <Field label="Time Horizon" htmlFor="calc-compound-years">
+          <Input id="calc-compound-years" value={years} onChange={setYears} suffix="years" placeholder="10" min="1" step="1" />
         </Field>
         <p className="text-xs text-gray-400">
           NSE 10-year historical average: ~12–15%/yr. 2025 return was 52%.
@@ -346,17 +351,17 @@ function DCACalc() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="space-y-5">
-        <Field label="Monthly Investment Amount">
-          <Input value={monthlyAmount} onChange={setMonthlyAmount} prefix="KSh" placeholder="5,000" />
+        <Field label="Monthly Investment Amount" htmlFor="calc-dca-monthly-amount">
+          <Input id="calc-dca-monthly-amount" value={monthlyAmount} onChange={setMonthlyAmount} prefix="KSh" placeholder="5,000" />
         </Field>
-        <Field label="Duration">
-          <Input value={months} onChange={setMonths} suffix="months" placeholder="12" min="1" step="1" />
+        <Field label="Duration" htmlFor="calc-dca-months">
+          <Input id="calc-dca-months" value={months} onChange={setMonths} suffix="months" placeholder="12" min="1" step="1" />
         </Field>
-        <Field label="Share Price at Start" hint="price when you began">
-          <Input value={avgBuyPrice} onChange={setAvgBuyPrice} prefix="KSh" placeholder="30.00" step="0.01" />
+        <Field label="Share Price at Start" hint="price when you began" htmlFor="calc-dca-start-price">
+          <Input id="calc-dca-start-price" value={avgBuyPrice} onChange={setAvgBuyPrice} prefix="KSh" placeholder="30.00" step="0.01" />
         </Field>
-        <Field label="Current Share Price">
-          <Input value={currentPrice} onChange={setCurrentPrice} prefix="KSh" placeholder="35.00" step="0.01" />
+        <Field label="Current Share Price" htmlFor="calc-dca-current-price">
+          <Input id="calc-dca-current-price" value={currentPrice} onChange={setCurrentPrice} prefix="KSh" placeholder="35.00" step="0.01" />
         </Field>
         <p className="text-xs text-gray-400">
           DCA buys more shares when prices are low, lowering your average cost over time.
@@ -410,14 +415,14 @@ function DividendIncomeCalc() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="space-y-5">
-        <Field label="Target Monthly Income">
-          <Input value={targetMonthly} onChange={setTargetMonthly} prefix="KSh" placeholder="10,000" />
+        <Field label="Target Monthly Income" htmlFor="calc-income-target-monthly">
+          <Input id="calc-income-target-monthly" value={targetMonthly} onChange={setTargetMonthly} prefix="KSh" placeholder="10,000" />
         </Field>
-        <Field label="Annual Dividend per Share">
-          <Input value={dps} onChange={setDps} prefix="KSh" placeholder="2.50" step="0.01" />
+        <Field label="Annual Dividend per Share" htmlFor="calc-income-dps">
+          <Input id="calc-income-dps" value={dps} onChange={setDps} prefix="KSh" placeholder="2.50" step="0.01" />
         </Field>
-        <Field label="Current Share Price">
-          <Input value={sharePrice} onChange={setSharePrice} prefix="KSh" placeholder="40.00" step="0.01" />
+        <Field label="Current Share Price" htmlFor="calc-income-share-price">
+          <Input id="calc-income-share-price" value={sharePrice} onChange={setSharePrice} prefix="KSh" placeholder="40.00" step="0.01" />
         </Field>
         <Field label="Dividend Frequency">
           <div className="flex gap-2">

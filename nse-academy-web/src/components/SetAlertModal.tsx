@@ -79,8 +79,9 @@ export function SetAlertModal({ ticker, onClose, onCreated }: SetAlertModalProps
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Target price (KES)</label>
+            <label htmlFor="set-alert-target-price" className="block text-xs font-semibold text-gray-500 mb-1">Target price (KES)</label>
             <input
+              id="set-alert-target-price"
               autoFocus
               type="number"
               min={0.01}

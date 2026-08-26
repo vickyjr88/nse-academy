@@ -86,10 +86,11 @@ function LoginForm() {
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
               <input
+                id="login-email"
                 type="email"
                 required
                 value={email}
@@ -100,7 +101,7 @@ function LoginForm() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
                 <Link
@@ -111,6 +112,7 @@ function LoginForm() {
                 </Link>
               </div>
               <input
+                id="login-password"
                 type="password"
                 required
                 value={password}

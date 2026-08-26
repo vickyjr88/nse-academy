@@ -160,8 +160,9 @@ function RegisterForm() {
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+              <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
               <input
+                id="register-name"
                 type="text"
                 required
                 value={name}
@@ -171,8 +172,9 @@ function RegisterForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
+                id="register-email"
                 type="email"
                 required
                 value={email}
@@ -182,10 +184,11 @@ function RegisterForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="register-phone" className="block text-sm font-medium text-gray-700 mb-1">
                 Mobile number
               </label>
               <input
+                id="register-phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.trim())}
@@ -194,8 +197,9 @@ function RegisterForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
+                id="register-password"
                 type="password"
                 required
                 minLength={8}
@@ -208,10 +212,11 @@ function RegisterForm() {
 
             {/* Referral code field - pre-filled if from URL, otherwise manually enterable */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="register-referral-code" className="block text-sm font-medium text-gray-700 mb-1">
                 Referral code <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
+                id="register-referral-code"
                 type="text"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.trim())}

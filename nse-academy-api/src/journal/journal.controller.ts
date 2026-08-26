@@ -36,9 +36,16 @@ export class JournalController {
   constructor(private journal: JournalService) {}
 
   @Get('trades')
-  @ApiOperation({ summary: 'List the current user trade journal entries' })
-  listTrades(@Req() req: { user: { id: string } }) {
-    return this.journal.listTrades(req.user.id);
+  @ApiOperation({ summary: 'List the current user trade journal entries (paginated)' })
+  listTrades(
+    @Req() req: { user: { id: string } },
+    @Query('page') page = '1',
+    @Query('limit') limit = '50',
+  ) {
+    return this.journal.listTrades(req.user.id, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('trades')

@@ -116,8 +116,15 @@ export class FinancialAdvisorController {
   }
 
   @Get('insights/feed')
-  insightsFeed(@Request() req: any) {
-    return this.advisor.listInsightsForClient(req.user.id);
+  insightsFeed(
+    @Request() req: any,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.advisor.listInsightsForClient(req.user.id, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('alerts')

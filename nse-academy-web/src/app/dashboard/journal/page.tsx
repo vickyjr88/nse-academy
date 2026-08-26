@@ -56,6 +56,8 @@ export default function JournalPage() {
   const { tier, loading: subLoading } = useSubscription();
   const [loading, setLoading] = useState(true);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [tradesPage, setTradesPage] = useState(1);
+  const [tradesTotalPages, setTradesTotalPages] = useState(1);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
@@ -75,19 +77,28 @@ export default function JournalPage() {
 
   async function loadAll() {
     const [t, b, p, a, d, y] = await Promise.all([
-      listTrades(),
+      listTrades({ page: 1, limit: 50 }),
       listBrokers(),
       getPortfolio(),
       listAlerts(),
       listDividends(),
       getYieldOnCost(),
     ]);
-    setTrades(t);
+    setTrades(t.data);
+    setTradesPage(t.page);
+    setTradesTotalPages(t.totalPages);
     setBrokers(b);
     setPortfolio(p);
     setAlerts(a);
     setDividends(d);
     setYieldOnCost(y);
+  }
+
+  async function loadTradesPage(page: number) {
+    const t = await listTrades({ page, limit: 50 });
+    setTrades(t.data);
+    setTradesPage(t.page);
+    setTradesTotalPages(t.totalPages);
   }
 
   async function handleDeleteAlert(id: string) {
@@ -245,8 +256,9 @@ export default function JournalPage() {
           className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Broker</label>
+            <label htmlFor="journal-trade-broker" className="block text-xs font-semibold text-gray-500 mb-1">Broker</label>
             <select
+              id="journal-trade-broker"
               required
               value={form.brokerId}
               onChange={(e) => setForm({ ...form, brokerId: e.target.value })}
@@ -262,8 +274,9 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Ticker</label>
+            <label htmlFor="journal-trade-ticker" className="block text-xs font-semibold text-gray-500 mb-1">Ticker</label>
             <input
+              id="journal-trade-ticker"
               required
               value={form.ticker}
               onChange={(e) => setForm({ ...form, ticker: e.target.value })}
@@ -273,8 +286,9 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Side</label>
+            <label htmlFor="journal-trade-side" className="block text-xs font-semibold text-gray-500 mb-1">Side</label>
             <select
+              id="journal-trade-side"
               value={form.side}
               onChange={(e) => setForm({ ...form, side: e.target.value as "BUY" | "SELL" })}
               className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm"
@@ -285,8 +299,9 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
+            <label htmlFor="journal-trade-quantity" className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
             <input
+              id="journal-trade-quantity"
               required
               type="number"
               min={1}
@@ -297,8 +312,9 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Price per share (KES)</label>
+            <label htmlFor="journal-trade-price" className="block text-xs font-semibold text-gray-500 mb-1">Price per share (KES)</label>
             <input
+              id="journal-trade-price"
               required
               type="number"
               min={0.01}
@@ -310,8 +326,9 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Trade date</label>
+            <label htmlFor="journal-trade-date" className="block text-xs font-semibold text-gray-500 mb-1">Trade date</label>
             <input
+              id="journal-trade-date"
               required
               type="date"
               value={form.tradeDate}
@@ -327,8 +344,9 @@ export default function JournalPage() {
           )}
 
           <div className="lg:col-span-3">
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Notes (optional)</label>
+            <label htmlFor="journal-trade-notes" className="block text-xs font-semibold text-gray-500 mb-1">Notes (optional)</label>
             <input
+              id="journal-trade-notes"
               value={form.notes || ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm"
@@ -480,6 +498,26 @@ export default function JournalPage() {
             </table>
           </div>
         )}
+
+        {tradesTotalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <button
+              onClick={() => loadTradesPage(tradesPage - 1)}
+              disabled={tradesPage <= 1}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              ← Previous
+            </button>
+            <span className="px-4 py-2 text-sm text-gray-500">Page {tradesPage} of {tradesTotalPages}</span>
+            <button
+              onClick={() => loadTradesPage(tradesPage + 1)}
+              disabled={tradesPage >= tradesTotalPages}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Price alerts */}
@@ -542,8 +580,9 @@ export default function JournalPage() {
             className="mb-6 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Broker</label>
+              <label htmlFor="journal-dividend-broker" className="block text-xs font-semibold text-gray-500 mb-1">Broker</label>
               <select
+                id="journal-dividend-broker"
                 required
                 value={dividendForm.brokerId}
                 onChange={(e) => setDividendForm({ ...dividendForm, brokerId: e.target.value })}
@@ -559,8 +598,9 @@ export default function JournalPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Ticker</label>
+              <label htmlFor="journal-dividend-ticker" className="block text-xs font-semibold text-gray-500 mb-1">Ticker</label>
               <input
+                id="journal-dividend-ticker"
                 required
                 value={dividendForm.ticker}
                 onChange={(e) => setDividendForm({ ...dividendForm, ticker: e.target.value })}
@@ -570,10 +610,11 @@ export default function JournalPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label htmlFor="journal-dividend-amount" className="block text-xs font-semibold text-gray-500 mb-1">
                 Amount received (KES, net of WHT)
               </label>
               <input
+                id="journal-dividend-amount"
                 required
                 type="number"
                 min={0.01}
@@ -585,8 +626,9 @@ export default function JournalPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Payment date</label>
+              <label htmlFor="journal-dividend-date" className="block text-xs font-semibold text-gray-500 mb-1">Payment date</label>
               <input
+                id="journal-dividend-date"
                 required
                 type="date"
                 value={dividendForm.paymentDate}

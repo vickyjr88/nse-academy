@@ -358,19 +358,32 @@ export class FinancialAdvisorService {
     return this.prisma.advisorInsight.findMany({ where: { advisorId: advisor.id }, orderBy: { createdAt: 'desc' } });
   }
 
-  async listInsightsForClient(userId: string) {
+  async listInsightsForClient(userId: string, params: { page: number; limit: number }) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
+
     const connections = await this.prisma.advisorClient.findMany({
       where: { userId, status: 'accepted' },
       select: { advisorId: true },
     });
     const advisorIds = connections.map((c) => c.advisorId);
-    if (advisorIds.length === 0) return [];
+    if (advisorIds.length === 0) {
+      return { data: [], total: 0, page, limit, totalPages: 0 };
+    }
 
-    return this.prisma.advisorInsight.findMany({
-      where: { advisorId: { in: advisorIds } },
-      include: { advisor: { include: { user: { select: { name: true } } } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const where = { advisorId: { in: advisorIds } };
+    const [data, total] = await Promise.all([
+      this.prisma.advisorInsight.findMany({
+        where,
+        include: { advisor: { include: { user: { select: { name: true } } } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.advisorInsight.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async sendAlert(advisorUserId: string, dto: SendAlertDto) {

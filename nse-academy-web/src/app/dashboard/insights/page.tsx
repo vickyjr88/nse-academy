@@ -7,13 +7,19 @@ export default function InsightsFeedPage() {
   const [insights, setInsights] = useState<AdvisorInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    listInsightsFeed()
-      .then(setInsights)
+    setLoading(true);
+    listInsightsFeed({ page, limit: 20 })
+      .then((res) => {
+        setInsights(res.data);
+        setTotalPages(res.totalPages);
+      })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   if (loading) return <div className="text-gray-400 py-20 text-center">Loading…</div>;
 
@@ -60,6 +66,26 @@ export default function InsightsFeedPage() {
           )}
         </div>
       ))}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <button
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page <= 1}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          >
+            ← Previous
+          </button>
+          <span className="px-4 py-2 text-sm text-gray-500">Page {page} of {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

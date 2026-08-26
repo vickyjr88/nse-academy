@@ -102,9 +102,20 @@ export function listBrokers(): Promise<Broker[]> {
   return fetch(apiUrl("/brokers")).then((r) => handle<Broker[]>(r));
 }
 
-export function listTrades(): Promise<Trade[]> {
-  return fetch(apiUrl("/journal/trades"), { headers: authHeaders() }).then((r) =>
-    handle<Trade[]>(r),
+export interface PaginatedTrades {
+  data: Trade[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export function listTrades(params?: { page?: number; limit?: number }): Promise<PaginatedTrades> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  return fetch(apiUrl(`/journal/trades?${qs.toString()}`), { headers: authHeaders() }).then((r) =>
+    handle<PaginatedTrades>(r),
   );
 }
 

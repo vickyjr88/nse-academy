@@ -134,12 +134,23 @@ export class JournalService {
     }
   }
 
-  async listTrades(userId: string) {
-    return this.prisma.trade.findMany({
-      where: { userId },
-      include: { broker: true },
-      orderBy: { tradeDate: 'desc' },
-    });
+  async listTrades(userId: string, params: { page: number; limit: number }) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
+    const where = { userId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.trade.findMany({
+        where,
+        include: { broker: true },
+        orderBy: { tradeDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.trade.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async createTrade(userId: string, dto: CreateTradeDto) {

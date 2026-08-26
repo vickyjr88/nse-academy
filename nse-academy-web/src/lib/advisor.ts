@@ -253,8 +253,19 @@ export function listMyInsights(): Promise<AdvisorInsight[]> {
   return fetch(apiUrl("/financial-advisor/insights"), { headers: authHeaders() }).then((r) => handle(r));
 }
 
-export function listInsightsFeed(): Promise<AdvisorInsight[]> {
-  return fetch(apiUrl("/financial-advisor/insights/feed"), { headers: authHeaders() }).then((r) => handle(r));
+export interface PaginatedInsights {
+  data: AdvisorInsight[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export function listInsightsFeed(params?: { page?: number; limit?: number }): Promise<PaginatedInsights> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  return fetch(apiUrl(`/financial-advisor/insights/feed?${qs.toString()}`), { headers: authHeaders() }).then((r) => handle(r));
 }
 
 export function sendAlert(input: { ticker: string; action: "BUY" | "SELL"; message: string }): Promise<AdvisorAlert> {

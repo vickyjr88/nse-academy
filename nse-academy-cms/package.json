@@ -17,22 +17,22 @@
   "dependencies": {
     "@google-analytics/data": "^5.2.1",
     "@strapi-community/plugin-seo": "^2.1.1",
-    "@strapi/plugin-cloud": "5.42.1",
-    "@strapi/plugin-users-permissions": "5.42.1",
-    "@strapi/strapi": "5.42.1",
-    "pg": "8.20.0",
+    "@strapi/plugin-cloud": "5.52.2",
+    "@strapi/plugin-users-permissions": "5.52.2",
+    "@strapi/strapi": "5.52.2",
+    "analytics-dashboard": "file:src/plugins/analytics-dashboard",
+    "pg": "^8.23.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "react-router-dom": "^6.0.0",
-    "recharts": "^3.8.1",
+    "react-router-dom": "^6.30.6",
+    "recharts": "^3.10.1",
     "strapi-google-analytics-dashboard": "^0.0.2",
-    "styled-components": "^6.0.0",
-    "user-manager": "file:src/plugins/user-manager",
-    "analytics-dashboard": "file:src/plugins/analytics-dashboard"
+    "styled-components": "^6.5.3",
+    "user-manager": "file:src/plugins/user-manager"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.3.31",
     "@types/react-dom": "^18",
     "typescript": "^5"
   },

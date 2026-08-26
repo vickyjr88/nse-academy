@@ -41,6 +41,7 @@ const STATUS_BADGE: Record<string, string> = { pending: 'warning', approved: 'su
 export function AdvisorApprovals() {
   const [advisors, setAdvisors] = useState<Advisor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -58,7 +59,7 @@ export function AdvisorApprovals() {
   }, [page]);
 
   async function fetchAdvisors(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ page: String(p), limit: '20' });
@@ -76,6 +77,7 @@ export function AdvisorApprovals() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
@@ -96,7 +98,7 @@ export function AdvisorApprovals() {
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading advisors…</Loader>

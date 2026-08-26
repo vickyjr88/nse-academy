@@ -50,6 +50,7 @@ export function InvestorProfilesList() {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<InvestorProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -76,7 +77,7 @@ export function InvestorProfilesList() {
   }, []);
 
   async function fetchProfiles(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -98,10 +99,11 @@ export function InvestorProfilesList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading investor profiles…</Loader>

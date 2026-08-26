@@ -42,6 +42,7 @@ export function OrganizationsList() {
   const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -58,7 +59,7 @@ export function OrganizationsList() {
   }, [page]);
 
   async function fetchOrganizations(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -79,10 +80,11 @@ export function OrganizationsList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading organizations…</Loader>

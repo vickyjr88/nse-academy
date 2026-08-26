@@ -52,6 +52,7 @@ export function ReferralsList() {
   const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -70,7 +71,7 @@ export function ReferralsList() {
   }, []);
 
   async function fetchReferrals(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -90,10 +91,11 @@ export function ReferralsList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading referrals…</Loader>

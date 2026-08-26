@@ -47,6 +47,7 @@ export function ContactSubmissionsList() {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -65,7 +66,7 @@ export function ContactSubmissionsList() {
   }, []);
 
   async function fetchSubmissions(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -85,10 +86,11 @@ export function ContactSubmissionsList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading contact submissions…</Loader>

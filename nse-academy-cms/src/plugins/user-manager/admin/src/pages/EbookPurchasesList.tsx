@@ -48,6 +48,7 @@ export function EbookPurchasesList() {
   const navigate = useNavigate();
   const [purchases, setPurchases] = useState<EbookPurchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -72,7 +73,7 @@ export function EbookPurchasesList() {
   }, []);
 
   async function fetchPurchases(p: number) {
-    setLoading(true);
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -92,10 +93,11 @@ export function EbookPurchasesList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading ebook purchases…</Loader>

@@ -10,7 +10,6 @@ import {
   Tr,
   Th,
   Td,
-  Td,
   Typography,
   TextInput,
   SingleSelect,
@@ -46,6 +45,7 @@ export function UsersList() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -65,7 +65,10 @@ export function UsersList() {
   }, [page]);
 
   async function fetchUsers(p: number) {
-    setLoading(true);
+    // Only the very first load blocks the page - a search/filter/page
+    // change re-fetches quietly so the input never loses focus or the
+    // whole page flashes back to a bare loader on every keystroke.
+    if (!loaded) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -87,10 +90,11 @@ export function UsersList() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }
 
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <Box padding={8} style={{ display: 'flex', justifyContent: 'center' }}>
         <Loader>Loading users…</Loader>

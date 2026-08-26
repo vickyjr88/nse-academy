@@ -20,7 +20,15 @@ export class BroadcastService {
   ) {}
 
   private audienceWhere(tier?: Tier) {
-    return tier ? { subscription: { tier } } : {};
+    if (!tier) return {};
+    if (tier === 'free') {
+      // A user with no Subscription row at all is free tier by definition
+      // (see deriveEffectiveTier) - without this, "free" would only match
+      // users who happen to have an explicit tier='free' row, missing most
+      // of the actual free-tier user base.
+      return { OR: [{ subscription: null }, { subscription: { tier: 'free' } }] };
+    }
+    return { subscription: { tier } };
   }
 
   async getAudiencePreview(tier?: Tier): Promise<{ count: number }> {

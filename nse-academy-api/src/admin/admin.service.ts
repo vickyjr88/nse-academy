@@ -63,7 +63,15 @@ export class AdminService {
         { phone: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (tier || status) {
+    if (tier === 'free' && !status) {
+      // A user with no Subscription row at all is free tier by definition
+      // (see deriveEffectiveTier) - the naive `subscription.tier = 'free'`
+      // relation filter below would only match users who *do* have a row,
+      // silently excluding the majority of free users who never got one.
+      // Nested under AND (not OR) so it composes with the search filter's
+      // own OR above instead of overwriting it.
+      where.AND = [{ OR: [{ subscription: null }, { subscription: { tier: 'free' } }] }];
+    } else if (tier || status) {
       where.subscription = {};
       if (tier) where.subscription.tier = tier;
       if (status) where.subscription.status = status;
@@ -659,10 +667,15 @@ export class AdminService {
 
     const activeSubscriptions = subscriptionStats.find(s => s.status === 'active')?._count ?? 0;
     const cancelledSubscriptions = subscriptionStats.find(s => s.status === 'cancelled')?._count ?? 0;
+    const intermediaryCount = tierStats.find(t => t.tier === 'intermediary')?._count ?? 0;
+    const premiumCount = tierStats.find(t => t.tier === 'premium')?._count ?? 0;
     const tierBreakdown = {
-      free: tierStats.find(t => t.tier === 'free')?._count ?? 0,
-      intermediary: tierStats.find(t => t.tier === 'intermediary')?._count ?? 0,
-      premium: tierStats.find(t => t.tier === 'premium')?._count ?? 0,
+      // Users without a Subscription row are free tier by definition (see
+      // deriveEffectiveTier) - groupBy only sees rows that exist, so "free"
+      // has to be everyone else rather than a group count of its own.
+      free: totalUsers - intermediaryCount - premiumCount,
+      intermediary: intermediaryCount,
+      premium: premiumCount,
     };
     const estimatedMRR = tierBreakdown.intermediary * 300 + tierBreakdown.premium * 500;
 

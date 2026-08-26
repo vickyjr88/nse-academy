@@ -149,7 +149,13 @@ export function AdvisorApprovals() {
         </Flex>
       </Box>
 
-      <Table colCount={6} rowCount={advisors.length}>
+      {loading && loaded && (
+        <Box paddingBottom={2}>
+          <Typography variant="pi" textColor="neutral500">Refreshing…</Typography>
+        </Box>
+      )}
+
+      <Table colCount={6} rowCount={advisors.length} style={{ opacity: loading && loaded ? 0.5 : 1 }}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">Name</Typography></Th>

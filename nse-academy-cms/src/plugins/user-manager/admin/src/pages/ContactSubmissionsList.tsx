@@ -11,6 +11,7 @@ import {
   Th,
   Td,
   Typography,
+  TextInput,
   SingleSelect,
   SingleSelectOption,
   Flex,
@@ -52,11 +53,17 @@ export function ContactSubmissionsList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState('');
+  const [search, setSearch] = useState('');
   const [stats, setStats] = useState<ContactFeatures | null>(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => fetchSubmissions(1), 300);
+    return () => clearTimeout(timer);
+  }, [search, status]);
+
+  useEffect(() => {
     fetchSubmissions(page);
-  }, [page, status]);
+  }, [page]);
 
   useEffect(() => {
     fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
@@ -74,6 +81,7 @@ export function ContactSubmissionsList() {
         limit: '20',
       });
       if (status) params.append('status', status);
+      if (search) params.append('search', search);
 
       const res = await fetch(`${NSE_API_URL}/admin/contact-submissions?${params.toString()}`, {
         headers: { 'x-admin-key': NSE_ADMIN_KEY },
@@ -123,6 +131,18 @@ export function ContactSubmissionsList() {
 
       <Box paddingBottom={4}>
         <Flex gap={4}>
+          <Box style={{ width: '300px' }}>
+            <TextInput
+              placeholder="Search by name, email, subject, or message..."
+              label="Search"
+              name="search"
+              value={search}
+              onChange={(e: any) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </Box>
           <Box style={{ width: '200px' }}>
             <SingleSelect
               label="Status"
@@ -138,7 +158,13 @@ export function ContactSubmissionsList() {
         </Flex>
       </Box>
 
-      <Table colCount={6} rowCount={submissions.length}>
+      {loading && loaded && (
+        <Box paddingBottom={2}>
+          <Typography variant="pi" textColor="neutral500">Refreshing…</Typography>
+        </Box>
+      )}
+
+      <Table colCount={6} rowCount={submissions.length} style={{ opacity: loading && loaded ? 0.5 : 1 }}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">Name</Typography></Th>

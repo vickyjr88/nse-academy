@@ -580,12 +580,21 @@ export class AdminService {
     page: number;
     limit: number;
     status?: string;
+    search?: string;
   }) {
-    const { page, limit, status } = params;
+    const { page, limit, status, search } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { referrer: { name: { contains: search, mode: 'insensitive' } } },
+        { referrer: { email: { contains: search, mode: 'insensitive' } } },
+        { referred: { name: { contains: search, mode: 'insensitive' } } },
+        { referred: { email: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
 
     const [referrals, total] = await Promise.all([
       this.prisma.referral.findMany({
@@ -626,12 +635,21 @@ export class AdminService {
     page: number;
     limit: number;
     status?: string;
+    search?: string;
   }) {
-    const { page, limit, status } = params;
+    const { page, limit, status, search } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } },
+        { message: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [submissions, total] = await Promise.all([
       this.prisma.contactSubmission.findMany({

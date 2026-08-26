@@ -213,15 +213,18 @@ export class AdminController {
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
   @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'search', required: false, description: 'Matches referrer/referred name or email' })
   listReferrals(
     @Query('page') page = '1',
     @Query('limit') limit = '20',
     @Query('status') status?: string,
+    @Query('search') search?: string,
   ) {
     return this.admin.listReferrals({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       status,
+      search,
     });
   }
 
@@ -236,15 +239,18 @@ export class AdminController {
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
   @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'search', required: false, description: 'Matches name, email, subject, or message' })
   listContactSubmissions(
     @Query('page') page = '1',
     @Query('limit') limit = '20',
     @Query('status') status?: string,
+    @Query('search') search?: string,
   ) {
     return this.admin.listContactSubmissions({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       status,
+      search,
     });
   }
 

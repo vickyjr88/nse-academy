@@ -156,7 +156,13 @@ export function LessonProgressList() {
         </Flex>
       </Box>
 
-      <Table colCount={5} rowCount={progresses.length}>
+      {loading && loaded && (
+        <Box paddingBottom={2}>
+          <Typography variant="pi" textColor="neutral500">Refreshing…</Typography>
+        </Box>
+      )}
+
+      <Table colCount={5} rowCount={progresses.length} style={{ opacity: loading && loaded ? 0.5 : 1 }}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">User</Typography></Th>

@@ -120,6 +120,18 @@ export class BroadcastService {
       await this.brevo.sendCampaignNow(campaign.id);
 
       this.logger.log(`Sent broadcast campaign ${campaign.id} to ${audienceCount} users`);
+
+      await this.prisma.broadcastCampaign.create({
+        data: {
+          brevoCampaignId: campaign.id,
+          subject: dto.subject,
+          htmlContent: dto.htmlContent,
+          tier: dto.tier ?? null,
+          audienceCount,
+          failedCount: failedEmails.length,
+        },
+      });
+
       return { campaignId: campaign.id, audienceCount, failedCount: failedEmails.length, failedEmails };
     } catch (err) {
       // Surface the real reason to the admin UI rather than a generic 500 -
@@ -127,5 +139,21 @@ export class BroadcastService {
       // always a Brevo config issue (missing key, invalid list) worth acting on.
       throw new BadRequestException((err as Error).message || 'Failed to send broadcast via Brevo');
     }
+  }
+
+  async listCampaigns(params: { page: number; limit: number }) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.broadcastCampaign.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.broadcastCampaign.count(),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }

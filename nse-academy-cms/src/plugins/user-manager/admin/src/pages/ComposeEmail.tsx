@@ -4,16 +4,33 @@ import {
   Box,
   Button,
   Checkbox,
+  Divider,
   Flex,
+  Loader,
   SingleSelect,
   SingleSelectOption,
+  Table,
+  Tbody,
+  Td,
   Textarea,
   TextInput,
+  Th,
+  Thead,
+  Tr,
   Typography,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
 
 type Tier = 'free' | 'intermediary' | 'premium' | '';
+
+interface Campaign {
+  id: string;
+  subject: string;
+  tier: string | null;
+  audienceCount: number;
+  failedCount: number;
+  createdAt: string;
+}
 
 export function ComposeEmail() {
   const [subject, setSubject] = useState('');
@@ -30,6 +47,28 @@ export function ComposeEmail() {
     failedCount: number;
     failedEmails: string[];
   } | null>(null);
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+
+  async function fetchCampaigns() {
+    try {
+      const res = await fetch(`${NSE_API_URL}/admin/broadcast/campaigns?limit=20`, {
+        headers: { 'x-admin-key': NSE_ADMIN_KEY },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setCampaigns(data.data);
+    } catch {
+      setCampaigns([]);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
   useEffect(() => {
     setAudienceLoading(true);
@@ -79,6 +118,7 @@ export function ComposeEmail() {
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
       setSuccess(data);
       setConfirmed(false);
+      fetchCampaigns();
     } catch (e: any) {
       setError(e.message || 'Failed to send broadcast');
     } finally {
@@ -188,6 +228,48 @@ export function ComposeEmail() {
           </Button>
         </Box>
       </Flex>
+
+      <Box paddingTop={8}>
+        <Divider />
+      </Box>
+
+      <Box paddingTop={8} paddingBottom={4}>
+        <Typography variant="beta">Past Campaigns</Typography>
+      </Box>
+
+      {campaignsLoading ? (
+        <Box style={{ display: 'flex', justifyContent: 'center' }} padding={4}>
+          <Loader>Loading campaign history…</Loader>
+        </Box>
+      ) : campaigns.length === 0 ? (
+        <Typography textColor="neutral600">No campaigns sent yet.</Typography>
+      ) : (
+        <Table colCount={4} rowCount={campaigns.length}>
+          <Thead>
+            <Tr>
+              <Th><Typography variant="sigma">Subject</Typography></Th>
+              <Th><Typography variant="sigma">Audience</Typography></Th>
+              <Th><Typography variant="sigma">Reached</Typography></Th>
+              <Th><Typography variant="sigma">Sent</Typography></Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {campaigns.map((c) => (
+              <Tr key={c.id}>
+                <Td><Typography>{c.subject}</Typography></Td>
+                <Td><Typography>{c.tier ? `${c.tier} tier` : 'All users'}</Typography></Td>
+                <Td>
+                  <Typography textColor={c.failedCount > 0 ? 'warning600' : undefined}>
+                    {c.audienceCount.toLocaleString()}
+                    {c.failedCount > 0 ? ` (${c.failedCount} failed)` : ''}
+                  </Typography>
+                </Td>
+                <Td><Typography>{new Date(c.createdAt).toLocaleString()}</Typography></Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
     </Box>
   );
 }

@@ -444,3 +444,17 @@ model AdvisorAlert {
 
   @@index([advisorId, createdAt])
 }
+
+// One row per admin broadcast email send - Brevo owns delivery, this table
+// is purely a local history so the CMS can show past campaigns without
+// needing Brevo API access from the admin panel.
+model BroadcastCampaign {
+  id             String    @id @default(cuid())
+  brevoCampaignId Int?
+  subject        String
+  htmlContent    String
+  tier           String? // free | intermediary | premium | null (all users)
+  audienceCount  Int
+  failedCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+}

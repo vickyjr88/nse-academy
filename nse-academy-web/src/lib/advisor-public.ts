@@ -16,7 +16,7 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-export function listPublicAdvisors(params?: { page?: number; limit?: number; specialty?: string }): Promise<{
+export async function listPublicAdvisors(params?: { page?: number; limit?: number; specialty?: string }): Promise<{
   data: AdvisorProfile[];
   total: number;
   page: number;
@@ -27,7 +27,12 @@ export function listPublicAdvisors(params?: { page?: number; limit?: number; spe
   if (params?.page) qs.set("page", String(params.page));
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.specialty) qs.set("specialty", params.specialty);
-  return fetch(apiUrl(`/financial-advisors?${qs.toString()}`), { next: { revalidate: 60 } }).then((r) => handle(r));
+  try {
+    const res = await fetch(apiUrl(`/financial-advisors?${qs.toString()}`), { next: { revalidate: 60 } });
+    return await handle(res);
+  } catch {
+    return { data: [], total: 0, page: params?.page ?? 1, limit: params?.limit ?? 20, totalPages: 0 };
+  }
 }
 
 export function getPublicAdvisor(id: string): Promise<AdvisorProfile> {

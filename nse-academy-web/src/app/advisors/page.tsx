@@ -3,6 +3,8 @@ import { listPublicAdvisors } from "@/lib/advisor-public";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Financial Advisors - NSE Academy",
   description: "Connect with independent financial advisors offering personalised NSE investment guidance.",

@@ -1003,7 +1003,7 @@ export class AdminService {
           avgBounceRate: Math.round((rows.reduce((s, r) => s + Number(r.metricValues?.[3]?.value ?? 0), 0) / (rows.length || 1)) * 100) / 100,
         };
       } catch (err) {
-        console.error('GA Fetch Error:', err);
+        this.logger.error(`GA Fetch Error: ${(err as Error).message}`);
       }
     }
 

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -118,6 +118,7 @@ const TYPE_LABELS: Record<InvestorType, string> = {
 
 @Injectable()
 export class AdvisorService {
+  private readonly logger = new Logger(AdvisorService.name);
   private readonly cmsUrl: string;
   private readonly cmsToken: string;
 
@@ -315,7 +316,7 @@ Return ONLY the JSON object. Do not include markdown code blocks.`;
         generatedAt: new Date().toISOString(),
       };
     } catch (err) {
-      console.error('Gemini AI advice error:', err);
+      this.logger.error(`Gemini AI advice error: ${(err as Error).message}`);
       throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
     }
   }
@@ -331,7 +332,7 @@ Return ONLY the JSON object. Do not include markdown code blocks.`;
       const json = await response.json();
       return json.data || [];
     } catch (error) {
-      console.error('Advisor fetch error:', error);
+      this.logger.error(`Advisor fetch error: ${(error as Error).message}`);
       throw new InternalServerErrorException('Could not connect to CMS for recommendations');
     }
   }

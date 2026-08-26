@@ -18,6 +18,7 @@ import {
 } from '@strapi/design-system';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
 
 interface InvestorProfile {
   type: string;
@@ -99,33 +100,6 @@ const CHART_COLORS = ['#4945FF', '#7B79FF', '#66B7F1', '#0C75AF', '#AC73E5', '#5
 function kes(n: number | null | undefined): string {
   if (n == null) return '—';
   return `KSh ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  tone?: 'positive' | 'negative' | 'neutral';
-}) {
-  const color = tone === 'positive' ? 'success600' : tone === 'negative' ? 'danger600' : 'neutral800';
-  return (
-    <Box
-      padding={5}
-      background="neutral0"
-      borderColor="neutral200"
-      hasRadius
-      shadow="filterShadow"
-      style={{ flex: 1, minWidth: '180px' }}
-    >
-      <Typography variant="sigma" textColor="neutral600">{label}</Typography>
-      <Box paddingTop={2}>
-        <Typography variant="alpha" textColor={color}>{value}</Typography>
-      </Box>
-    </Box>
-  );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

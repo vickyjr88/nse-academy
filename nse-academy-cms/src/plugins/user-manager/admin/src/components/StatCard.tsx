@@ -1,7 +1,16 @@
 import React from 'react';
 import { Box, Typography } from '@strapi/design-system';
 
-export function StatCard({ label, value }: { label: string; value: string | number }) {
+export function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  tone?: 'positive' | 'negative' | 'neutral';
+}) {
+  const color = tone === 'positive' ? 'success600' : tone === 'negative' ? 'danger600' : 'neutral800';
   return (
     <Box
       padding={5}
@@ -13,7 +22,7 @@ export function StatCard({ label, value }: { label: string; value: string | numb
     >
       <Typography variant="sigma" textColor="neutral600">{label}</Typography>
       <Box paddingTop={2}>
-        <Typography variant="alpha" textColor="neutral800">{value}</Typography>
+        <Typography variant="alpha" textColor={color}>{value}</Typography>
       </Box>
     </Box>
   );

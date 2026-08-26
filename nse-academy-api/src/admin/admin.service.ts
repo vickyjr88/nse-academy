@@ -1059,6 +1059,19 @@ export class AdminService {
     };
   }
 
+  listBrokers() {
+    return this.prisma.broker.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  async updateBroker(
+    id: string,
+    data: { feePercent?: number; cdaCode?: string | null; cdsRequired?: boolean; isActive?: boolean },
+  ) {
+    const broker = await this.prisma.broker.findUnique({ where: { id } });
+    if (!broker) throw new NotFoundException('Broker not found');
+    return this.prisma.broker.update({ where: { id }, data });
+  }
+
   private fillMonths<T extends { month: string }>(
     data: T[],
     from: Date,

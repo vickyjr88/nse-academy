@@ -280,4 +280,19 @@ export class AdminController {
   cancelSubscription(@Param('id') id: string) {
     return this.admin.cancelSubscription(id);
   }
+
+  @Get('brokers')
+  @ApiOperation({ summary: 'List all brokers, including inactive ones (admin view)' })
+  listBrokers() {
+    return this.admin.listBrokers();
+  }
+
+  @Put('brokers/:id')
+  @ApiOperation({ summary: 'Update a broker\'s fee rate, CDA code, CDS requirement, or active status' })
+  updateBroker(
+    @Param('id') id: string,
+    @Body() body: { feePercent?: number; cdaCode?: string | null; cdsRequired?: boolean; isActive?: boolean },
+  ) {
+    return this.admin.updateBroker(id, body);
+  }
 }

@@ -10,15 +10,16 @@ export class BrokersService implements OnModuleInit {
     await this.seedBrokers();
   }
 
+  /**
+   * create-only: an admin may have edited feePercent/cdaCode/cdsRequired via
+   * the admin API after initial seed, and this runs on every app restart -
+   * overwriting on update would silently discard those edits.
+   */
   private async seedBrokers() {
     for (const broker of BROKER_SEED) {
       await this.prisma.broker.upsert({
         where: { name: broker.name },
-        update: {
-          cdaCode: broker.cdaCode,
-          feePercent: broker.feePercent,
-          cdsRequired: broker.cdsRequired,
-        },
+        update: {},
         create: broker,
       });
     }

@@ -296,15 +296,13 @@ export default function LearnPage() {
 
   useEffect(() => {
     const cmsUrl = process.env.NEXT_PUBLIC_CMS_URL ?? "http://localhost:1337";
-    const token = process.env.CMS_API_TOKEN || "";
-    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
+    // Courses are served by a public Strapi endpoint - there is no token to
+    // send here. CMS_API_TOKEN (server-only, used in lib/cms.ts) would never
+    // reach this client component even if it were set.
     fetch(
       `${cmsUrl}/api/courses?populate[modules][populate]=lessons&sort=createdAt:asc`,
-      { 
-        headers: authHeaders,
-        cache: "no-store" 
-      } as RequestInit
+      { cache: "no-store" }
     )
       .then((r) => r.json())
       .then((json) => setCourses(json.data ?? []))

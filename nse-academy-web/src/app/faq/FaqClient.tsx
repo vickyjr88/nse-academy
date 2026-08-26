@@ -87,7 +87,7 @@ export default function FaqClient({ categories }: { categories: FaqCategory[] })
             className="flex-1 bg-transparent outline-none text-sm text-gray-900 placeholder:text-gray-400"
           />
           {query && (
-            <button onClick={() => setQuery("")} className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
+            <button onClick={() => setQuery("")} aria-label="Clear search" className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
           )}
         </div>
         {query && (

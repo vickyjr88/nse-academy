@@ -170,6 +170,28 @@ export class AdminController {
     return this.admin.upsertOrganizationLicense(id, dto);
   }
 
+  @Put('organizations/:orgId/members/:memberId/role')
+  @ApiOperation({ summary: "Change a member's role (admin | member)" })
+  updateOrgMemberRole(
+    @Param('orgId') orgId: string,
+    @Param('memberId') memberId: string,
+    @Body() body: { role: 'admin' | 'member' },
+  ) {
+    return this.admin.updateOrgMemberRole(orgId, memberId, body.role);
+  }
+
+  @Post('organizations/:orgId/members/:memberId/resend-invite')
+  @ApiOperation({ summary: "Resend a pending member's invite email" })
+  resendOrgMemberInvite(@Param('orgId') orgId: string, @Param('memberId') memberId: string) {
+    return this.admin.resendOrgMemberInvite(orgId, memberId);
+  }
+
+  @Delete('organizations/:orgId/members/:memberId')
+  @ApiOperation({ summary: 'Remove a member from an organization' })
+  removeOrgMember(@Param('orgId') orgId: string, @Param('memberId') memberId: string) {
+    return this.admin.removeOrgMember(orgId, memberId);
+  }
+
   @Get('advisors')
   @ApiOperation({ summary: 'List financial advisors (paginated), filterable by approval status' })
   @ApiQuery({ name: 'page', required: false, example: 1 })

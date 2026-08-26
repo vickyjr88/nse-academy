@@ -70,6 +70,10 @@ export function OrganizationDetail() {
   const [savingLicense, setSavingLicense] = useState(false);
   const [licenseError, setLicenseError] = useState<string | null>(null);
 
+  const [memberActionId, setMemberActionId] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [resentId, setResentId] = useState<string | null>(null);
+
   async function fetchOrg() {
     try {
       const res = await fetch(`${NSE_API_URL}/admin/organizations/${id}`, {
@@ -125,6 +129,63 @@ export function OrganizationDetail() {
       setLicenseError(e.message || 'Failed to update license');
     } finally {
       setSavingLicense(false);
+    }
+  }
+
+  async function handleRoleChange(memberId: string, role: 'admin' | 'member') {
+    setMemberActionId(memberId);
+    setMemberError(null);
+    try {
+      const res = await fetch(`${NSE_API_URL}/admin/organizations/${id}/members/${memberId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': NSE_ADMIN_KEY },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+      await fetchOrg();
+    } catch (e: any) {
+      setMemberError(e.message || 'Failed to update role');
+    } finally {
+      setMemberActionId(null);
+    }
+  }
+
+  async function handleResendInvite(memberId: string) {
+    setMemberActionId(memberId);
+    setMemberError(null);
+    try {
+      const res = await fetch(`${NSE_API_URL}/admin/organizations/${id}/members/${memberId}/resend-invite`, {
+        method: 'POST',
+        headers: { 'x-admin-key': NSE_ADMIN_KEY },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+      setResentId(memberId);
+      setTimeout(() => setResentId((cur) => (cur === memberId ? null : cur)), 3000);
+    } catch (e: any) {
+      setMemberError(e.message || 'Failed to resend invite');
+    } finally {
+      setMemberActionId(null);
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    if (!window.confirm('Remove this member from the organization?')) return;
+    setMemberActionId(memberId);
+    setMemberError(null);
+    try {
+      const res = await fetch(`${NSE_API_URL}/admin/organizations/${id}/members/${memberId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': NSE_ADMIN_KEY },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+      await fetchOrg();
+    } catch (e: any) {
+      setMemberError(e.message || 'Failed to remove member');
+    } finally {
+      setMemberActionId(null);
     }
   }
 
@@ -302,7 +363,15 @@ export function OrganizationDetail() {
         <Typography variant="beta">Members ({org.members.length})</Typography>
       </Box>
 
-      <Table colCount={5} rowCount={org.members.length}>
+      {memberError && (
+        <Box paddingBottom={4}>
+          <Alert closeLabel="Close" title="Action failed" variant="danger" onClose={() => setMemberError(null)}>
+            {memberError}
+          </Alert>
+        </Box>
+      )}
+
+      <Table colCount={6} rowCount={org.members.length}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">Name</Typography></Th>
@@ -310,6 +379,7 @@ export function OrganizationDetail() {
             <Th><Typography variant="sigma">Role</Typography></Th>
             <Th><Typography variant="sigma">Accepted Invite</Typography></Th>
             <Th><Typography variant="sigma">Joined At</Typography></Th>
+            <Th><Typography variant="sigma">Actions</Typography></Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -324,6 +394,38 @@ export function OrganizationDetail() {
                 </Typography>
               </Td>
               <Td><Typography>{new Date(member.joinedAt).toLocaleDateString()}</Typography></Td>
+              <Td>
+                <Flex gap={2}>
+                  <Button
+                    size="S"
+                    variant="tertiary"
+                    loading={memberActionId === member.id}
+                    onClick={() => handleRoleChange(member.id, member.role === 'admin' ? 'member' : 'admin')}
+                  >
+                    {member.role === 'admin' ? 'Make member' : 'Make admin'}
+                  </Button>
+                  {!member.inviteAccepted && (
+                    <Button
+                      size="S"
+                      variant="secondary"
+                      loading={memberActionId === member.id}
+                      onClick={() => handleResendInvite(member.id)}
+                    >
+                      {resentId === member.id ? 'Sent!' : 'Resend invite'}
+                    </Button>
+                  )}
+                  {member.role !== 'admin' && (
+                    <Button
+                      size="S"
+                      variant="danger-light"
+                      loading={memberActionId === member.id}
+                      onClick={() => handleRemoveMember(member.id)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Flex>
+              </Td>
             </Tr>
           ))}
         </Tbody>

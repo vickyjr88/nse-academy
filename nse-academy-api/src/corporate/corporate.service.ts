@@ -268,6 +268,20 @@ Accept your invite: ${inviteLink}
     return org;
   }
 
+  async updateMemberRole(orgId: string, memberId: string, role: 'admin' | 'member') {
+    const member = await this.prisma.orgMember.findUnique({ where: { id: memberId } });
+    if (!member || member.orgId !== orgId) throw new NotFoundException('Member not found');
+
+    if (member.role === 'admin' && role === 'member') {
+      const adminCount = await this.prisma.orgMember.count({ where: { orgId, role: 'admin' } });
+      if (adminCount <= 1) {
+        throw new BadRequestException('Cannot demote the only admin - promote another member first');
+      }
+    }
+
+    return this.prisma.orgMember.update({ where: { id: memberId }, data: { role } });
+  }
+
   async removeMember(orgId: string, memberId: string) {
     const member = await this.prisma.orgMember.findUnique({ where: { id: memberId } });
     if (!member || member.orgId !== orgId) throw new NotFoundException('Member not found');

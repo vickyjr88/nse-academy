@@ -472,6 +472,18 @@ export class AdminService {
     });
   }
 
+  async updateOrgMemberRole(orgId: string, memberId: string, role: 'admin' | 'member') {
+    return this.corporate.updateMemberRole(orgId, memberId, role);
+  }
+
+  async resendOrgMemberInvite(orgId: string, memberId: string) {
+    return this.corporate.resendInvite(orgId, memberId);
+  }
+
+  async removeOrgMember(orgId: string, memberId: string) {
+    return this.corporate.removeMember(orgId, memberId);
+  }
+
   private webUrl(): string {
     return (
       this.configService.get<string>('WEB_URL') ||

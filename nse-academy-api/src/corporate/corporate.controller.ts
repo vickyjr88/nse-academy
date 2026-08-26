@@ -50,6 +50,15 @@ export class CorporateController {
     return this.corporateService.acceptInvite(body.token, req.user.id);
   }
 
+  @Post('members/:memberId/resend-invite')
+  async resendInvite(@Request() req: any, @Param('memberId') memberId: string) {
+    const membership = await this.corporateService.getUserOrg(req.user.id);
+    if (!membership || membership.role !== 'admin') {
+      throw new ForbiddenException('Only org admins can resend invites');
+    }
+    return this.corporateService.resendInvite(membership.orgId, memberId);
+  }
+
   @Get('dashboard')
   async dashboard(@Request() req: any) {
     const membership = await this.corporateService.getUserOrg(req.user.id);

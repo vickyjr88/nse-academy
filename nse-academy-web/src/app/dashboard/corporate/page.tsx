@@ -41,6 +41,9 @@ export default function CorporateDashboardPage() {
   const [inviteLink, setInviteLink] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState("");
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resentId, setResentId] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -94,6 +97,28 @@ export default function CorporateDashboardPage() {
       headers: { Authorization: `Bearer ${token}` },
     });
     setOrg((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.id !== memberId) } : prev);
+  }
+
+  async function handleResendInvite(memberId: string) {
+    setResendingId(memberId);
+    setResentId(null);
+    setResendError(null);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/corporate/members/${memberId}/resend-invite`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to resend invite");
+      }
+      setResentId(memberId);
+    } catch (err) {
+      setResendError(err instanceof Error ? err.message : "Failed to resend invite");
+    } finally {
+      setResendingId(null);
+    }
   }
 
   if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading…</div>;
@@ -235,20 +260,36 @@ export default function CorporateDashboardPage() {
                       </td>
                       <td className="py-3 text-gray-500">{new Date(member.joinedAt).toLocaleDateString()}</td>
                       <td className="py-3">
-                        {member.role !== "admin" && (
-                          <button
-                            onClick={() => handleRemove(member.id)}
-                            className="text-xs text-red-500 hover:text-red-700 font-medium"
-                          >
-                            Remove
-                          </button>
-                        )}
+                        <div className="flex items-center gap-3 justify-end">
+                          {!member.inviteAccepted && (
+                            <button
+                              onClick={() => handleResendInvite(member.id)}
+                              disabled={resendingId === member.id}
+                              className="text-xs text-indigo-700 hover:text-indigo-900 font-medium disabled:opacity-60"
+                            >
+                              {resendingId === member.id
+                                ? "Sending…"
+                                : resentId === member.id
+                                  ? "Sent ✓"
+                                  : "Resend invite"}
+                            </button>
+                          )}
+                          {member.role !== "admin" && (
+                            <button
+                              onClick={() => handleRemove(member.id)}
+                              className="text-xs text-red-500 hover:text-red-700 font-medium"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {resendError && <p className="mt-3 text-sm text-red-600">{resendError}</p>}
           </div>
         </>
       )}

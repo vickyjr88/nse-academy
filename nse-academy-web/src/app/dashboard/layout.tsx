@@ -85,7 +85,8 @@ export default function DashboardLayout({
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      router.push("/auth/login");
+      const returnTo = window.location.pathname + window.location.search;
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(returnTo)}`);
       return;
     }
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
@@ -94,7 +95,8 @@ export default function DashboardLayout({
       .then((r) => r.json())
       .then((data) => {
         if (data.statusCode === 401) {
-          router.push("/auth/login");
+          const returnTo = window.location.pathname + window.location.search;
+          router.push(`/auth/login?redirectTo=${encodeURIComponent(returnTo)}`);
         } else {
           setUser(data);
           // Belt-and-braces: re-identify on every dashboard visit so users
@@ -110,7 +112,10 @@ export default function DashboardLayout({
           }
         }
       })
-      .catch(() => router.push("/auth/login"))
+      .catch(() => {
+        const returnTo = window.location.pathname + window.location.search;
+        router.push(`/auth/login?redirectTo=${encodeURIComponent(returnTo)}`);
+      })
       .finally(() => setLoading(false));
   }, [router]);
 

@@ -165,10 +165,29 @@ export class CorporateService {
       },
     });
 
-    const inviteLink = `${this.webUrl()}/dashboard/corporate/invite?token=${inviteToken}`;
+    const inviteLink = this.buildInviteLink(inviteToken);
     void this.sendInviteEmail(user.email, user.name, org.name, inviteLink);
 
     return { inviteLink };
+  }
+
+  async resendInvite(orgId: string, memberId: string) {
+    const member = await this.prisma.orgMember.findUnique({
+      where: { id: memberId },
+      include: { user: true, org: true },
+    });
+    if (!member || member.orgId !== orgId) throw new NotFoundException('Member not found');
+    if (member.inviteAccepted) throw new BadRequestException('This member has already joined');
+    if (!member.inviteToken) throw new BadRequestException('This member has no pending invite');
+
+    const inviteLink = this.buildInviteLink(member.inviteToken);
+    void this.sendInviteEmail(member.user.email, member.user.name, member.org.name, inviteLink);
+
+    return { inviteLink };
+  }
+
+  private buildInviteLink(inviteToken: string): string {
+    return `${this.webUrl()}/dashboard/corporate/invite?token=${inviteToken}`;
   }
 
   private async sendInviteEmail(email: string, name: string, orgName: string, inviteLink: string): Promise<void> {

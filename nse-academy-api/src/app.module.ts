@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfilerModule } from './profiler/profiler.module';
 import { AdvisorModule } from './advisor/advisor.module';
+import { FinancialAdvisorModule } from './financial-advisors/financial-advisor.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { AdminModule } from './admin/admin.module';
@@ -31,6 +32,7 @@ import { AppService } from './app.service';
     UsersModule,
     ProfilerModule,
     AdvisorModule,
+    FinancialAdvisorModule,
     PaymentsModule,
     ReferralsModule,
     AdminModule,

@@ -30,6 +30,9 @@ model User {
   dividends           Dividend[]
   realizedGains       RealizedGain[]
   passwordResetTokens PasswordResetToken[]
+  advisorProfile      AdvisorProfile?
+  advisorConnections  AdvisorClient[]
+  advisorQueries      AdvisorQuery[]
 }
 
 model EbookPurchase {
@@ -97,15 +100,16 @@ model Referral {
 }
 
 model Organization {
-  id          String            @id @default(cuid())
-  name        String
-  type        String            @default("company")
-  email       String            @unique
-  adminUserId String            @unique
-  licenseKey  String            @unique @default(cuid())
-  createdAt   DateTime          @default(now())
-  license     CorporateLicense?
-  members     OrgMember[]
+  id             String            @id @default(cuid())
+  name           String
+  type           String            @default("company")
+  email          String            @unique
+  adminUserId    String            @unique
+  licenseKey     String            @unique @default(cuid())
+  createdAt      DateTime          @default(now())
+  license        CorporateLicense?
+  members        OrgMember[]
+  advisorProfile AdvisorProfile?
 }
 
 model CorporateLicense {
@@ -344,4 +348,84 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+}
+
+model AdvisorProfile {
+  id          String        @id @default(cuid())
+  userId      String        @unique
+  user        User          @relation(fields: [userId], references: [id])
+  orgId       String?       @unique
+  org         Organization? @relation(fields: [orgId], references: [id])
+  headline    String
+  bio         String
+  specialties String[]      @default([])
+  credentials String?
+  photoUrl    String?
+  isPublic    Boolean       @default(true)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  clients     AdvisorClient[]
+  queries     AdvisorQuery[]
+  insights    AdvisorInsight[]
+  alerts      AdvisorAlert[]
+}
+
+model AdvisorClient {
+  id          String         @id @default(cuid())
+  advisorId   String
+  advisor     AdvisorProfile @relation(fields: [advisorId], references: [id])
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  status      String         @default("pending") // pending | accepted | declined
+  source      String         @default("request") // request | org_member
+  requestedAt DateTime       @default(now())
+  respondedAt DateTime?
+
+  @@unique([advisorId, userId])
+  @@index([userId])
+  @@index([advisorId, status])
+}
+
+model AdvisorQuery {
+  id         String         @id @default(cuid())
+  advisorId  String
+  advisor    AdvisorProfile @relation(fields: [advisorId], references: [id])
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  question   String
+  reply      String?
+  status     String         @default("open") // open | answered
+  createdAt  DateTime       @default(now())
+  answeredAt DateTime?
+
+  @@index([advisorId, status])
+  @@index([userId])
+}
+
+model AdvisorInsight {
+  id        String         @id @default(cuid())
+  advisorId String
+  advisor   AdvisorProfile @relation(fields: [advisorId], references: [id])
+  title     String
+  body      String
+  tickers   String[]       @default([])
+  emailedAt DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([advisorId, createdAt])
+}
+
+model AdvisorAlert {
+  id             String         @id @default(cuid())
+  advisorId      String
+  advisor        AdvisorProfile @relation(fields: [advisorId], references: [id])
+  ticker         String
+  action         String // BUY | SELL
+  message        String
+  recipientCount Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  @@index([advisorId, createdAt])
 }

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
+import DurationPicker from "@/components/DurationPicker";
+import type { BillingMonths } from "@/lib/pricing";
 import {
   apiUrl,
   clearExpiredToken,
@@ -46,6 +48,8 @@ export default function CheckoutPanel({ product }: Props) {
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
+  const [subscriptionReady, setSubscriptionReady] = useState(false);
+  const [durationLoading, setDurationLoading] = useState<BillingMonths | null>(null);
 
   const refreshStatus = useCallback(async () => {
     const access = getAccessToken();
@@ -199,7 +203,7 @@ export default function CheckoutPanel({ product }: Props) {
     throw new Error(data?.message || "Failed to initialize payment. Please try again.");
   }
 
-  async function startSubscriptionPayment(plan: "intermediary" | "premium") {
+  async function startSubscriptionPayment(plan: "intermediary" | "premium", months: BillingMonths) {
     const token = getAccessToken();
     if (!token) {
       throw new Error("Create an account or log in to subscribe.");
@@ -210,15 +214,27 @@ export default function CheckoutPanel({ product }: Props) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, months }),
     });
     const data = await res.json();
     if (data?.authorization_url) {
-      trackEvent("payment_initiated", { kind: "subscription", plan });
+      trackEvent("payment_initiated", { kind: "subscription", plan, months });
       window.location.href = data.authorization_url;
       return;
     }
     throw new Error(data?.message || "Failed to start subscription checkout.");
+  }
+
+  async function handleDurationSelect(months: BillingMonths) {
+    if (payPath === "ebook") return;
+    setDurationLoading(months);
+    setError("");
+    try {
+      await startSubscriptionPayment(payPath, months);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start subscription checkout.");
+      setDurationLoading(null);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -251,7 +267,9 @@ export default function CheckoutPanel({ product }: Props) {
       if (payPath === "ebook") {
         await startEbookPayment();
       } else {
-        await startSubscriptionPayment(payPath);
+        // Auth (if any) is done - reveal the duration picker instead of
+        // paying immediately, so the user chooses 1/3/6/12 months first.
+        setSubscriptionReady(true);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -337,7 +355,10 @@ export default function CheckoutPanel({ product }: Props) {
           </p>
           <PayOption
             selected={payPath === "ebook"}
-            onSelect={() => setPayPath("ebook")}
+            onSelect={() => {
+              setPayPath("ebook");
+              setSubscriptionReady(false);
+            }}
             title="One-time purchase"
             price={`KSh ${product.price.toLocaleString("en-KE")}`}
             detail="Keep the PDF forever. No account required."
@@ -347,6 +368,7 @@ export default function CheckoutPanel({ product }: Props) {
               selected={payPath === "intermediary"}
               onSelect={() => {
                 setPayPath("intermediary");
+                setSubscriptionReady(false);
                 if (!isLoggedIn) setAuthMode("register");
               }}
               title="Intermediary subscription"
@@ -359,6 +381,7 @@ export default function CheckoutPanel({ product }: Props) {
             selected={payPath === "premium"}
             onSelect={() => {
               setPayPath("premium");
+              setSubscriptionReady(false);
               if (!isLoggedIn) setAuthMode("register");
             }}
             title="Premium subscription"
@@ -476,20 +499,29 @@ export default function CheckoutPanel({ product }: Props) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full bg-emerald-700 text-white text-base font-bold py-4 rounded-xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-60 flex items-center justify-center gap-2"
-      >
-        {busy ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            {ctaLabel}
-          </>
-        ) : (
-          ctaLabel
-        )}
-      </button>
+      {subscriptionReady && payPath !== "ebook" ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Choose a duration
+          </p>
+          <DurationPicker plan={payPath} onSelect={handleDurationSelect} loadingMonths={durationLoading} />
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={busy}
+          className="w-full bg-emerald-700 text-white text-base font-bold py-4 rounded-xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {busy ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              {ctaLabel}
+            </>
+          ) : (
+            ctaLabel
+          )}
+        </button>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">

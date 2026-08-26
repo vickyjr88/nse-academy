@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import DurationPicker from "@/components/DurationPicker";
+import type { BillingMonths } from "@/lib/pricing";
 
 type Tier = "free" | "intermediary" | "premium";
 
@@ -49,7 +51,8 @@ export default function BillingPage() {
   const router = useRouter();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initLoading, setInitLoading] = useState<string | null>(null);
+  const [initLoading, setInitLoading] = useState<BillingMonths | null>(null);
+  const [expandedPlan, setExpandedPlan] = useState<"intermediary" | "premium" | null>(null);
 
   useEffect(() => {
     fetchStatus();
@@ -74,8 +77,8 @@ export default function BillingPage() {
     }
   }
 
-  async function handleUpgrade(plan: "intermediary" | "premium") {
-    setInitLoading(plan);
+  async function handleUpgrade(plan: "intermediary" | "premium", months: BillingMonths) {
+    setInitLoading(months);
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/initialize`, {
@@ -84,7 +87,7 @@ export default function BillingPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, months }),
       });
       const data = await res.json();
       if (data.authorization_url) {
@@ -168,13 +171,20 @@ export default function BillingPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={() => handleUpgrade(plan)}
-                  disabled={initLoading === plan}
-                  className="w-full bg-emerald-700 text-white font-bold py-4 rounded-2xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
-                >
-                  {initLoading === plan ? "Redirecting…" : `Upgrade to ${label} - ${price}`}
-                </button>
+                {expandedPlan === plan ? (
+                  <DurationPicker
+                    plan={plan}
+                    onSelect={(months) => handleUpgrade(plan, months)}
+                    loadingMonths={initLoading}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setExpandedPlan(plan)}
+                    className="w-full bg-emerald-700 text-white font-bold py-4 rounded-2xl hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-100"
+                  >
+                    Upgrade to {label} - {price}
+                  </button>
+                )}
               </div>
             ))}
           </div>

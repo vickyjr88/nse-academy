@@ -8,11 +8,26 @@ import { BrevoService } from '../brevo/brevo.service';
 import { computeEffectiveTier } from '../auth/effective-tier.util';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
+export type BillingMonths = 1 | 3 | 6 | 12;
 
 const PLAN_PRICES: Record<SubscriptionPlan, number> = {
   intermediary: 30000, // KSh 300 in kobo
   premium: 50000,      // KSh 500 in kobo
 };
+
+const VALID_MONTHS: BillingMonths[] = [1, 3, 6, 12];
+
+// Longer prepaid terms earn a bigger discount - 1 month is full price.
+const DISCOUNT_BY_MONTHS: Record<BillingMonths, number> = { 1: 0, 3: 0.05, 6: 0.10, 12: 0.15 };
+
+function computeAmountKobo(plan: SubscriptionPlan, months: BillingMonths): number {
+  const base = PLAN_PRICES[plan] * months;
+  return Math.round(base * (1 - DISCOUNT_BY_MONTHS[months]));
+}
+
+function computePeriodEnd(months: BillingMonths): Date {
+  return new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000);
+}
 
 @Injectable()
 export class PaymentsService {
@@ -37,9 +52,17 @@ export class PaymentsService {
     );
   }
 
-  async initializeTransaction(userId: string, email: string, plan: SubscriptionPlan = 'premium') {
+  async initializeTransaction(
+    userId: string,
+    email: string,
+    plan: SubscriptionPlan = 'premium',
+    months: BillingMonths = 1,
+  ) {
     if (!PLAN_PRICES[plan]) {
       throw new BadRequestException(`Invalid plan: ${plan}`);
+    }
+    if (!VALID_MONTHS.includes(months)) {
+      throw new BadRequestException(`Invalid months: ${months}. Must be one of ${VALID_MONTHS.join(', ')}`);
     }
 
     if (!this.paystackSecret) {
@@ -56,12 +79,13 @@ export class PaymentsService {
         },
         body: JSON.stringify({
           email,
-          amount: PLAN_PRICES[plan],
+          amount: computeAmountKobo(plan, months),
           callback_url: `${this.configService.get('WEB_URL', 'https://nseacademy.vitaldigitalmedia.net')}/payment/callback`,
           metadata: {
             type: 'subscription',
             userId,
             plan,
+            months,
           },
         }),
       });
@@ -127,6 +151,7 @@ export class PaymentsService {
           }
           // --- Subscription payment (default) ---
           const plan: SubscriptionPlan = data.metadata.plan || 'premium';
+          const months: BillingMonths = VALID_MONTHS.includes(data.metadata.months) ? data.metadata.months : 1;
 
           await this.prisma.subscription.upsert({
             where: { userId },
@@ -135,12 +160,12 @@ export class PaymentsService {
               tier: plan,
               status: 'active',
               paystackSubId: reference,
-              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              currentPeriodEnd: computePeriodEnd(months),
             },
             update: {
               tier: plan,
               status: 'active',
-              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              currentPeriodEnd: computePeriodEnd(months),
             },
           });
 
@@ -221,6 +246,7 @@ export class PaymentsService {
 
   private async activateSubscription(userId: string, reference: string, metadata: any) {
     const plan: SubscriptionPlan = metadata?.plan || 'premium';
+    const months: BillingMonths = VALID_MONTHS.includes(metadata?.months) ? metadata.months : 1;
 
     await this.prisma.subscription.upsert({
       where: { userId },
@@ -229,13 +255,13 @@ export class PaymentsService {
         tier: plan,
         status: 'active',
         paystackSubId: reference,
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd: computePeriodEnd(months),
       },
       update: {
         tier: plan,
         status: 'active',
         paystackSubId: reference,
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd: computePeriodEnd(months),
       },
     });
 

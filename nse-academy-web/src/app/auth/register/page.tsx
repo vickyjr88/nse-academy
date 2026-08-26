@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { decodeJwtPayload, identifyUser, trackEvent } from "@/lib/analytics";
+import DurationPicker from "@/components/DurationPicker";
+import type { BillingMonths, SubscriptionPlan } from "@/lib/pricing";
 
 function RegisterForm() {
   const router = useRouter();
@@ -16,6 +18,9 @@ function RegisterForm() {
   const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registeredPlan, setRegisteredPlan] = useState<SubscriptionPlan | null>(null);
+  const [payLoading, setPayLoading] = useState<BillingMonths | null>(null);
+  const [payError, setPayError] = useState("");
 
   // Pre-fill referral code and email from URL
   useEffect(() => {
@@ -64,8 +69,12 @@ function RegisterForm() {
         plan: searchParams.get("plan") ?? null,
       });
 
-      const redirectTo = searchParams.get("redirectTo") || "/profile";
-      router.push(redirectTo);
+      if (plan === "intermediary" || plan === "premium") {
+        setRegisteredPlan(plan);
+      } else {
+        const redirectTo = searchParams.get("redirectTo") || "/profile";
+        router.push(redirectTo);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -73,7 +82,59 @@ function RegisterForm() {
     }
   }
 
+  async function handlePay(months: BillingMonths) {
+    if (!registeredPlan) return;
+    setPayLoading(months);
+    setPayError("");
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/initialize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: registeredPlan, months }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to start payment");
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      }
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Failed to start payment");
+      setPayLoading(null);
+    }
+  }
+
   const plan = searchParams.get("plan");
+
+  if (registeredPlan) {
+    const redirectTo = searchParams.get("redirectTo") || "/profile";
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Link href="/" className="text-2xl font-bold text-emerald-700">NSE Academy</Link>
+            <h1 className="mt-4 text-2xl font-bold text-gray-900">You&apos;re in! Choose your plan</h1>
+            <p className="mt-1 text-gray-500">
+              Pick how long you&apos;d like to subscribe. Longer plans save you more.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            {payError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{payError}</div>
+            )}
+            <DurationPicker plan={registeredPlan} onSelect={handlePay} loadingMonths={payLoading} />
+          </div>
+
+          <p className="text-center mt-4 text-sm text-gray-500">
+            <Link href={redirectTo} className="text-gray-400 hover:text-gray-600 hover:underline">
+              Not now, continue on the free tier
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -122,7 +183,7 @@ function RegisterForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mobile number <span className="text-gray-400 font-normal">(optional)</span>
+                Mobile number
               </label>
               <input
                 type="tel"

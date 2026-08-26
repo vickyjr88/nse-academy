@@ -11,6 +11,8 @@ export interface AdvisorProfile {
   photoUrl: string | null;
   isPublic: boolean;
   isActive: boolean;
+  approvalStatus: "pending" | "approved" | "suspended";
+  approvedAt: string | null;
   createdAt: string;
   user?: { name: string };
 }
@@ -27,17 +29,38 @@ export interface AdvisorClientRow {
   advisor?: AdvisorProfile;
 }
 
+export interface AdvisorQueryMessage {
+  id: string;
+  queryId: string;
+  senderRole: "client" | "advisor";
+  body: string;
+  createdAt: string;
+}
+
 export interface AdvisorQuery {
   id: string;
   advisorId: string;
   userId: string;
-  question: string;
-  reply: string | null;
+  subject: string;
   status: "open" | "answered";
   createdAt: string;
-  answeredAt: string | null;
+  updatedAt: string;
   user?: { id: string; name: string; email: string };
   advisor?: AdvisorProfile;
+  _count?: { messages: number };
+}
+
+export interface AdvisorQueryThread {
+  id: string;
+  advisorId: string;
+  userId: string;
+  subject: string;
+  status: "open" | "answered";
+  createdAt: string;
+  updatedAt: string;
+  messages: AdvisorQueryMessage[];
+  advisor: AdvisorProfile & { user: { id: string; name: string } };
+  user: { id: string; name: string };
 }
 
 export interface AdvisorInsight {
@@ -198,11 +221,23 @@ export function listMyQueries(): Promise<AdvisorQuery[]> {
   return fetch(apiUrl("/financial-advisor/queries/mine"), { headers: authHeaders() }).then((r) => handle(r));
 }
 
-export function answerQuery(id: string, reply: string): Promise<AdvisorQuery> {
+export function getQueryThread(id: string): Promise<AdvisorQueryThread> {
+  return fetch(apiUrl(`/financial-advisor/queries/${id}`), { headers: authHeaders() }).then((r) => handle(r));
+}
+
+export function answerQuery(id: string, body: string): Promise<AdvisorQuery> {
   return fetch(apiUrl(`/financial-advisor/queries/${id}/answer`), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ reply }),
+    body: JSON.stringify({ body }),
+  }).then((r) => handle(r));
+}
+
+export function replyToQuery(id: string, body: string): Promise<AdvisorQuery> {
+  return fetch(apiUrl(`/financial-advisor/queries/${id}/reply`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ body }),
   }).then((r) => handle(r));
 }
 

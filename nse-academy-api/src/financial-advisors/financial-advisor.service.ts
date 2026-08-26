@@ -7,7 +7,7 @@ import { JournalService } from '../journal/journal.service';
 import { CreateAdvisorProfileDto } from './dto/create-advisor-profile.dto';
 import { UpdateAdvisorProfileDto } from './dto/update-advisor-profile.dto';
 import { SubmitQueryDto } from './dto/submit-query.dto';
-import { AnswerQueryDto } from './dto/answer-query.dto';
+import { PostMessageDto } from './dto/post-message.dto';
 import { PublishInsightDto } from './dto/publish-insight.dto';
 import { SendAlertDto } from './dto/send-alert.dto';
 
@@ -95,7 +95,7 @@ export class FinancialAdvisorService {
   async listPublicAdvisors(params: { specialty?: string; page: number; limit: number }) {
     const { specialty, page, limit } = params;
     const skip = (page - 1) * limit;
-    const where: any = { isPublic: true, isActive: true };
+    const where: any = { isPublic: true, isActive: true, approvalStatus: 'approved' };
     if (specialty) where.specialties = { has: specialty };
 
     const [data, total] = await Promise.all([
@@ -117,7 +117,7 @@ export class FinancialAdvisorService {
       where: { id: advisorId },
       include: { user: { select: { name: true } } },
     });
-    if (!profile || !profile.isPublic || !profile.isActive) {
+    if (!profile || !profile.isPublic || !profile.isActive || profile.approvalStatus !== 'approved') {
       throw new NotFoundException('Advisor not found');
     }
     return profile;
@@ -126,6 +126,9 @@ export class FinancialAdvisorService {
   async requestConnection(advisorId: string, userId: string) {
     const advisor = await this.prisma.advisorProfile.findUnique({ where: { id: advisorId } });
     if (!advisor || !advisor.isActive) throw new NotFoundException('Advisor not found');
+    if (advisor.approvalStatus !== 'approved') {
+      throw new BadRequestException('This advisor is not yet accepting clients');
+    }
     if (advisor.userId === userId) throw new BadRequestException('You cannot connect with yourself');
 
     const existing = await this.prisma.advisorClient.findUnique({
@@ -209,18 +212,30 @@ export class FinancialAdvisorService {
 
   async submitQuery(userId: string, advisorId: string, dto: SubmitQueryDto) {
     await this.assertAcceptedClient(advisorId, userId);
-    const query = await this.prisma.advisorQuery.create({
-      data: { advisorId, userId, question: dto.question },
+
+    const subject = dto.question.length > 140 ? `${dto.question.slice(0, 140)}...` : dto.question;
+    const query = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.advisorQuery.create({
+        data: { advisorId, userId, subject, status: 'open' },
+      });
+      await tx.advisorQueryMessage.create({
+        data: { queryId: created.id, senderRole: 'client', body: dto.question },
+      });
+      return created;
     });
 
-    const advisor = await this.prisma.advisorProfile.findUnique({ where: { id: advisorId } });
+    const [advisor, client] = await Promise.all([
+      this.prisma.advisorProfile.findUnique({ where: { id: advisorId } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    ]);
     if (advisor) {
       void this.notifyAndEmail(
         advisor.userId,
         'ADVISOR_QUERY',
         'New question from a client',
-        dto.question.length > 140 ? `${dto.question.slice(0, 140)}...` : dto.question,
+        dto.question,
         `${this.webUrl()}/dashboard/advisor`,
+        client ? `New question from ${client.name}` : undefined,
       );
     }
 
@@ -231,36 +246,88 @@ export class FinancialAdvisorService {
     const advisor = await this.getAdvisorProfileOrThrow(userId);
     return this.prisma.advisorQuery.findMany({
       where: { advisorId: advisor.id, ...(status ? { status } : {}) },
-      include: { user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, name: true, email: true } }, _count: { select: { messages: true } } },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
   listMyQueries(userId: string) {
     return this.prisma.advisorQuery.findMany({
       where: { userId },
-      include: { advisor: { include: { user: { select: { name: true } } } } },
-      orderBy: { createdAt: 'desc' },
+      include: {
+        advisor: { include: { user: { select: { name: true } } } },
+        _count: { select: { messages: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
-  async answerQuery(advisorUserId: string, queryId: string, dto: AnswerQueryDto) {
-    const advisor = await this.getAdvisorProfileOrThrow(advisorUserId);
-    const query = await this.prisma.advisorQuery.findUnique({ where: { id: queryId } });
-    if (!query || query.advisorId !== advisor.id) throw new NotFoundException('Query not found');
+  async getQueryThread(userId: string, queryId: string) {
+    const query = await this.prisma.advisorQuery.findUnique({
+      where: { id: queryId },
+      include: {
+        advisor: { include: { user: { select: { id: true, name: true } } } },
+        user: { select: { id: true, name: true } },
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!query) throw new NotFoundException('Query not found');
+    if (query.userId !== userId && query.advisor.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this conversation');
+    }
+    return query;
+  }
 
+  async answerQuery(advisorUserId: string, queryId: string, dto: PostMessageDto) {
+    return this.postMessage(advisorUserId, queryId, dto.body, 'advisor');
+  }
+
+  async replyAsClient(userId: string, queryId: string, dto: PostMessageDto) {
+    return this.postMessage(userId, queryId, dto.body, 'client');
+  }
+
+  private async postMessage(userId: string, queryId: string, body: string, senderRole: 'client' | 'advisor') {
+    const query = await this.prisma.advisorQuery.findUnique({
+      where: { id: queryId },
+      include: { advisor: true },
+    });
+    if (!query) throw new NotFoundException('Query not found');
+
+    const isAdvisor = query.advisor.userId === userId;
+    const isClient = query.userId === userId;
+    if (senderRole === 'advisor' && !isAdvisor) throw new ForbiddenException('Not the advisor on this conversation');
+    if (senderRole === 'client' && !isClient) throw new ForbiddenException('Not the client on this conversation');
+
+    await this.prisma.advisorQueryMessage.create({
+      data: { queryId, senderRole, body },
+    });
     const updated = await this.prisma.advisorQuery.update({
       where: { id: queryId },
-      data: { reply: dto.reply, status: 'answered', answeredAt: new Date() },
+      data: { status: senderRole === 'advisor' ? 'answered' : 'open', updatedAt: new Date() },
     });
 
-    void this.notifyAndEmail(
-      query.userId,
-      'ADVISOR_QUERY_ANSWERED',
-      'Your advisor replied to your question',
-      dto.reply,
-      `${this.webUrl()}/dashboard/advisor`,
-    );
+    const link = `${this.webUrl()}/dashboard/${senderRole === 'advisor' ? 'advisors' : 'advisor'}/queries/${queryId}`;
+    if (senderRole === 'advisor') {
+      const advisorUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      void this.notifyAndEmail(
+        query.userId,
+        'ADVISOR_QUERY_ANSWERED',
+        'Your advisor replied to your question',
+        body,
+        link,
+        advisorUser ? `${advisorUser.name} replied to your question` : undefined,
+      );
+    } else {
+      const clientUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      void this.notifyAndEmail(
+        query.advisor.userId,
+        'ADVISOR_QUERY',
+        'New message from a client',
+        body,
+        link,
+        clientUser ? `New message from ${clientUser.name}` : undefined,
+      );
+    }
 
     return updated;
   }
@@ -347,7 +414,14 @@ export class FinancialAdvisorService {
     return this.prisma.advisorAlert.findMany({ where: { advisorId: advisor.id }, orderBy: { createdAt: 'desc' } });
   }
 
-  private async notifyAndEmail(userId: string, type: string, title: string, body: string, link: string): Promise<void> {
+  private async notifyAndEmail(
+    userId: string,
+    type: string,
+    title: string,
+    body: string,
+    link: string,
+    subjectOverride?: string,
+  ): Promise<void> {
     await this.prisma.notification.create({ data: { userId, type, title, body, link } });
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -355,7 +429,7 @@ export class FinancialAdvisorService {
     try {
       await this.brevo.sendTransactional({
         to: { email: user.email, name: user.name },
-        subject: title,
+        subject: subjectOverride ?? title,
         htmlContent: `<p>${body}</p><p><a href="${link}">View in your dashboard</a></p>`,
         textContent: `${body}\n\n${link}`,
         tags: ['advisor'],

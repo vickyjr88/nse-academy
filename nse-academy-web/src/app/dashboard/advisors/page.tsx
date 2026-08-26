@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   type AdvisorProfile,
   type AdvisorClientRow,
+  type AdvisorQuery,
   listMyConnections,
   requestConnection,
   submitQuery,
+  listMyQueries,
 } from "@/lib/advisor";
 import { listPublicAdvisors } from "@/lib/advisor-public";
 
@@ -18,19 +22,21 @@ function statusBadge(status?: string) {
 }
 
 export default function DashboardAdvisorsPage() {
+  const router = useRouter();
   const [advisors, setAdvisors] = useState<AdvisorProfile[]>([]);
   const [connections, setConnections] = useState<AdvisorClientRow[]>([]);
+  const [queries, setQueries] = useState<AdvisorQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const [askingId, setAskingId] = useState<string | null>(null);
-  const [sentQuestion, setSentQuestion] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([listPublicAdvisors({ limit: 100 }), listMyConnections()])
-      .then(([advisorsRes, connectionsRes]) => {
+    Promise.all([listPublicAdvisors({ limit: 100 }), listMyConnections(), listMyQueries()])
+      .then(([advisorsRes, connectionsRes, queriesRes]) => {
         setAdvisors(advisorsRes.data);
         setConnections(connectionsRes);
+        setQueries(queriesRes);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -50,9 +56,8 @@ export default function DashboardAdvisorsPage() {
     if (!question?.trim()) return;
     setAskingId(advisorId);
     try {
-      await submitQuery(advisorId, question);
-      setSentQuestion(advisorId);
-      setQuestionDrafts((prev) => ({ ...prev, [advisorId]: "" }));
+      const query = await submitQuery(advisorId, question);
+      router.push(`/dashboard/advisors/queries/${query.id}`);
     } finally {
       setAskingId(null);
     }
@@ -69,6 +74,7 @@ export default function DashboardAdvisorsPage() {
 
       {advisors.map((advisor) => {
         const connection = connections.find((c) => c.advisorId === advisor.id);
+        const advisorQueries = queries.filter((q) => q.advisorId === advisor.id);
         return (
           <div key={advisor.id} className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -100,26 +106,42 @@ export default function DashboardAdvisorsPage() {
             </div>
 
             {connection?.status === "accepted" && (
-              <div className="mt-4 pt-4 border-t border-gray-50">
-                {sentQuestion === advisor.id ? (
-                  <p className="text-sm text-emerald-700">Question sent — you&apos;ll be notified when they reply.</p>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      value={questionDrafts[advisor.id] ?? ""}
-                      onChange={(e) => setQuestionDrafts((prev) => ({ ...prev, [advisor.id]: e.target.value }))}
-                      placeholder="Ask a question…"
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                    <button
-                      onClick={() => handleAsk(advisor.id)}
-                      disabled={askingId === advisor.id}
-                      className="text-sm bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
-                    >
-                      Ask
-                    </button>
+              <div className="mt-4 pt-4 border-t border-gray-50 space-y-4">
+                {advisorQueries.length > 0 && (
+                  <div className="space-y-2">
+                    {advisorQueries.map((q) => (
+                      <Link
+                        key={q.id}
+                        href={`/dashboard/advisors/queries/${q.id}`}
+                        className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-sm text-gray-900 truncate">{q.subject}</span>
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${
+                            q.status === "answered" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {q.status === "answered" ? "Answered" : "Waiting"}
+                        </span>
+                      </Link>
+                    ))}
                   </div>
                 )}
+                <div className="flex gap-2">
+                  <input
+                    value={questionDrafts[advisor.id] ?? ""}
+                    onChange={(e) => setQuestionDrafts((prev) => ({ ...prev, [advisor.id]: e.target.value }))}
+                    placeholder="Ask a question…"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={() => handleAsk(advisor.id)}
+                    disabled={askingId === advisor.id}
+                    className="text-sm bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
+                  >
+                    Ask
+                  </button>
+                </div>
               </div>
             )}
           </div>

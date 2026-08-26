@@ -5,7 +5,7 @@ import { FinancialAdvisorService } from './financial-advisor.service';
 import { CreateAdvisorProfileDto } from './dto/create-advisor-profile.dto';
 import { UpdateAdvisorProfileDto } from './dto/update-advisor-profile.dto';
 import { SubmitQueryDto } from './dto/submit-query.dto';
-import { AnswerQueryDto } from './dto/answer-query.dto';
+import { PostMessageDto } from './dto/post-message.dto';
 import { PublishInsightDto } from './dto/publish-insight.dto';
 import { SendAlertDto } from './dto/send-alert.dto';
 
@@ -90,9 +90,19 @@ export class FinancialAdvisorController {
     return this.advisor.listMyQueries(req.user.id);
   }
 
+  @Get('queries/:id')
+  queryThread(@Request() req: any, @Param('id') id: string) {
+    return this.advisor.getQueryThread(req.user.id, id);
+  }
+
   @Post('queries/:id/answer')
-  answerQuery(@Request() req: any, @Param('id') id: string, @Body() dto: AnswerQueryDto) {
+  answerQuery(@Request() req: any, @Param('id') id: string, @Body() dto: PostMessageDto) {
     return this.advisor.answerQuery(req.user.id, id, dto);
+  }
+
+  @Post('queries/:id/reply')
+  replyToQuery(@Request() req: any, @Param('id') id: string, @Body() dto: PostMessageDto) {
+    return this.advisor.replyAsClient(req.user.id, id, dto);
   }
 
   @Post('insights')

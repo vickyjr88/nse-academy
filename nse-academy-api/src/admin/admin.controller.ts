@@ -152,6 +152,38 @@ export class AdminController {
     return this.admin.upsertOrganizationLicense(id, dto);
   }
 
+  @Get('advisors')
+  @ApiOperation({ summary: 'List financial advisors (paginated), filterable by approval status' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false, description: 'pending | approved | suspended' })
+  listAdvisors(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.admin.listAdvisors({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      status,
+    });
+  }
+
+  @Post('advisors/:id/approve')
+  @ApiOperation({ summary: 'Approve a pending or suspended advisor profile' })
+  approveAdvisor(@Param('id') id: string) {
+    return this.admin.approveAdvisor(id);
+  }
+
+  @Post('advisors/:id/suspend')
+  @ApiOperation({ summary: 'Suspend an advisor profile' })
+  suspendAdvisor(@Param('id') id: string) {
+    return this.admin.suspendAdvisor(id);
+  }
+
   @Get('referrals')
   @ApiOperation({ summary: 'List all referrals (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })

@@ -121,6 +121,37 @@ interface JournalFeatures {
   };
 }
 
+interface AdvisorFeatures {
+  advisors: {
+    total: number;
+    pending: number;
+    approved: number;
+    suspended: number;
+  };
+  clients: {
+    totalConnections: number;
+    accepted: number;
+    pending: number;
+    declined: number;
+  };
+  queries: {
+    total: number;
+    open: number;
+    answered: number;
+    avgResponseHours: number | null;
+  };
+  insights: {
+    total: number;
+    emailedCount: number;
+  };
+  alerts: {
+    total: number;
+    buy: number;
+    sell: number;
+    totalRecipients: number;
+  };
+}
+
 interface AnalyticsData {
   overview: Overview;
   userGrowth: MonthCount[];
@@ -130,6 +161,7 @@ interface AnalyticsData {
   investorProfiles: InvestorProfiles;
   googleAnalytics: GoogleAnalytics | null; // Added GA
   journalFeatures: JournalFeatures;
+  advisorFeatures: AdvisorFeatures;
   brevoConfigured: boolean;
 }
 
@@ -241,7 +273,7 @@ export function Dashboard() {
     );
   }
 
-  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures, brevoConfigured } = data;
+  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures, advisorFeatures, brevoConfigured } = data;
 
   const tierPieData = [
     { name: 'Free', value: overview.tierBreakdown.free },
@@ -268,6 +300,12 @@ export function Dashboard() {
   const dividendSourcePieData = [
     { name: 'Manual', value: journalFeatures.dividends.manual },
     { name: 'CDSC Import', value: journalFeatures.dividends.cdscImport },
+  ];
+
+  const advisorStatusPieData = [
+    { name: 'Pending', value: advisorFeatures.advisors.pending },
+    { name: 'Approved', value: advisorFeatures.advisors.approved },
+    { name: 'Suspended', value: advisorFeatures.advisors.suspended },
   ];
 
   return (
@@ -610,6 +648,64 @@ export function Dashboard() {
             Total imports attempted: {journalFeatures.statementImports.total.toLocaleString()}
           </Typography>
         </Box>
+      </Box>
+
+      {/* Financial Advisors */}
+      <SectionTitle>Financial Advisors</SectionTitle>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        <StatCard label="Total Advisors" value={advisorFeatures.advisors.total} />
+        <StatCard label="Pending Approval" value={advisorFeatures.advisors.pending} />
+        <StatCard label="Approved" value={advisorFeatures.advisors.approved} />
+        <StatCard label="Suspended" value={advisorFeatures.advisors.suspended} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <Box background="neutral0" padding={4} hasRadius shadow="filterShadow">
+            <Typography variant="delta">Advisors by Status</Typography>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={advisorStatusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {advisorStatusPieData.map((_entry, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </div>
+
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <Box background="neutral0" padding={4} hasRadius shadow="filterShadow">
+            <Typography variant="delta">Client Connections</Typography>
+            <Box paddingTop={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <StatCard label="Total Connections" value={advisorFeatures.clients.totalConnections} />
+              <StatCard label="Accepted" value={advisorFeatures.clients.accepted} />
+              <StatCard label="Pending" value={advisorFeatures.clients.pending} />
+              <StatCard label="Declined" value={advisorFeatures.clients.declined} />
+            </Box>
+          </Box>
+        </div>
+      </div>
+
+      <Box paddingTop={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <StatCard label="Total Queries" value={advisorFeatures.queries.total} />
+        <StatCard label="Open" value={advisorFeatures.queries.open} />
+        <StatCard label="Answered" value={advisorFeatures.queries.answered} />
+        <StatCard
+          label="Avg. Response Time"
+          value={advisorFeatures.queries.avgResponseHours != null ? `${advisorFeatures.queries.avgResponseHours}h` : '—'}
+        />
+      </Box>
+
+      <Box paddingTop={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <StatCard label="Insights Published" value={advisorFeatures.insights.total} />
+        <StatCard label="Insights Emailed" value={advisorFeatures.insights.emailedCount} />
+        <StatCard label="Alerts Sent" value={advisorFeatures.alerts.total} />
+        <StatCard label="Buy / Sell Alerts" value={`${advisorFeatures.alerts.buy} / ${advisorFeatures.alerts.sell}`} />
+        <StatCard label="Total Alert Recipients" value={advisorFeatures.alerts.totalRecipients} />
       </Box>
     </Box>
   );

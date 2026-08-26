@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +18,7 @@ type TrendRow = MonthRow & { active: bigint; cancelled: bigint };
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
   private analyticsClient: BetaAnalyticsDataClient | null = null;
 
   constructor(
@@ -437,6 +438,83 @@ export class AdminService {
     });
   }
 
+  private webUrl(): string {
+    return (
+      this.configService.get<string>('WEB_URL') ||
+      this.configService.get<string>('SITE_URL') ||
+      'https://nseacademy.vitaldigitalmedia.net'
+    );
+  }
+
+  async listAdvisors(params: { page: number; limit: number; search?: string; status?: string }) {
+    const { page, limit, search, status } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) where.approvalStatus = status;
+    if (search) {
+      where.user = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.advisorProfile.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          _count: { select: { clients: true, queries: true, insights: true, alerts: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.advisorProfile.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async approveAdvisor(id: string) {
+    const advisor = await this.prisma.advisorProfile.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+    if (!advisor) throw new NotFoundException('Advisor not found');
+
+    const updated = await this.prisma.advisorProfile.update({
+      where: { id },
+      data: { approvalStatus: 'approved', approvedAt: new Date() },
+    });
+
+    try {
+      await this.brevo.sendTransactional({
+        to: { email: advisor.user.email, name: advisor.user.name },
+        subject: "You're approved as an NSE Academy advisor",
+        htmlContent: `<p>Good news, ${advisor.user.name} - your financial advisor profile has been approved and is now live in the NSE Academy advisor directory.</p><p><a href="${this.webUrl()}/dashboard/advisor">Go to your advisor dashboard</a></p>`,
+        textContent: `Good news, ${advisor.user.name} - your financial advisor profile has been approved and is now live in the NSE Academy advisor directory.\n\n${this.webUrl()}/dashboard/advisor`,
+        tags: ['advisor-approved'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send advisor-approved email to ${advisor.user.email}: ${(err as Error).message}`);
+    }
+
+    return updated;
+  }
+
+  async suspendAdvisor(id: string) {
+    const advisor = await this.prisma.advisorProfile.findUnique({ where: { id } });
+    if (!advisor) throw new NotFoundException('Advisor not found');
+
+    return this.prisma.advisorProfile.update({
+      where: { id },
+      data: { approvalStatus: 'suspended' },
+    });
+  }
+
   async listReferrals(params: {
     page: number;
     limit: number;
@@ -683,6 +761,72 @@ export class AdminService {
       this.prisma.broker.count({ where: { isActive: true } }),
     ]);
 
+    const [
+      totalAdvisors,
+      advisorsByStatus,
+      totalConnections,
+      connectionsByStatus,
+      totalQueries,
+      queriesByStatus,
+      avgResponseRaw,
+      totalInsights,
+      emailedInsights,
+      totalAdvisorAlerts,
+      advisorAlertsByAction,
+      advisorAlertRecipientsRaw,
+    ] = await Promise.all([
+      this.prisma.advisorProfile.count(),
+      this.prisma.advisorProfile.groupBy({ by: ['approvalStatus'], _count: true }),
+      this.prisma.advisorClient.count(),
+      this.prisma.advisorClient.groupBy({ by: ['status'], _count: true }),
+      this.prisma.advisorQuery.count(),
+      this.prisma.advisorQuery.groupBy({ by: ['status'], _count: true }),
+      this.prisma.$queryRaw<[{ avg_hours: number | null }]>`
+        SELECT AVG(EXTRACT(EPOCH FROM (first_advisor_msg."createdAt" - q."createdAt")) / 3600.0) AS avg_hours
+        FROM "AdvisorQuery" q
+        JOIN LATERAL (
+          SELECT "createdAt" FROM "AdvisorQueryMessage"
+          WHERE "queryId" = q.id AND "senderRole" = 'advisor'
+          ORDER BY "createdAt" ASC LIMIT 1
+        ) first_advisor_msg ON true`,
+      this.prisma.advisorInsight.count(),
+      this.prisma.advisorInsight.count({ where: { emailedAt: { not: null } } }),
+      this.prisma.advisorAlert.count(),
+      this.prisma.advisorAlert.groupBy({ by: ['action'], _count: true }),
+      this.prisma.advisorAlert.aggregate({ _sum: { recipientCount: true } }),
+    ]);
+
+    const advisorFeatures = {
+      advisors: {
+        total: totalAdvisors,
+        pending: advisorsByStatus.find(a => a.approvalStatus === 'pending')?._count ?? 0,
+        approved: advisorsByStatus.find(a => a.approvalStatus === 'approved')?._count ?? 0,
+        suspended: advisorsByStatus.find(a => a.approvalStatus === 'suspended')?._count ?? 0,
+      },
+      clients: {
+        totalConnections,
+        accepted: connectionsByStatus.find(c => c.status === 'accepted')?._count ?? 0,
+        pending: connectionsByStatus.find(c => c.status === 'pending')?._count ?? 0,
+        declined: connectionsByStatus.find(c => c.status === 'declined')?._count ?? 0,
+      },
+      queries: {
+        total: totalQueries,
+        open: queriesByStatus.find(q => q.status === 'open')?._count ?? 0,
+        answered: queriesByStatus.find(q => q.status === 'answered')?._count ?? 0,
+        avgResponseHours: avgResponseRaw[0]?.avg_hours != null ? Math.round(Number(avgResponseRaw[0].avg_hours) * 10) / 10 : null,
+      },
+      insights: {
+        total: totalInsights,
+        emailedCount: emailedInsights,
+      },
+      alerts: {
+        total: totalAdvisorAlerts,
+        buy: advisorAlertsByAction.find(a => a.action === 'BUY')?._count ?? 0,
+        sell: advisorAlertsByAction.find(a => a.action === 'SELL')?._count ?? 0,
+        totalRecipients: advisorAlertRecipientsRaw._sum.recipientCount ?? 0,
+      },
+    };
+
     const journalFeatures = {
       trades: {
         total: totalTrades,
@@ -771,6 +915,7 @@ export class AdminService {
       subscriptionTrend,
       googleAnalytics, // Added GA data
       journalFeatures,
+      advisorFeatures,
       brevoConfigured: this.brevo.hasCredentials(),
       lessonProgress: {
         totalCompletions,

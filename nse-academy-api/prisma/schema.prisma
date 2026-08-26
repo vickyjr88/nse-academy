@@ -351,20 +351,22 @@ model PasswordResetToken {
 }
 
 model AdvisorProfile {
-  id          String        @id @default(cuid())
-  userId      String        @unique
-  user        User          @relation(fields: [userId], references: [id])
-  orgId       String?       @unique
-  org         Organization? @relation(fields: [orgId], references: [id])
-  headline    String
-  bio         String
-  specialties String[]      @default([])
-  credentials String?
-  photoUrl    String?
-  isPublic    Boolean       @default(true)
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id])
+  orgId          String?       @unique
+  org            Organization? @relation(fields: [orgId], references: [id])
+  headline       String
+  bio            String
+  specialties    String[]      @default([])
+  credentials    String?
+  photoUrl       String?
+  isPublic       Boolean       @default(true)
+  isActive       Boolean       @default(true)
+  approvalStatus String        @default("pending") // pending | approved | suspended
+  approvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   clients     AdvisorClient[]
   queries     AdvisorQuery[]
@@ -389,19 +391,30 @@ model AdvisorClient {
 }
 
 model AdvisorQuery {
-  id         String         @id @default(cuid())
-  advisorId  String
-  advisor    AdvisorProfile @relation(fields: [advisorId], references: [id])
-  userId     String
-  user       User           @relation(fields: [userId], references: [id])
-  question   String
-  reply      String?
-  status     String         @default("open") // open | answered
-  createdAt  DateTime       @default(now())
-  answeredAt DateTime?
+  id        String                @id @default(cuid())
+  advisorId String
+  advisor   AdvisorProfile        @relation(fields: [advisorId], references: [id])
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id])
+  subject   String // first message's text, truncated - used for list previews
+  status    String                @default("open") // open (client waiting on advisor) | answered (advisor replied last)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  messages  AdvisorQueryMessage[]
 
   @@index([advisorId, status])
   @@index([userId])
+}
+
+model AdvisorQueryMessage {
+  id         String       @id @default(cuid())
+  queryId    String
+  query      AdvisorQuery @relation(fields: [queryId], references: [id])
+  senderRole String // client | advisor
+  body       String
+  createdAt  DateTime     @default(now())
+
+  @@index([queryId, createdAt])
 }
 
 model AdvisorInsight {

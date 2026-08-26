@@ -13,7 +13,6 @@ import {
   listMyClients,
   respondToConnection,
   listQueriesForAdvisor,
-  answerQuery,
   publishInsight,
   listMyInsights,
   sendAlert,
@@ -194,29 +193,32 @@ function ClientsTab() {
 function QueriesTab() {
   const [queries, setQueries] = useState<AdvisorQuery[]>([]);
   const [loading, setLoading] = useState(true);
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState<string | null>(null);
 
   useEffect(() => {
     listQueriesForAdvisor().then(setQueries).finally(() => setLoading(false));
   }, []);
 
-  async function handleAnswer(id: string) {
-    const reply = replyDrafts[id];
-    if (!reply?.trim()) return;
-    setSubmitting(id);
-    try {
-      const updated = await answerQuery(id, reply);
-      setQueries((prev) => prev.map((q) => (q.id === id ? updated : q)));
-    } finally {
-      setSubmitting(null);
-    }
-  }
-
   if (loading) return <div className="text-gray-400 py-8 text-center">Loading…</div>;
 
   const open = queries.filter((q) => q.status === "open");
   const answered = queries.filter((q) => q.status === "answered");
+
+  function QueryRow({ q }: { q: AdvisorQuery }) {
+    return (
+      <Link
+        href={`/dashboard/advisor/queries/${q.id}`}
+        className="flex items-center justify-between bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors"
+      >
+        <div>
+          <p className="text-sm text-gray-500 mb-1">{q.user?.name}</p>
+          <p className="text-gray-900">{q.subject}</p>
+        </div>
+        <span className="text-xs text-gray-400 shrink-0 ml-4">
+          {q._count?.messages ?? 0} message{(q._count?.messages ?? 0) === 1 ? "" : "s"}
+        </span>
+      </Link>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -225,42 +227,21 @@ function QueriesTab() {
         {open.length === 0 ? (
           <p className="text-sm text-gray-500">No open questions.</p>
         ) : (
-          <div className="space-y-4">
-            {open.map((q) => (
-              <div key={q.id} className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-500 mb-1">{q.user?.name}</p>
-                <p className="text-gray-900 mb-3">{q.question}</p>
-                <textarea
-                  value={replyDrafts[q.id] ?? ""}
-                  onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                  rows={2}
-                  placeholder="Write your reply…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button
-                  onClick={() => handleAnswer(q.id)}
-                  disabled={submitting === q.id}
-                  className="text-sm bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors disabled:opacity-60"
-                >
-                  {submitting === q.id ? "Sending…" : "Send reply"}
-                </button>
-              </div>
-            ))}
+          <div className="space-y-3">
+            {open.map((q) => <QueryRow key={q.id} q={q} />)}
           </div>
         )}
       </div>
 
       <div className="bg-white border border-gray-100 rounded-2xl p-6">
         <h3 className="font-semibold text-gray-900 mb-4">Answered ({answered.length})</h3>
-        <div className="space-y-3">
-          {answered.map((q) => (
-            <div key={q.id} className="text-sm">
-              <p className="text-gray-500">{q.user?.name} asked:</p>
-              <p className="text-gray-900">{q.question}</p>
-              <p className="text-emerald-700 mt-1">→ {q.reply}</p>
-            </div>
-          ))}
-        </div>
+        {answered.length === 0 ? (
+          <p className="text-sm text-gray-500">No answered conversations yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {answered.map((q) => <QueryRow key={q.id} q={q} />)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -482,6 +463,25 @@ export default function AdvisorWorkspacePage() {
 
   if (!profile) {
     return <RegisterForm onDone={() => getMyAdvisorProfile().then(setProfile)} />;
+  }
+
+  if (profile.approvalStatus !== "approved") {
+    const pending = profile.approvalStatus === "pending";
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className={`border rounded-2xl p-6 text-center ${pending ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
+          <span className="text-3xl">{pending ? "⏳" : "⚠️"}</span>
+          <h2 className="text-lg font-bold text-gray-900 mt-3">
+            {pending ? "Your advisor profile is pending approval" : "Your advisor profile has been suspended"}
+          </h2>
+          <p className="text-sm text-gray-600 mt-2">
+            {pending
+              ? "An NSE Academy admin needs to review your profile before it's listed in the advisor directory and you can accept clients. You'll get an email once you're approved."
+              : "Your advisor profile is currently suspended and is not visible in the directory. Contact NSE Academy support if you believe this is a mistake."}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const tabs: { key: Tab; label: string }[] = [

@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -61,6 +61,16 @@ export default {
       intlLabel: {
         id: `${PLUGIN_ID}.plugin.organizations`,
         defaultMessage: 'Organizations',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/advisor-approvals`,
+      icon: SealCheck,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.advisor-approvals`,
+        defaultMessage: 'Advisor Approvals',
       },
       permissions: [],
     });
@@ -133,6 +143,11 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/organizations/new`,
       Component: React.lazy(() => import('./pages/CreateOrganization').then((m) => ({ default: m.CreateOrganization }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/advisor-approvals`,
+      Component: React.lazy(() => import('./pages/AdvisorApprovals').then((m) => ({ default: m.AdvisorApprovals }))),
     });
 
     app.router.addRoute({

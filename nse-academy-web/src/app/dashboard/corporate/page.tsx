@@ -44,6 +44,7 @@ export default function CorporateDashboardPage() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [resentId, setResentId] = useState<string | null>(null);
   const [resendError, setResendError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -64,6 +65,7 @@ export default function CorporateDashboardPage() {
           setOrg(dashData);
         }
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -122,6 +124,20 @@ export default function CorporateDashboardPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading…</div>;
+
+  if (loadError) return (
+    <div className="max-w-md mx-auto mt-16 text-center">
+      <div className="text-5xl mb-4">⚠️</div>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">Couldn't load your organization</h2>
+      <p className="text-gray-500 mb-6">Something went wrong fetching your corporate account. Please try again.</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-800 transition-colors"
+      >
+        Retry
+      </button>
+    </div>
+  );
 
   if (!membership) return (
     <div className="max-w-md mx-auto mt-16 text-center">

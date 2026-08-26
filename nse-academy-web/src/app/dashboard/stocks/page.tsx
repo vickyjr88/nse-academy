@@ -42,7 +42,7 @@ export default function StocksPage() {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard/stocks")}`);
       return;
     }
 

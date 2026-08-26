@@ -101,7 +101,7 @@ export default function ResearchPage() {
   // Auth + load ticker list
   useEffect(() => {
     const t = localStorage.getItem("access_token");
-    if (!t) { router.push("/auth/login"); return; }
+    if (!t) { router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard/research")}`); return; }
     setToken(t);
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/advisor/tickers`, {

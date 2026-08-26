@@ -34,7 +34,7 @@ export default function ReferralsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) { router.push("/auth/login"); return; }
+    if (!token) { router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard/referrals")}`); return; }
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/referrals/stats`, {
       headers: { Authorization: `Bearer ${token}` },

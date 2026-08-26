@@ -27,6 +27,7 @@ export default function DashboardAdvisorsPage() {
   const [connections, setConnections] = useState<AdvisorClientRow[]>([]);
   const [queries, setQueries] = useState<AdvisorQuery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const [askingId, setAskingId] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export default function DashboardAdvisorsPage() {
         setConnections(connectionsRes);
         setQueries(queriesRes);
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -64,6 +66,16 @@ export default function DashboardAdvisorsPage() {
   }
 
   if (loading) return <div className="text-gray-400 py-20 text-center">Loading…</div>;
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20">
+        <div className="text-4xl mb-4">⚠️</div>
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Couldn't load advisors</h2>
+        <p className="text-sm text-gray-500">Something went wrong. Please refresh the page to try again.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">

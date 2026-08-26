@@ -15,7 +15,11 @@ function CorporateCallbackHandler() {
   useEffect(() => {
     if (!reference) { setErrorMsg("No payment reference found."); setState("error"); return; }
     const token = localStorage.getItem("access_token");
-    if (!token) { router.push("/auth/login"); return; }
+    if (!token) {
+      const returnTo = `/payment/corporate-callback?reference=${encodeURIComponent(reference)}`;
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/corporate/license/verify`, {
       method: "POST",

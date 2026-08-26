@@ -6,14 +6,26 @@ import { type AdvisorInsight, listInsightsFeed } from "@/lib/advisor";
 export default function InsightsFeedPage() {
   const [insights, setInsights] = useState<AdvisorInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     listInsightsFeed()
       .then(setInsights)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-400 py-20 text-center">Loading…</div>;
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20">
+        <div className="text-4xl mb-4">⚠️</div>
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Couldn't load insights</h2>
+        <p className="text-sm text-gray-500">Something went wrong. Please refresh the page to try again.</p>
+      </div>
+    );
+  }
 
   if (insights.length === 0) {
     return (

@@ -45,16 +45,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) { router.push("/auth/login"); return; }
+    if (!token) { router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard")}`); return; }
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data.statusCode === 401) router.push("/auth/login");
+        if (data.statusCode === 401) router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard")}`);
         else setUser(data);
       })
-      .catch(() => router.push("/auth/login"))
+      .catch(() => router.push(`/auth/login?redirectTo=${encodeURIComponent("/dashboard")}`))
       .finally(() => setLoading(false));
   }, [router]);
 

@@ -126,13 +126,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (!token) { router.push('/auth/login'); return; }
+    if (!token) { router.push(`/auth/login?redirectTo=${encodeURIComponent('/dashboard/profile')}`); return; }
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data?.statusCode === 401) { router.push('/auth/login'); return; }
+        if (data?.statusCode === 401) { router.push(`/auth/login?redirectTo=${encodeURIComponent('/dashboard/profile')}`); return; }
         if (data?.investorProfile) {
           setExistingProfile(data.investorProfile);
         } else {
@@ -165,7 +165,7 @@ export default function ProfilePage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       if (!token) {
-        router.push('/auth/login');
+        router.push(`/auth/login?redirectTo=${encodeURIComponent('/dashboard/profile')}`);
         return;
       }
 
@@ -179,7 +179,7 @@ export default function ProfilePage() {
       });
 
       if (res.status === 401) {
-        router.push('/auth/login');
+        router.push(`/auth/login?redirectTo=${encodeURIComponent('/dashboard/profile')}`);
         return;
       }
 

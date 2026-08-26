@@ -375,36 +375,60 @@ export class FinancialAdvisorService {
 
   async sendAlert(advisorUserId: string, dto: SendAlertDto) {
     const advisor = await this.getAdvisorProfileOrThrow(advisorUserId);
+    const advisorUser = await this.prisma.user.findUnique({ where: { id: advisorUserId }, select: { name: true } });
     const ticker = dto.ticker.toUpperCase().trim();
 
     const clients = await this.prisma.advisorClient.findMany({
       where: { advisorId: advisor.id, status: 'accepted' },
       select: { userId: true },
     });
-    let recipientIds = clients.map((c) => c.userId);
+    let clientIds = clients.map((c) => c.userId);
 
-    if (dto.action === 'SELL' && recipientIds.length > 0) {
-      const holders = await this.prisma.holding.findMany({
-        where: { userId: { in: recipientIds }, ticker, quantity: { gt: 0 } },
-        select: { userId: true },
-      });
+    // Free-tier platform users get the same call as a taste of advisor
+    // value (and a nudge toward the advisor's public profile) - excludes
+    // anyone already an accepted client so they aren't notified twice.
+    const freeTierUsers = await this.prisma.user.findMany({
+      where: {
+        id: { notIn: clientIds.length > 0 ? clientIds : undefined },
+        OR: [{ subscription: null }, { subscription: { tier: 'free' } }],
+      },
+      select: { id: true },
+    });
+    let freeTierIds = freeTierUsers.map((u) => u.id);
+
+    if (dto.action === 'SELL') {
+      const allCandidateIds = [...clientIds, ...freeTierIds];
+      const holders = allCandidateIds.length > 0
+        ? await this.prisma.holding.findMany({
+            where: { userId: { in: allCandidateIds }, ticker, quantity: { gt: 0 } },
+            select: { userId: true },
+          })
+        : [];
       const holderIds = new Set(holders.map((h) => h.userId));
-      recipientIds = recipientIds.filter((id) => holderIds.has(id));
+      clientIds = clientIds.filter((id) => holderIds.has(id));
+      freeTierIds = freeTierIds.filter((id) => holderIds.has(id));
     }
 
     const title = `${dto.action === 'BUY' ? 'Buy' : 'Sell'} alert: ${ticker}`;
-    const link = `${this.webUrl()}/dashboard/advisor`;
-    for (const userId of recipientIds) {
-      void this.notifyAndEmail(userId, 'ADVISOR_ALERT', title, dto.message, link);
+    const clientLink = `${this.webUrl()}/dashboard/advisor`;
+    const freeTierLink = `${this.webUrl()}/advisors/${advisor.id}`;
+    const freeTierSubject = advisorUser ? `${title} - from ${advisorUser.name}` : title;
+
+    for (const userId of clientIds) {
+      void this.notifyAndEmail(userId, 'ADVISOR_ALERT', title, dto.message, clientLink);
+    }
+    for (const userId of freeTierIds) {
+      void this.notifyAndEmail(userId, 'ADVISOR_ALERT', title, dto.message, freeTierLink, freeTierSubject);
     }
 
+    const recipientCount = clientIds.length + freeTierIds.length;
     return this.prisma.advisorAlert.create({
       data: {
         advisorId: advisor.id,
         ticker,
         action: dto.action,
         message: dto.message,
-        recipientCount: recipientIds.length,
+        recipientCount,
       },
     });
   }

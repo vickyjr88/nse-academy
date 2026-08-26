@@ -1,8 +1,10 @@
 import { Injectable, InternalServerErrorException, Logger, BadRequestException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service';
 import { EbookService } from '../ebook/ebook.service';
+import { BrevoService } from '../brevo/brevo.service';
 import { computeEffectiveTier } from '../auth/effective-tier.util';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
@@ -22,8 +24,17 @@ export class PaymentsService {
     private configService: ConfigService,
     private referrals: ReferralsService,
     private ebookService: EbookService,
+    private brevo: BrevoService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
+  }
+
+  private webUrl(): string {
+    return (
+      this.configService.get<string>('WEB_URL') ||
+      this.configService.get<string>('SITE_URL') ||
+      'https://nseacademy.vitaldigitalmedia.net'
+    );
   }
 
   async initializeTransaction(userId: string, email: string, plan: SubscriptionPlan = 'premium') {
@@ -241,5 +252,82 @@ export class PaymentsService {
     const { effectiveTier } = await computeEffectiveTier(this.prisma, userId);
 
     return { ...(sub || { tier: 'free', status: 'none' }), effectiveTier };
+  }
+
+  /**
+   * Personal subscriptions never had anything flipping them back to free
+   * once currentPeriodEnd passed - deriveEffectiveTier only reads `tier`,
+   * so an expired-but-untouched row kept granting paid access forever.
+   * Runs once a day; downgrades the row in place (keeps history) and
+   * emails the user so they know why they lost access.
+   */
+  @Cron('0 6 * * *')
+  async handleExpiredSubscriptions() {
+    const expired = await this.prisma.subscription.findMany({
+      where: {
+        status: 'active',
+        tier: { in: ['intermediary', 'premium'] },
+        currentPeriodEnd: { lt: new Date() },
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (expired.length === 0) return;
+
+    this.logger.log(`Downgrading ${expired.length} expired subscription(s) to free`);
+
+    for (const sub of expired) {
+      try {
+        await this.prisma.subscription.update({
+          where: { userId: sub.userId },
+          data: { tier: 'free', status: 'cancelled' },
+        });
+        await this.sendExpiryEmail(sub.user.email, sub.user.name);
+      } catch (err) {
+        this.logger.error(`Failed to downgrade subscription for user ${sub.userId}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  private async sendExpiryEmail(email: string, name: string): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const upgradeUrl = `${this.webUrl()}/pricing`;
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: 'Your NSE Academy subscription has expired',
+        htmlContent: `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
+  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
+  <h1 style="font-size: 22px; margin: 0 0 12px;">Your subscription has expired, ${firstName}</h1>
+  <p style="font-size: 16px; line-height: 1.6;">
+    Your paid plan has ended and your account has moved to the free tier. You'll keep access to
+    everything free tier includes, but premium features like personalised stock picks and deep-dive
+    research are now paused.
+  </p>
+  <p style="margin: 28px 0;">
+    <a href="${upgradeUrl}"
+       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
+              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
+      Renew your subscription
+    </a>
+  </p>
+  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
+    - The NSE Academy team
+  </p>
+</body></html>`,
+        textContent: `Your subscription has expired, ${firstName}
+
+Your paid plan has ended and your account has moved to the free tier. You'll keep access to everything free tier includes, but premium features like personalised stock picks and deep-dive research are now paused.
+
+Renew your subscription: ${upgradeUrl}
+
+- The NSE Academy team
+`,
+        tags: ['subscription-expired'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send subscription-expired email to ${email}: ${(err as Error).message}`);
+    }
   }
 }

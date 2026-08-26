@@ -5,27 +5,28 @@ import { ConfigService } from '@nestjs/config';
 import { ReferralsService } from '../referrals/referrals.service';
 import { EbookService } from '../ebook/ebook.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { PaystackService } from '../paystack/paystack.service';
 import { computeEffectiveTier } from '../auth/effective-tier.util';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 export type BillingMonths = 1 | 3 | 6 | 12;
 
-const PLAN_PRICES: Record<SubscriptionPlan, number> = {
+export const PLAN_PRICES: Record<SubscriptionPlan, number> = {
   intermediary: 30000, // KSh 300 in kobo
   premium: 50000,      // KSh 500 in kobo
 };
 
-const VALID_MONTHS: BillingMonths[] = [1, 3, 6, 12];
+export const VALID_MONTHS: BillingMonths[] = [1, 3, 6, 12];
 
 // Longer prepaid terms earn a bigger discount - 1 month is full price.
-const DISCOUNT_BY_MONTHS: Record<BillingMonths, number> = { 1: 0, 3: 0.05, 6: 0.10, 12: 0.15 };
+export const DISCOUNT_BY_MONTHS: Record<BillingMonths, number> = { 1: 0, 3: 0.05, 6: 0.10, 12: 0.15 };
 
-function computeAmountKobo(plan: SubscriptionPlan, months: BillingMonths): number {
+export function computeAmountKobo(plan: SubscriptionPlan, months: BillingMonths): number {
   const base = PLAN_PRICES[plan] * months;
   return Math.round(base * (1 - DISCOUNT_BY_MONTHS[months]));
 }
 
-function computePeriodEnd(months: BillingMonths): Date {
+export function computePeriodEnd(months: BillingMonths): Date {
   return new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000);
 }
 
@@ -40,6 +41,7 @@ export class PaymentsService {
     private referrals: ReferralsService,
     private ebookService: EbookService,
     private brevo: BrevoService,
+    private paystack: PaystackService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -70,112 +72,95 @@ export class PaymentsService {
       throw new InternalServerErrorException('Payment system configuration missing');
     }
 
-    try {
-      const response = await fetch('https://api.paystack.co/transaction/initialize', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.paystackSecret}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          amount: computeAmountKobo(plan, months),
-          callback_url: `${this.configService.get('WEB_URL', 'https://nseacademy.vitaldigitalmedia.net')}/payment/callback`,
-          metadata: {
-            type: 'subscription',
-            userId,
-            plan,
-            months,
-          },
-        }),
-      });
-
-      const json = await response.json();
-      if (!json.status) {
-        this.logger.error(`Paystack initialization failed: ${json.message || 'Unknown error'}`);
-        throw new Error(json.message || 'Paystack initialization failed');
-      }
-
-      return json.data; // { authorization_url, access_code, reference }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error('Paystack init error:', error.message);
-        throw new InternalServerErrorException(`Payment system unavailable: ${error.message}`);
-      }
-      this.logger.error('Paystack init error:', error);
-      throw new InternalServerErrorException('Payment system unavailable');
+    const json = await this.paystack.initializeTransaction({
+      email,
+      amountKobo: computeAmountKobo(plan, months),
+      callbackUrl: `${this.configService.get('WEB_URL', 'https://nseacademy.vitaldigitalmedia.net')}/payment/callback`,
+      metadata: { type: 'subscription', userId, plan, months },
+    });
+    if (!json.status) {
+      this.logger.error(`Paystack initialization failed: ${json.message || 'Unknown error'}`);
+      throw new InternalServerErrorException(json.message || 'Paystack initialization failed');
     }
+
+    return json.data; // { authorization_url, access_code, reference }
   }
 
+  /**
+   * Malformed-but-harmless events (missing metadata we can't act on) return
+   * normally so Paystack doesn't keep retrying something that will never
+   * succeed. A genuine processing failure (DB error, activation throwing)
+   * instead propagates out of this method so the controller returns a
+   * non-2xx status - Paystack retries those, which is what we want for a
+   * payment that came in fine but failed to apply on our end.
+   */
   async handleWebhook(body: any) {
     const event = body.event;
     const data = body.data;
 
     this.logger.log(`Received Paystack webhook event: ${event}`);
 
-    try {
-      if (event === 'charge.success') {
-        const paymentType: string = data.metadata?.type || 'subscription';
-        const userId = data.metadata?.userId;
-        const reference = data.reference;
+    if (event !== 'charge.success') {
+      return { received: true };
+    }
 
-        if (paymentType === 'ebook') {
-          const productId: string = data.metadata?.productId;
-          const priceKes: number = data.metadata?.price_kes ?? 0;
-          const email: string =
-            data.metadata?.email || data.customer?.email || '';
+    const paymentType: string = data.metadata?.type || 'subscription';
+    const userId = data.metadata?.userId;
+    const reference = data.reference;
 
-          if (!productId) {
-            this.logger.error('Ebook webhook missing productId');
-            return { received: true };
-          }
-          if (!email && !userId) {
-            this.logger.error('Ebook webhook missing email and userId');
-            return { received: true };
-          }
+    if (paymentType === 'ebook') {
+      const productId: string = data.metadata?.productId;
+      const priceKes: number = data.metadata?.price_kes ?? 0;
+      const email: string =
+        data.metadata?.email || data.customer?.email || '';
 
-          await this.ebookService.activateFromWebhook({
-            userId: userId || null,
-            email,
-            productId,
-            reference,
-            priceKes,
-          });
-          this.logger.log(
-            `[Webhook] Ebook ${productId} activated for ${email || userId}`,
-          );
-        } else {
-          if (!userId) {
-            this.logger.error('No userId found in webhook metadata');
-            return { received: true };
-          }
-          // --- Subscription payment (default) ---
-          const plan: SubscriptionPlan = data.metadata.plan || 'premium';
-          const months: BillingMonths = VALID_MONTHS.includes(data.metadata.months) ? data.metadata.months : 1;
-
-          await this.prisma.subscription.upsert({
-            where: { userId },
-            create: {
-              userId,
-              tier: plan,
-              status: 'active',
-              paystackSubId: reference,
-              currentPeriodEnd: computePeriodEnd(months),
-            },
-            update: {
-              tier: plan,
-              status: 'active',
-              currentPeriodEnd: computePeriodEnd(months),
-            },
-          });
-
-          this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
-          // Complete referral if this is the user's first paid subscription
-          await this.referrals.completeReferral(userId);
-        }
+      if (!productId) {
+        this.logger.error('Ebook webhook missing productId - ignoring');
+        return { received: true };
       }
-    } catch (err) {
-      this.logger.error(`Error processing webhook ${event}:`, err);
+      if (!email && !userId) {
+        this.logger.error('Ebook webhook missing email and userId - ignoring');
+        return { received: true };
+      }
+
+      await this.ebookService.activateFromWebhook({
+        userId: userId || null,
+        email,
+        productId,
+        reference,
+        priceKes,
+      });
+      this.logger.log(
+        `[Webhook] Ebook ${productId} activated for ${email || userId}`,
+      );
+    } else {
+      if (!userId) {
+        this.logger.error('No userId found in webhook metadata - ignoring');
+        return { received: true };
+      }
+      // --- Subscription payment (default) ---
+      const plan: SubscriptionPlan = data.metadata.plan || 'premium';
+      const months: BillingMonths = VALID_MONTHS.includes(data.metadata.months) ? data.metadata.months : 1;
+
+      await this.prisma.subscription.upsert({
+        where: { userId },
+        create: {
+          userId,
+          tier: plan,
+          status: 'active',
+          paystackSubId: reference,
+          currentPeriodEnd: computePeriodEnd(months),
+        },
+        update: {
+          tier: plan,
+          status: 'active',
+          currentPeriodEnd: computePeriodEnd(months),
+        },
+      });
+
+      this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
+      // Complete referral if this is the user's first paid subscription
+      await this.referrals.completeReferral(userId);
     }
 
     return { received: true };
@@ -188,10 +173,7 @@ export class PaymentsService {
   async verifyAny(userId: string | null, reference: string) {
     if (!reference) throw new BadRequestException('reference is required');
 
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${this.paystackSecret}` },
-    });
-    const json = await response.json();
+    const json = await this.paystack.verifyTransaction(reference);
 
     if (!json.status || json.data?.status !== 'success') {
       this.logger.warn(`Verify failed for ref ${reference}: ${json.message}`);
@@ -226,10 +208,7 @@ export class PaymentsService {
   async verifyAndActivate(userId: string, reference: string) {
     if (!reference) throw new BadRequestException('reference is required');
 
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${this.paystackSecret}` },
-    });
-    const json = await response.json();
+    const json = await this.paystack.verifyTransaction(reference);
 
     if (!json.status || json.data?.status !== 'success') {
       this.logger.warn(`Verify failed for ref ${reference}: ${json.message}`);

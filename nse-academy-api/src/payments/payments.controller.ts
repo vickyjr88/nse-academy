@@ -37,13 +37,21 @@ export class PaymentsController {
     }
 
     const rawBody = (req as any).rawBody as Buffer | undefined;
-    if (rawBody && signature) {
-      const hash = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
-      if (hash !== signature) {
-        this.logger.error('Invalid Paystack signature');
-        throw new UnauthorizedException('Invalid webhook signature');
-      }
+    if (!rawBody || !signature) {
+      this.logger.error('Webhook request missing raw body or signature header - rejecting');
+      throw new UnauthorizedException('Missing webhook signature');
     }
+
+    const expectedHash = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
+    const expected = Buffer.from(expectedHash, 'utf8');
+    const provided = Buffer.from(signature, 'utf8');
+    const validSignature =
+      expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+    if (!validSignature) {
+      this.logger.error('Invalid Paystack signature');
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+
     return this.paymentsService.handleWebhook(body);
   }
 

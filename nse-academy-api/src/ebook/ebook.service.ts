@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { BrevoService } from '../brevo/brevo.service';
+import { PaystackService } from '../paystack/paystack.service';
 import { randomBytes } from 'crypto';
 import {
   checkoutPathFor,
@@ -53,6 +54,7 @@ export class EbookService {
     private prisma: PrismaService,
     private config: ConfigService,
     private brevo: BrevoService,
+    private paystack: PaystackService,
   ) {
     this.paystackSecret = this.config.get<string>('PAYSTACK_SECRET_KEY')!;
     this.dexterApiKey = this.config.get<string>('DEXTER_API_KEY')!;
@@ -128,32 +130,20 @@ export class EbookService {
       };
     }
 
-    const response = await fetch(
-      'https://api.paystack.co/transaction/initialize',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.paystackSecret}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          amount: priceKes * 100,
-          callback_url: `${this.webUrl()}/payment/callback`,
-          metadata: {
-            type: 'ebook',
-            userId,
-            productId,
-            price_kes: priceKes,
-            email,
-            name: dto.name || undefined,
-            guest: !userId,
-          },
-        }),
+    const json = await this.paystack.initializeTransaction({
+      email,
+      amountKobo: priceKes * 100,
+      callbackUrl: `${this.webUrl()}/payment/callback`,
+      metadata: {
+        type: 'ebook',
+        userId,
+        productId,
+        price_kes: priceKes,
+        email,
+        name: dto.name || undefined,
+        guest: !userId,
       },
-    );
-
-    const json = await response.json();
+    });
     if (!json.status) {
       throw new BadRequestException(json.message || 'Payment init failed');
     }
@@ -584,11 +574,7 @@ export class EbookService {
   }
 
   private async verifyPaystack(reference: string) {
-    const response = await fetch(
-      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${this.paystackSecret}` } },
-    );
-    const json = await response.json();
+    const json = await this.paystack.verifyTransaction(reference);
     if (!json.status || json.data?.status !== 'success') {
       throw new BadRequestException(json.message || 'Payment not confirmed');
     }

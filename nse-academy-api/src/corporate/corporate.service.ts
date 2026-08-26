@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
+import { PaystackService } from '../paystack/paystack.service';
 
 type CorporatePlan = 'starter' | 'team' | 'sacco';
 
@@ -27,6 +28,7 @@ export class CorporateService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private brevo: BrevoService,
+    private paystack: PaystackService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -69,22 +71,13 @@ export class CorporateService {
 
     const callbackUrl = `${this.webUrl()}/payment/corporate-callback`;
 
-    const response = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.paystackSecret}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: org.email,
-        amount: config.amountKobo,
-        callback_url: callbackUrl,
-        metadata: { orgId, plan },
-      }),
+    const json = await this.paystack.initializeTransaction({
+      email: org.email,
+      amountKobo: config.amountKobo,
+      callbackUrl,
+      metadata: { orgId, plan },
     });
-
-    const json = await response.json();
-    if (!json.status) {
+    if (!json.status || !json.data) {
       this.logger.error(`Paystack init failed: ${json.message}`);
       throw new InternalServerErrorException(json.message || 'Paystack initialization failed');
     }
@@ -95,10 +88,7 @@ export class CorporateService {
   async verifyAndActivateLicense(orgId: string, reference: string) {
     if (!reference) throw new BadRequestException('reference is required');
 
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${this.paystackSecret}` },
-    });
-    const json = await response.json();
+    const json = await this.paystack.verifyTransaction(reference);
 
     if (!json.status || json.data?.status !== 'success') {
       throw new BadRequestException(json.message || 'Payment not confirmed by Paystack');

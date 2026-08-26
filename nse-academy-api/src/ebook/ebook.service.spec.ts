@@ -37,7 +37,11 @@ function makeService(prisma: ReturnType<typeof mockPrisma>) {
     }),
   };
   const brevo = { sendTransactional: jest.fn().mockResolvedValue(undefined) };
-  return new EbookService(prisma as never, config as never, brevo as never);
+  const paystack = {
+    initializeTransaction: jest.fn(),
+    verifyTransaction: jest.fn(),
+  };
+  return new EbookService(prisma as never, config as never, brevo as never, paystack as never);
 }
 
 describe('EbookService.getStatus', () => {

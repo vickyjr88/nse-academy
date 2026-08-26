@@ -14,6 +14,7 @@ import { CorporateModule } from './corporate/corporate.module';
 import { ContactModule } from './contact/contact.module';
 import { LeadsModule } from './leads/leads.module';
 import { BrevoModule } from './brevo/brevo.module';
+import { PaystackModule } from './paystack/paystack.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
@@ -40,6 +41,7 @@ import { AppService } from './app.service';
     CorporateModule,
     ContactModule,
     BrevoModule,
+    PaystackModule,
     LeadsModule,
     MarketDataModule,
     JournalModule,

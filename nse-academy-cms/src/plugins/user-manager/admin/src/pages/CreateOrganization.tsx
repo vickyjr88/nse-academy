@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -12,6 +12,12 @@ import {
 } from '@strapi/design-system';
 import { ArrowLeft } from '@strapi/icons';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+
+interface UserOption {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export function CreateOrganization() {
   const navigate = useNavigate();
@@ -29,6 +35,51 @@ export function CreateOrganization() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; name: string } | null>(null);
+
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [showOptions, setShowOptions] = useState(false);
+  const [pickedExisting, setPickedExisting] = useState(false);
+  const adminEmailFieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pickedExisting || adminEmail.trim().length < 2) {
+      setUserOptions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ page: '1', limit: '8', search: adminEmail.trim() });
+        const res = await fetch(`${NSE_API_URL}/admin/users?${params.toString()}`, {
+          headers: { 'x-admin-key': NSE_ADMIN_KEY },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setUserOptions(json.data || []);
+        setShowOptions(true);
+      } catch {
+        // Autocomplete is a convenience - silently skip on failure, the
+        // admin can still type a fresh email to create a new account.
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [adminEmail, pickedExisting]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (adminEmailFieldRef.current && !adminEmailFieldRef.current.contains(e.target as Node)) {
+        setShowOptions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function selectExistingUser(user: UserOption) {
+    setAdminEmail(user.email);
+    setAdminName(user.name);
+    setPickedExisting(true);
+    setShowOptions(false);
+  }
 
   const canSubmit =
     name.trim().length > 0 &&
@@ -146,13 +197,50 @@ export function CreateOrganization() {
           onChange={(e: any) => setAdminName(e.target.value)}
         />
 
-        <TextInput
-          label="Admin email"
-          name="adminEmail"
-          placeholder="jane@acmesacco.com"
-          value={adminEmail}
-          onChange={(e: any) => setAdminEmail(e.target.value)}
-        />
+        <Box ref={adminEmailFieldRef} style={{ position: 'relative' }}>
+          <TextInput
+            label="Admin email"
+            hint={pickedExisting ? 'Existing user selected' : 'Start typing to search existing users, or enter a new email'}
+            name="adminEmail"
+            placeholder="jane@acmesacco.com"
+            value={adminEmail}
+            onFocus={() => userOptions.length > 0 && setShowOptions(true)}
+            onChange={(e: any) => {
+              setAdminEmail(e.target.value);
+              setPickedExisting(false);
+            }}
+          />
+          {showOptions && userOptions.length > 0 && (
+            <Box
+              background="neutral0"
+              shadow="tableShadow"
+              hasRadius
+              padding={1}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                zIndex: 4,
+                maxHeight: '220px',
+                overflowY: 'auto',
+              }}
+            >
+              {userOptions.map((u) => (
+                <Box
+                  key={u.id}
+                  padding={2}
+                  hasRadius
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => selectExistingUser(u)}
+                >
+                  <Typography fontWeight="semiBold">{u.name}</Typography>
+                  <Typography variant="pi" textColor="neutral600">{u.email}</Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
 
         <Typography variant="beta">License</Typography>
 

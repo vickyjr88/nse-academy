@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Button,
   Loader,
   Table,
   Thead,
@@ -11,7 +11,6 @@ import {
   Td,
   Typography,
   TextInput,
-  Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
 
@@ -25,55 +24,29 @@ interface StockPrice {
   timestamp: string;
 }
 
-interface StockPricesResponse {
-  data: StockPrice[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 export function StockPricesList() {
+  const navigate = useNavigate();
   const [prices, setPrices] = useState<StockPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [ticker, setTicker] = useState('');
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => fetchPrices(1), 300);
-    return () => clearTimeout(timer);
-  }, [ticker]);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetchPrices(page);
-  }, [page]);
-
-  async function fetchPrices(p: number) {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(p),
-        limit: '20',
-      });
-      if (ticker) params.append('ticker', ticker);
-
-      const res = await fetch(`${NSE_API_URL}/admin/stock-prices?${params.toString()}`, {
-        headers: { 'x-admin-key': NSE_ADMIN_KEY },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: StockPricesResponse = await res.json();
-      setPrices(json.data);
-      setTotalPages(json.totalPages);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+    (async () => {
+      try {
+        const res = await fetch(`${NSE_API_URL}/admin/stock-prices`, {
+          headers: { 'x-admin-key': NSE_ADMIN_KEY },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json: { data: StockPrice[] } = await res.json();
+        setPrices(json.data.sort((a, b) => a.ticker.localeCompare(b.ticker)));
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   if (loading) {
     return (
@@ -91,71 +64,67 @@ export function StockPricesList() {
     );
   }
 
+  const visible = search
+    ? prices.filter(
+        (p) =>
+          p.ticker.toLowerCase().includes(search.toLowerCase()) ||
+          p.name.toLowerCase().includes(search.toLowerCase()),
+      )
+    : prices;
+
   return (
     <Box padding={8}>
       <Box paddingBottom={4}>
         <Typography variant="alpha">Stock Prices</Typography>
+        <Box paddingTop={2}>
+          <Typography textColor="neutral600">
+            Latest price for every counter ({prices.length} tickers). Click a row for price history.
+          </Typography>
+        </Box>
       </Box>
 
-      <Box paddingBottom={4}>
-        <Flex gap={4}>
-          <Box style={{ width: '250px' }}>
-            <TextInput
-              placeholder="Search by Ticker..."
-              label="Ticker Search"
-              name="ticker"
-              value={ticker}
-              onChange={(e: any) => {
-                setTicker(e.target.value);
-                setPage(1);
-              }}
-            />
-          </Box>
-        </Flex>
+      <Box paddingBottom={4} style={{ width: '280px' }}>
+        <TextInput
+          placeholder="Search by ticker or name..."
+          label="Search"
+          name="search"
+          value={search}
+          onChange={(e: any) => setSearch(e.target.value)}
+        />
       </Box>
 
-      <Table colCount={6} rowCount={prices.length}>
+      <Table colCount={5} rowCount={visible.length}>
         <Thead>
           <Tr>
             <Th><Typography variant="sigma">Ticker</Typography></Th>
             <Th><Typography variant="sigma">Name</Typography></Th>
             <Th><Typography variant="sigma">Price (KES)</Typography></Th>
-            <Th><Typography variant="sigma">Volume</Typography></Th>
             <Th><Typography variant="sigma">Change</Typography></Th>
-            <Th><Typography variant="sigma">Timestamp</Typography></Th>
+            <Th><Typography variant="sigma">Last Updated</Typography></Th>
           </Tr>
         </Thead>
         <Tbody>
-          {prices.map((price) => (
-            <Tr key={price.id}>
+          {visible.map((price) => (
+            <Tr
+              key={price.ticker}
+              onClick={() => navigate(`/plugins/user-manager/stock-prices/${price.ticker}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td><Typography fontWeight="bold">{price.ticker}</Typography></Td>
               <Td><Typography>{price.name}</Typography></Td>
               <Td><Typography>{price.price}</Typography></Td>
-              <Td><Typography>{price.volume}</Typography></Td>
               <Td>
                 <Typography textColor={price.change.startsWith('-') ? 'danger600' : 'success600'}>
                   {price.change}
                 </Typography>
               </Td>
               <Td>
-                <Typography>
-                  {new Date(price.timestamp).toLocaleString()}
-                </Typography>
+                <Typography>{new Date(price.timestamp).toLocaleString()}</Typography>
               </Td>
             </Tr>
           ))}
         </Tbody>
       </Table>
-
-      <Box paddingTop={4} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <Button size="S" variant="tertiary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-          Previous
-        </Button>
-        <Typography>Page {page} of {totalPages}</Typography>
-        <Button size="S" variant="tertiary" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-          Next
-        </Button>
-      </Box>
     </Box>
   );
 }

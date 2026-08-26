@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -16,6 +17,7 @@ import {
   Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
 
 interface InvestorProfile {
   id: string;
@@ -38,7 +40,14 @@ interface InvestorProfilesResponse {
   totalPages: number;
 }
 
+interface InvestorProfileAnalytics {
+  total: number;
+  avgRiskScore: number;
+  byType: Record<string, number>;
+}
+
 export function InvestorProfilesList() {
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<InvestorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,7 @@ export function InvestorProfilesList() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [capitalRange, setCapitalRange] = useState('');
+  const [stats, setStats] = useState<InvestorProfileAnalytics | null>(null);
 
   // Debounced search
   useEffect(() => {
@@ -57,6 +67,13 @@ export function InvestorProfilesList() {
   useEffect(() => {
     fetchProfiles(page);
   }, [page]);
+
+  useEffect(() => {
+    fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
+      .then((r) => r.json())
+      .then((json) => setStats(json.investorProfiles))
+      .catch(() => {});
+  }, []);
 
   async function fetchProfiles(p: number) {
     setLoading(true);
@@ -105,6 +122,14 @@ export function InvestorProfilesList() {
       <Box paddingBottom={4}>
         <Typography variant="alpha">Investor Profiles</Typography>
       </Box>
+
+      {stats && (
+        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <StatCard label="Total Profiles" value={stats.total} />
+          <StatCard label="Avg. Risk Score" value={`${stats.avgRiskScore} / 100`} />
+          <StatCard label="Most Common Type" value={Object.entries(stats.byType).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'} />
+        </Box>
+      )}
 
       {/* Filters */}
       <Box paddingBottom={4}>
@@ -164,7 +189,11 @@ export function InvestorProfilesList() {
         </Thead>
         <Tbody>
           {profiles.map((profile) => (
-            <Tr key={profile.id}>
+            <Tr
+              key={profile.id}
+              onClick={() => navigate(`/plugins/user-manager/investor-profiles/${profile.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td><Typography>{profile.user?.name}</Typography></Td>
               <Td><Typography>{profile.user?.email}</Typography></Td>
               <Td><Typography>{profile.type}</Typography></Td>

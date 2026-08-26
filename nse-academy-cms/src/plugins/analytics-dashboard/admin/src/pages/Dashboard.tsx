@@ -152,6 +152,20 @@ interface AdvisorFeatures {
   };
 }
 
+interface EbookFeatures {
+  totalPurchases: number;
+  totalRevenueKes: number;
+  guestPurchases: number;
+  accountPurchases: number;
+}
+
+interface ContactFeatures {
+  totalSubmissions: number;
+  new: number;
+  read: number;
+  replied: number;
+}
+
 interface AnalyticsData {
   overview: Overview;
   userGrowth: MonthCount[];
@@ -162,6 +176,8 @@ interface AnalyticsData {
   googleAnalytics: GoogleAnalytics | null; // Added GA
   journalFeatures: JournalFeatures;
   advisorFeatures: AdvisorFeatures;
+  ebookFeatures: EbookFeatures;
+  contactFeatures: ContactFeatures;
   brevoConfigured: boolean;
 }
 
@@ -273,7 +289,7 @@ export function Dashboard() {
     );
   }
 
-  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures, advisorFeatures, brevoConfigured } = data;
+  const { overview, userGrowth, subscriptionTrend, lessonProgress, referrals, investorProfiles, googleAnalytics, journalFeatures, advisorFeatures, ebookFeatures, contactFeatures, brevoConfigured } = data;
 
   const tierPieData = [
     { name: 'Free', value: overview.tierBreakdown.free },
@@ -706,6 +722,23 @@ export function Dashboard() {
         <StatCard label="Alerts Sent" value={advisorFeatures.alerts.total} />
         <StatCard label="Buy / Sell Alerts" value={`${advisorFeatures.alerts.buy} / ${advisorFeatures.alerts.sell}`} />
         <StatCard label="Total Alert Recipients" value={advisorFeatures.alerts.totalRecipients} />
+      </Box>
+
+      {/* Ebook Purchases & Contact Submissions */}
+      <SectionTitle>Ebook Purchases</SectionTitle>
+      <Box style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        <StatCard label="Total Purchases" value={ebookFeatures.totalPurchases} />
+        <StatCard label="Total Revenue (KES)" value={ebookFeatures.totalRevenueKes.toLocaleString(undefined, { maximumFractionDigits: 0 })} />
+        <StatCard label="Guest Purchases" value={ebookFeatures.guestPurchases} />
+        <StatCard label="Account Purchases" value={ebookFeatures.accountPurchases} />
+      </Box>
+
+      <SectionTitle>Contact Submissions</SectionTitle>
+      <Box style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <StatCard label="Total Submissions" value={contactFeatures.totalSubmissions} />
+        <StatCard label="New" value={contactFeatures.new} />
+        <StatCard label="Read" value={contactFeatures.read} />
+        <StatCard label="Replied" value={contactFeatures.replied} />
       </Box>
     </Box>
   );

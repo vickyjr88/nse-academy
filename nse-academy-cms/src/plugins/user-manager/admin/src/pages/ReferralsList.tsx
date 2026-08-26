@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -15,6 +16,7 @@ import {
   Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
 
 interface Referral {
   id: string;
@@ -39,17 +41,33 @@ interface ReferralsResponse {
   totalPages: number;
 }
 
+interface ReferralAnalytics {
+  total: number;
+  completed: number;
+  pending: number;
+  conversionRate: number;
+}
+
 export function ReferralsList() {
+  const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState('');
+  const [stats, setStats] = useState<ReferralAnalytics | null>(null);
 
   useEffect(() => {
     fetchReferrals(page);
   }, [page, status]);
+
+  useEffect(() => {
+    fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
+      .then((r) => r.json())
+      .then((json) => setStats(json.referrals))
+      .catch(() => {});
+  }, []);
 
   async function fetchReferrals(p: number) {
     setLoading(true);
@@ -97,6 +115,15 @@ export function ReferralsList() {
         <Typography variant="alpha">Referrals</Typography>
       </Box>
 
+      {stats && (
+        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <StatCard label="Total Referrals" value={stats.total} />
+          <StatCard label="Completed" value={stats.completed} />
+          <StatCard label="Pending" value={stats.pending} />
+          <StatCard label="Conversion Rate" value={`${stats.conversionRate}%`} />
+        </Box>
+      )}
+
       <Box paddingBottom={4}>
         <Flex gap={4}>
           <Box style={{ width: '200px' }}>
@@ -126,7 +153,11 @@ export function ReferralsList() {
         </Thead>
         <Tbody>
           {referrals.map((ref) => (
-            <Tr key={ref.id}>
+            <Tr
+              key={ref.id}
+              onClick={() => navigate(`/plugins/user-manager/referrals/${ref.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td><Typography>{ref.referrer?.name}</Typography></Td>
               <Td><Typography>{ref.referrer?.email}</Typography></Td>
               <Td><Typography>{ref.referred?.name}</Typography></Td>

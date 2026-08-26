@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -16,6 +17,7 @@ import {
   Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
 
 interface LessonProgress {
   id: string;
@@ -36,7 +38,14 @@ interface LessonProgressResponse {
   totalPages: number;
 }
 
+interface LessonProgressAnalytics {
+  totalCompletions: number;
+  uniqueLearners: number;
+  topLessons: Array<{ lessonId: string; completions: number }>;
+}
+
 export function LessonProgressList() {
+  const navigate = useNavigate();
   const [progresses, setProgresses] = useState<LessonProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +53,7 @@ export function LessonProgressList() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [completed, setCompleted] = useState('');
+  const [stats, setStats] = useState<LessonProgressAnalytics | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchProgress(1), 300);
@@ -53,6 +63,13 @@ export function LessonProgressList() {
   useEffect(() => {
     fetchProgress(page);
   }, [page]);
+
+  useEffect(() => {
+    fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
+      .then((r) => r.json())
+      .then((json) => setStats(json.lessonProgress))
+      .catch(() => {});
+  }, []);
 
   async function fetchProgress(p: number) {
     setLoading(true);
@@ -101,6 +118,14 @@ export function LessonProgressList() {
         <Typography variant="alpha">Lesson Progress</Typography>
       </Box>
 
+      {stats && (
+        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <StatCard label="Total Completions" value={stats.totalCompletions} />
+          <StatCard label="Unique Learners" value={stats.uniqueLearners} />
+          <StatCard label="Top Lesson" value={stats.topLessons[0]?.lessonId ?? '—'} />
+        </Box>
+      )}
+
       <Box paddingBottom={4}>
         <Flex gap={4}>
           <Box style={{ width: '300px' }}>
@@ -141,7 +166,11 @@ export function LessonProgressList() {
         </Thead>
         <Tbody>
           {progresses.map((progress) => (
-            <Tr key={progress.id}>
+            <Tr
+              key={progress.id}
+              onClick={() => navigate(`/plugins/user-manager/lesson-progress/${progress.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td><Typography>{progress.user?.name}</Typography></Td>
               <Td><Typography>{progress.user?.email}</Typography></Td>
               <Td><Typography>{progress.lessonId}</Typography></Td>

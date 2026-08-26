@@ -176,6 +176,36 @@ export default {
     });
 
     app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/ebook-purchases/:id`,
+      Component: React.lazy(() => import('./pages/EbookPurchaseDetail').then((m) => ({ default: m.EbookPurchaseDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/investor-profiles/:id`,
+      Component: React.lazy(() => import('./pages/InvestorProfileDetail').then((m) => ({ default: m.InvestorProfileDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/lesson-progress/:id`,
+      Component: React.lazy(() => import('./pages/LessonProgressDetail').then((m) => ({ default: m.LessonProgressDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/referrals/:id`,
+      Component: React.lazy(() => import('./pages/ReferralDetail').then((m) => ({ default: m.ReferralDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/contact-submissions/:id`,
+      Component: React.lazy(() => import('./pages/ContactSubmissionDetail').then((m) => ({ default: m.ContactSubmissionDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/stock-prices/:ticker`,
+      Component: React.lazy(() => import('./pages/StockPriceDetail').then((m) => ({ default: m.StockPriceDetail }))),
+    });
+
+    app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/:id`,
       Component: React.lazy(() => import('./pages/UserDetail').then((m) => ({ default: m.UserDetail }))),
     });

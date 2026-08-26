@@ -71,6 +71,12 @@ export class AdminController {
     });
   }
 
+  @Get('ebook-purchases/:id')
+  @ApiOperation({ summary: 'Get full ebook purchase detail including buyer and download history' })
+  getEbookPurchase(@Param('id') id: string) {
+    return this.admin.getEbookPurchase(id);
+  }
+
   @Get('investor-profiles')
   @ApiOperation({ summary: 'List all investor profiles (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -94,6 +100,12 @@ export class AdminController {
     });
   }
 
+  @Get('investor-profiles/:id')
+  @ApiOperation({ summary: 'Get full investor profile detail including quiz answers' })
+  getInvestorProfile(@Param('id') id: string) {
+    return this.admin.getInvestorProfile(id);
+  }
+
   @Get('lesson-progress')
   @ApiOperation({ summary: 'List all lesson progresses (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -112,6 +124,12 @@ export class AdminController {
       search,
       completed,
     });
+  }
+
+  @Get('lesson-progress/:id')
+  @ApiOperation({ summary: 'Get a single lesson progress record' })
+  getLessonProgress(@Param('id') id: string) {
+    return this.admin.getLessonProgress(id);
   }
 
   @Get('organizations')
@@ -201,6 +219,12 @@ export class AdminController {
     });
   }
 
+  @Get('referrals/:id')
+  @ApiOperation({ summary: 'Get full referral detail including referrer and referred users' })
+  getReferral(@Param('id') id: string) {
+    return this.admin.getReferral(id);
+  }
+
   @Get('contact-submissions')
   @ApiOperation({ summary: 'List all contact submissions (paginated)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -218,21 +242,22 @@ export class AdminController {
     });
   }
 
+  @Get('contact-submissions/:id')
+  @ApiOperation({ summary: 'Get a single contact submission with its full message' })
+  getContactSubmission(@Param('id') id: string) {
+    return this.admin.getContactSubmission(id);
+  }
+
   @Get('stock-prices')
-  @ApiOperation({ summary: 'List all stock prices (paginated)' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 20 })
-  @ApiQuery({ name: 'ticker', required: false })
-  listStockPrices(
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
-    @Query('ticker') ticker?: string,
-  ) {
-    return this.admin.listStockPrices({
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      ticker,
-    });
+  @ApiOperation({ summary: 'Latest price for every ticker (one row per counter)' })
+  listStockPrices() {
+    return this.admin.listStockPrices();
+  }
+
+  @Get('stock-prices/:ticker/history')
+  @ApiOperation({ summary: 'Price history for a single ticker over the last 30 days' })
+  getStockPriceHistory(@Param('ticker') ticker: string) {
+    return this.admin.getStockPriceHistory(ticker);
   }
 
   @Post('users/:id/subscription')

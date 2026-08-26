@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -14,6 +15,7 @@ import {
   Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
 
 interface EbookPurchase {
   id: string;
@@ -24,7 +26,7 @@ interface EbookPurchase {
   user: {
     name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface EbookPurchasesResponse {
@@ -35,13 +37,22 @@ interface EbookPurchasesResponse {
   totalPages: number;
 }
 
+interface EbookFeatures {
+  totalPurchases: number;
+  totalRevenueKes: number;
+  guestPurchases: number;
+  accountPurchases: number;
+}
+
 export function EbookPurchasesList() {
+  const navigate = useNavigate();
   const [purchases, setPurchases] = useState<EbookPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [stats, setStats] = useState<EbookFeatures | null>(null);
 
   // Debounced search
   useEffect(() => {
@@ -52,6 +63,13 @@ export function EbookPurchasesList() {
   useEffect(() => {
     fetchPurchases(page);
   }, [page]);
+
+  useEffect(() => {
+    fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
+      .then((r) => r.json())
+      .then((json) => setStats(json.ebookFeatures))
+      .catch(() => {});
+  }, []);
 
   async function fetchPurchases(p: number) {
     setLoading(true);
@@ -99,6 +117,15 @@ export function EbookPurchasesList() {
         <Typography variant="alpha">Ebook Purchases</Typography>
       </Box>
 
+      {stats && (
+        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <StatCard label="Total Purchases" value={stats.totalPurchases} />
+          <StatCard label="Total Revenue (KES)" value={stats.totalRevenueKes.toLocaleString()} />
+          <StatCard label="Guest Purchases" value={stats.guestPurchases} />
+          <StatCard label="Account Purchases" value={stats.accountPurchases} />
+        </Box>
+      )}
+
       {/* Filters */}
       <Box paddingBottom={4}>
         <Flex gap={4}>
@@ -130,8 +157,12 @@ export function EbookPurchasesList() {
         </Thead>
         <Tbody>
           {purchases.map((purchase) => (
-            <Tr key={purchase.id}>
-              <Td><Typography>{purchase.user?.name}</Typography></Td>
+            <Tr
+              key={purchase.id}
+              onClick={() => navigate(`/plugins/user-manager/ebook-purchases/${purchase.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
+              <Td><Typography>{purchase.user?.name ?? 'Guest'}</Typography></Td>
               <Td><Typography>{purchase.user?.email}</Typography></Td>
               <Td><Typography>{purchase.amountKes.toLocaleString()}</Typography></Td>
               <Td><Typography>{purchase.productId}</Typography></Td>

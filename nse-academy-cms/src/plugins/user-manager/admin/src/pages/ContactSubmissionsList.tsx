@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -15,6 +16,14 @@ import {
   Flex,
 } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
+import { StatCard } from '../components/StatCard';
+
+interface ContactFeatures {
+  totalSubmissions: number;
+  new: number;
+  read: number;
+  replied: number;
+}
 
 interface ContactSubmission {
   id: string;
@@ -35,16 +44,25 @@ interface ContactSubmissionsResponse {
 }
 
 export function ContactSubmissionsList() {
+  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState('');
+  const [stats, setStats] = useState<ContactFeatures | null>(null);
 
   useEffect(() => {
     fetchSubmissions(page);
   }, [page, status]);
+
+  useEffect(() => {
+    fetch(`${NSE_API_URL}/admin/analytics`, { headers: { 'x-admin-key': NSE_ADMIN_KEY } })
+      .then((r) => r.json())
+      .then((json) => setStats(json.contactFeatures))
+      .catch(() => {});
+  }, []);
 
   async function fetchSubmissions(p: number) {
     setLoading(true);
@@ -92,6 +110,15 @@ export function ContactSubmissionsList() {
         <Typography variant="alpha">Contact Submissions</Typography>
       </Box>
 
+      {stats && (
+        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <StatCard label="Total Submissions" value={stats.totalSubmissions} />
+          <StatCard label="New" value={stats.new} />
+          <StatCard label="Read" value={stats.read} />
+          <StatCard label="Replied" value={stats.replied} />
+        </Box>
+      )}
+
       <Box paddingBottom={4}>
         <Flex gap={4}>
           <Box style={{ width: '200px' }}>
@@ -122,7 +149,11 @@ export function ContactSubmissionsList() {
         </Thead>
         <Tbody>
           {submissions.map((sub) => (
-            <Tr key={sub.id}>
+            <Tr
+              key={sub.id}
+              onClick={() => navigate(`/plugins/user-manager/contact-submissions/${sub.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Td><Typography>{sub.name}</Typography></Td>
               <Td><Typography>{sub.email}</Typography></Td>
               <Td><Typography>{sub.subject}</Typography></Td>

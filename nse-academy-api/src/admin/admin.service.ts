@@ -226,6 +226,15 @@ export class AdminService {
     };
   }
 
+  async getEbookPurchase(id: string) {
+    const purchase = await this.prisma.ebookPurchase.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!purchase) throw new NotFoundException('Ebook purchase not found');
+    return purchase;
+  }
+
   async listInvestorProfiles(params: {
     page: number;
     limit: number;
@@ -268,6 +277,14 @@ export class AdminService {
     };
   }
 
+  async getInvestorProfile(id: string) {
+    const profile = await this.prisma.investorProfile.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!profile) throw new NotFoundException('Investor profile not found');
+    return profile;
+  }
 
   async listLessonProgresses(params: {
     page: number;
@@ -309,6 +326,15 @@ export class AdminService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getLessonProgress(id: string) {
+    const progress = await this.prisma.lessonProgress.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!progress) throw new NotFoundException('Lesson progress not found');
+    return progress;
   }
 
   async listOrganizations(params: {
@@ -557,6 +583,18 @@ export class AdminService {
     };
   }
 
+  async getReferral(id: string) {
+    const referral = await this.prisma.referral.findUnique({
+      where: { id },
+      include: {
+        referrer: { select: { id: true, name: true, email: true } },
+        referred: { select: { id: true, name: true, email: true } },
+      },
+    });
+    if (!referral) throw new NotFoundException('Referral not found');
+    return referral;
+  }
+
   async listContactSubmissions(params: {
     page: number;
     limit: number;
@@ -587,36 +625,36 @@ export class AdminService {
     };
   }
 
-  async listStockPrices(params: {
-    page: number;
-    limit: number;
-    ticker?: string;
-  }) {
-    const { page, limit, ticker } = params;
-    const skip = (page - 1) * limit;
+  async getContactSubmission(id: string) {
+    const submission = await this.prisma.contactSubmission.findUnique({ where: { id } });
+    if (!submission) throw new NotFoundException('Contact submission not found');
+    return submission;
+  }
 
-    const where: any = {};
-    if (ticker) {
-      where.ticker = { contains: ticker, mode: 'insensitive' };
-    }
+  /**
+   * The market poll writes a fresh row per ticker every 7 minutes with no
+   * upsert, so StockPrice is a pure time-series table - listing it "raw"
+   * means the same counter shows up dozens of times. This returns exactly
+   * one row per ticker (its most recent poll) via the same DISTINCT ON
+   * query MarketDataService.getLatestPrices() already uses.
+   */
+  async listStockPrices() {
+    const prices = await this.prisma.$queryRaw`
+      SELECT DISTINCT ON (ticker) *
+      FROM "StockPrice"
+      ORDER BY ticker, timestamp DESC
+    `;
+    return { data: prices };
+  }
 
-    const [prices, total] = await Promise.all([
-      this.prisma.stockPrice.findMany({
-        skip,
-        take: limit,
-        where,
-        orderBy: { timestamp: 'desc' },
-      }),
-      this.prisma.stockPrice.count({ where }),
-    ]);
-
-    return {
-      data: prices,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+  async getStockPriceHistory(ticker: string) {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const history = await this.prisma.stockPrice.findMany({
+      where: { ticker: { equals: ticker, mode: 'insensitive' }, timestamp: { gte: since } },
+      orderBy: { timestamp: 'asc' },
+    });
+    if (history.length === 0) throw new NotFoundException('No price history found for this ticker');
+    return { ticker: ticker.toUpperCase(), data: history };
   }
 
   async upsertSubscription(userId: string, dto: UpsertSubscriptionDto) {
@@ -840,6 +878,34 @@ export class AdminService {
       },
     };
 
+    const [
+      totalEbookPurchases,
+      ebookRevenueRaw,
+      ebookGuestCount,
+      totalContactSubmissions,
+      contactByStatus,
+    ] = await Promise.all([
+      this.prisma.ebookPurchase.count(),
+      this.prisma.ebookPurchase.aggregate({ _sum: { amountKes: true } }),
+      this.prisma.ebookPurchase.count({ where: { userId: null } }),
+      this.prisma.contactSubmission.count(),
+      this.prisma.contactSubmission.groupBy({ by: ['status'], _count: true }),
+    ]);
+
+    const ebookFeatures = {
+      totalPurchases: totalEbookPurchases,
+      totalRevenueKes: ebookRevenueRaw._sum.amountKes ?? 0,
+      guestPurchases: ebookGuestCount,
+      accountPurchases: totalEbookPurchases - ebookGuestCount,
+    };
+
+    const contactFeatures = {
+      totalSubmissions: totalContactSubmissions,
+      new: contactByStatus.find(c => c.status === 'new')?._count ?? 0,
+      read: contactByStatus.find(c => c.status === 'read')?._count ?? 0,
+      replied: contactByStatus.find(c => c.status === 'replied')?._count ?? 0,
+    };
+
     const journalFeatures = {
       trades: {
         total: totalTrades,
@@ -929,6 +995,8 @@ export class AdminService {
       googleAnalytics, // Added GA data
       journalFeatures,
       advisorFeatures,
+      ebookFeatures,
+      contactFeatures,
       brevoConfigured: this.brevo.hasCredentials(),
       lessonProgress: {
         totalCompletions,

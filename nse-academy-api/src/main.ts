@@ -2,14 +2,28 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+
+function corsOrigins(): string[] {
+  const configured = [process.env.WEB_URL, process.env.SITE_URL].filter(
+    (v): v is string => !!v,
+  );
+  const defaults = ['https://nseacademy.vitaldigitalmedia.net'];
+  // Only add localhost when nothing production-like is configured, rather
+  // than gating on NODE_ENV - this deployment doesn't reliably set it, and
+  // trusting an unset NODE_ENV would let localhost through in production.
+  const localDefaults = configured.length === 0 ? ['http://localhost:3000', 'http://localhost:3010'] : [];
+  return [...new Set([...configured, ...defaults, ...localDefaults])];
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   app.set('trust proxy', 1);
+  app.use(helmet());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors();
+  app.enableCors({ origin: corsOrigins() });
 
   const config = new DocumentBuilder()
     .setTitle('NSE Academy API')

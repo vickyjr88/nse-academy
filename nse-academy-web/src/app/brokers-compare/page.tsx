@@ -30,34 +30,42 @@ export default async function BrokersComparePage() {
             </p>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-x-auto mb-10">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100">
-                  <th className="px-5 py-4">Broker</th>
-                  <th className="px-5 py-4 text-right">Fee</th>
-                  <th className="px-5 py-4 text-center">CDS account required</th>
-                </tr>
-              </thead>
-              <tbody>
-                {brokers.map((b) => (
-                  <tr key={b.id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-5 py-4 font-semibold text-gray-900">{b.name}</td>
-                    <td className="px-5 py-4 text-right text-gray-900">{b.feePercent}%</td>
-                    <td className="px-5 py-4 text-center">
-                      <span
-                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${
-                          b.cdsRequired ? "bg-gray-50 text-gray-500" : "bg-emerald-50 text-emerald-700"
-                        }`}
-                      >
-                        {b.cdsRequired ? "Required" : "Not required"}
-                      </span>
-                    </td>
+          {brokers.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-10 text-center mb-10">
+              <p className="text-gray-500">
+                We couldn&apos;t load broker fee data right now. Please refresh the page or check back shortly.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-x-auto mb-10">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100">
+                    <th className="px-5 py-4">Broker</th>
+                    <th className="px-5 py-4 text-right">Fee</th>
+                    <th className="px-5 py-4 text-center">CDS account required</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {brokers.map((b) => (
+                    <tr key={b.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-5 py-4 font-semibold text-gray-900">{b.name}</td>
+                      <td className="px-5 py-4 text-right text-gray-900">{b.feePercent}%</td>
+                      <td className="px-5 py-4 text-center">
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${
+                            b.cdsRequired ? "bg-gray-50 text-gray-500" : "bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {b.cdsRequired ? "Required" : "Not required"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6">

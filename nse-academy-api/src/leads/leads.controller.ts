@@ -46,13 +46,13 @@ export class LeadsController {
     @Query('page') page = '1',
     @Query('limit') limit = '50',
     @Query('magnetSlug') magnetSlug?: string,
-    @Query('q') q?: string,
+    @Query('search') search?: string,
   ) {
     return this.service.list({
       page: Number(page),
       limit: Number(limit),
       magnetSlug,
-      q,
+      search,
     });
   }
 

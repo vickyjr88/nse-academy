@@ -247,17 +247,17 @@ ${this.siteUrl}
     page?: number;
     limit?: number;
     magnetSlug?: string;
-    q?: string;
+    search?: string;
   }) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 50, 200);
     const skip = (page - 1) * limit;
     const where: Prisma.LeadWhereInput = {};
     if (query.magnetSlug) where.magnetSlug = query.magnetSlug;
-    if (query.q) {
+    if (query.search) {
       where.OR = [
-        { email: { contains: query.q, mode: 'insensitive' } },
-        { name: { contains: query.q, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
     const [items, total] = await Promise.all([

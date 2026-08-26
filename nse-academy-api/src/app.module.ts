@@ -6,7 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfilerModule } from './profiler/profiler.module';
-import { AdvisorModule } from './advisor/advisor.module';
+import { StockAdvisorModule } from './stock-advisor/stock-advisor.module';
 import { FinancialAdvisorModule } from './financial-advisors/financial-advisor.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReferralsModule } from './referrals/referrals.module';
@@ -40,7 +40,7 @@ import { AppService } from './app.service';
     AuthModule,
     UsersModule,
     ProfilerModule,
-    AdvisorModule,
+    StockAdvisorModule,
     FinancialAdvisorModule,
     PaymentsModule,
     ReferralsModule,

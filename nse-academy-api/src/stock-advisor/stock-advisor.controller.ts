@@ -1,13 +1,13 @@
 import { Controller, Get, Query, UseGuards, Req, HttpCode } from '@nestjs/common';
-import { AdvisorService } from './advisor.service';
+import { StockAdvisorService } from './stock-advisor.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('advisor')
 @ApiBearerAuth()
 @Controller('advisor')
-export class AdvisorController {
-  constructor(private readonly advisorService: AdvisorService) {}
+export class StockAdvisorController {
+  constructor(private readonly advisorService: StockAdvisorService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('recommendations')

@@ -117,8 +117,8 @@ const TYPE_LABELS: Record<InvestorType, string> = {
 };
 
 @Injectable()
-export class AdvisorService {
-  private readonly logger = new Logger(AdvisorService.name);
+export class StockAdvisorService {
+  private readonly logger = new Logger(StockAdvisorService.name);
   private readonly cmsUrl: string;
   private readonly cmsToken: string;
 

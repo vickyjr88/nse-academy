@@ -1,13 +1,14 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ContactService } from './contact.service';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
+import { SubmitContactDto } from './dto/submit-contact.dto';
 
 @Controller('contact')
 export class ContactController {
   constructor(private service: ContactService) {}
 
   @Post()
-  submit(@Body() body: { name: string; email: string; subject: string; message: string }) {
+  submit(@Body() body: SubmitContactDto) {
     return this.service.create(body);
   }
 

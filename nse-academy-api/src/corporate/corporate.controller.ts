@@ -11,6 +11,11 @@ import {
 } from '@nestjs/common';
 import { CorporateService } from './corporate.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RegisterOrganizationDto } from './dto/register-organization.dto';
+import { LicensePayDto } from './dto/license-pay.dto';
+import { LicenseVerifyDto } from './dto/license-verify.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
+import { AcceptInviteDto } from './dto/accept-invite.dto';
 
 @Controller('corporate')
 @UseGuards(JwtAuthGuard)
@@ -18,26 +23,26 @@ export class CorporateController {
   constructor(private corporateService: CorporateService) {}
 
   @Post('register')
-  async register(@Request() req: any, @Body() body: { name: string; type: string; email: string }) {
+  async register(@Request() req: any, @Body() body: RegisterOrganizationDto) {
     return this.corporateService.createOrganization(req.user.id, body);
   }
 
   @Post('license/pay')
-  async licensePay(@Request() req: any, @Body() body: { plan: string }) {
+  async licensePay(@Request() req: any, @Body() body: LicensePayDto) {
     const membership = await this.corporateService.getUserOrg(req.user.id);
     if (!membership) throw new ForbiddenException('No organization found');
     return this.corporateService.initializeLicense(membership.orgId, body.plan);
   }
 
   @Post('license/verify')
-  async licenseVerify(@Request() req: any, @Body() body: { reference: string }) {
+  async licenseVerify(@Request() req: any, @Body() body: LicenseVerifyDto) {
     const membership = await this.corporateService.getUserOrg(req.user.id);
     if (!membership) throw new ForbiddenException('No organization found');
     return this.corporateService.verifyAndActivateLicense(membership.orgId, body.reference);
   }
 
   @Post('invite')
-  async invite(@Request() req: any, @Body() body: { email: string }) {
+  async invite(@Request() req: any, @Body() body: InviteMemberDto) {
     const membership = await this.corporateService.getUserOrg(req.user.id);
     if (!membership || membership.role !== 'admin') {
       throw new ForbiddenException('Only org admins can invite members');
@@ -46,7 +51,7 @@ export class CorporateController {
   }
 
   @Post('invite/accept')
-  async acceptInvite(@Request() req: any, @Body() body: { token: string }) {
+  async acceptInvite(@Request() req: any, @Body() body: AcceptInviteDto) {
     return this.corporateService.acceptInvite(body.token, req.user.id);
   }
 

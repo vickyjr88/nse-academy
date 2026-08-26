@@ -12,19 +12,7 @@ import {
 import type { Response } from 'express';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { LeadsService } from './leads.service';
-
-interface CaptureBody {
-  email: string;
-  name?: string | null;
-  magnetSlug: string;
-  source?: string | null;
-  referralCode?: string | null;
-  utmSource?: string | null;
-  utmMedium?: string | null;
-  utmCampaign?: string | null;
-  utmTerm?: string | null;
-  utmContent?: string | null;
-}
+import { CaptureLeadDto } from './dto/capture-lead.dto';
 
 @Controller('leads')
 export class LeadsController {
@@ -33,7 +21,7 @@ export class LeadsController {
   // Public capture - returns the persisted lead so the client can call the
   // download-tracker with its id.
   @Post()
-  async capture(@Body() body: CaptureBody) {
+  async capture(@Body() body: CaptureLeadDto) {
     const lead = await this.service.capture(body);
     return {
       id: lead.id,

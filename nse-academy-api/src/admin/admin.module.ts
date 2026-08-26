@@ -4,9 +4,10 @@ import { AdminService } from './admin.service';
 import { AdminAuthGuard } from './admin-auth.guard';
 import { CorporateModule } from '../corporate/corporate.module';
 import { AuthModule } from '../auth/auth.module';
+import { JournalModule } from '../journal/journal.module';
 
 @Module({
-  imports: [CorporateModule, AuthModule],
+  imports: [CorporateModule, AuthModule, JournalModule],
   controllers: [AdminController],
   providers: [AdminService, AdminAuthGuard],
   exports: [AdminAuthGuard],

@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
 import { AuthService } from '../auth/auth.service';
 import { CorporateService } from '../corporate/corporate.service';
+import { JournalService } from '../journal/journal.service';
 import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpsertLicenseDto } from './dto/upsert-license.dto';
@@ -25,6 +26,7 @@ export class AdminService {
     private brevo: BrevoService,
     private auth: AuthService,
     private corporate: CorporateService,
+    private journal: JournalService,
   ) {
     const propertyId = this.configService.get<string>('GA_PROPERTY_ID');
     const clientEmail = this.configService.get<string>('GA_CLIENT_EMAIL');
@@ -113,11 +115,65 @@ export class AdminService {
       include: {
         investorProfile: true,
         subscription: true,
+        ebookPurchase: { orderBy: { purchasedAt: 'desc' } },
+        orgMembership: { include: { org: true } },
+        referralsMade: true,
       },
     });
     if (!user) throw new NotFoundException('User not found');
-    const { passwordHash: _pw, ...rest } = user;
-    return rest;
+
+    const [
+      lessonsCompleted,
+      referredBy,
+      portfolio,
+      realizedGains,
+      dividendsTotal,
+      notificationsUnread,
+      priceAlertsActive,
+    ] = await Promise.all([
+      this.prisma.lessonProgress.count({ where: { userId: id, completed: true } }),
+      this.prisma.referral.findUnique({
+        where: { referredId: id },
+        include: { referrer: { select: { id: true, name: true, email: true } } },
+      }),
+      this.journal.getPortfolio(id),
+      this.journal.getRealizedGainsSummary(id),
+      this.prisma.dividend.aggregate({ where: { userId: id }, _sum: { amountKes: true } }),
+      this.prisma.notification.count({ where: { userId: id, read: false } }),
+      this.prisma.priceAlert.count({ where: { userId: id, status: 'pending' } }),
+    ]);
+
+    const { passwordHash: _pw, ebookPurchase, orgMembership, referralsMade, ...rest } = user;
+
+    return {
+      ...rest,
+      ebookPurchases: ebookPurchase,
+      organization: orgMembership
+        ? {
+            id: orgMembership.org.id,
+            name: orgMembership.org.name,
+            role: orgMembership.role,
+            inviteAccepted: orgMembership.inviteAccepted,
+            joinedAt: orgMembership.joinedAt,
+          }
+        : null,
+      referredBy: referredBy
+        ? { id: referredBy.referrer.id, name: referredBy.referrer.name, email: referredBy.referrer.email }
+        : null,
+      referralsMadeCount: referralsMade.length,
+      lessonsCompleted,
+      portfolio: {
+        totalMarketValueKes: portfolio.totalMarketValueKes,
+        totalCostBasisKes: portfolio.totalCostBasisKes,
+        totalUnrealizedGainKes: portfolio.totalUnrealizedGainKes,
+        holdingsCount: portfolio.consolidated.length,
+        holdings: portfolio.consolidated,
+      },
+      totalRealizedGainKes: realizedGains.totalRealizedGainKes,
+      totalDividendsKes: dividendsTotal._sum.amountKes ?? 0,
+      notificationsUnread,
+      priceAlertsActive,
+    };
   }
 
   async listEbookPurchases(params: {

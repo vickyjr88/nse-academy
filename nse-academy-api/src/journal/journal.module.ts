@@ -8,5 +8,6 @@ import { JournalService } from './journal.service';
   imports: [PrismaModule, MarketDataModule],
   controllers: [JournalController],
   providers: [JournalService],
+  exports: [JournalService],
 })
 export class JournalModule {}

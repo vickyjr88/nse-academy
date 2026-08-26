@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { BrevoService } from '../brevo/brevo.service';
 
 type CorporatePlan = 'starter' | 'team' | 'sacco';
 
@@ -25,8 +26,17 @@ export class CorporateService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private brevo: BrevoService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
+  }
+
+  private webUrl(): string {
+    return (
+      this.configService.get<string>('WEB_URL') ||
+      this.configService.get<string>('SITE_URL') ||
+      'https://nseacademy.vitaldigitalmedia.net'
+    );
   }
 
   async createOrganization(adminUserId: string, dto: { name: string; type: string; email: string }) {
@@ -57,7 +67,7 @@ export class CorporateService {
     const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
     if (!org) throw new NotFoundException('Organization not found');
 
-    const callbackUrl = `${this.configService.get('NEXTJS_URL')}/payment/corporate-callback`;
+    const callbackUrl = `${this.webUrl()}/payment/corporate-callback`;
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -141,6 +151,9 @@ export class CorporateService {
     const existing = await this.prisma.orgMember.findUnique({ where: { userId: user.id } });
     if (existing) throw new BadRequestException('User is already a member of an organization');
 
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Organization not found');
+
     const inviteToken = randomUUID();
     await this.prisma.orgMember.create({
       data: {
@@ -152,8 +165,63 @@ export class CorporateService {
       },
     });
 
-    const inviteLink = `${this.configService.get('NEXTJS_URL')}/dashboard/corporate/invite?token=${inviteToken}`;
+    const inviteLink = `${this.webUrl()}/dashboard/corporate/invite?token=${inviteToken}`;
+    void this.sendInviteEmail(user.email, user.name, org.name, inviteLink);
+
     return { inviteLink };
+  }
+
+  private async sendInviteEmail(email: string, name: string, orgName: string, inviteLink: string): Promise<void> {
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: `You've been invited to join ${orgName} on NSE Academy`,
+        htmlContent: this.renderInviteEmailHtml(name, orgName, inviteLink),
+        textContent: this.renderInviteEmailText(name, orgName, inviteLink),
+        tags: ['corporate-invite'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send invite email to ${email}: ${(err as Error).message}`);
+    }
+  }
+
+  private renderInviteEmailHtml(name: string, orgName: string, inviteLink: string): string {
+    const firstName = name.split(' ')[0];
+    return `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
+  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
+  <h1 style="font-size: 22px; margin: 0 0 12px;">You're invited, ${firstName}</h1>
+  <p style="font-size: 16px; line-height: 1.6;">
+    <strong>${orgName}</strong> has invited you to join their organization on NSE Academy,
+    unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.
+  </p>
+  <p style="margin: 28px 0;">
+    <a href="${inviteLink}"
+       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
+              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
+      Accept Invite
+    </a>
+  </p>
+  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
+    If the button doesn't work, copy and paste this link into your browser:<br/>
+    <a href="${inviteLink}" style="color: #047857;">${inviteLink}</a>
+  </p>
+  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
+    - The NSE Academy team
+  </p>
+</body></html>`;
+  }
+
+  private renderInviteEmailText(name: string, orgName: string, inviteLink: string): string {
+    const firstName = name.split(' ')[0];
+    return `You're invited, ${firstName}
+
+${orgName} has invited you to join their organization on NSE Academy, unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.
+
+Accept your invite: ${inviteLink}
+
+- The NSE Academy team
+`;
   }
 
   async acceptInvite(token: string, userId: string) {

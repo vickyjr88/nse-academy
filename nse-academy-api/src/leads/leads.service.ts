@@ -243,6 +243,12 @@ ${this.siteUrl}
     });
   }
 
+  async getById(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead not found');
+    return lead;
+  }
+
   async list(query: {
     page?: number;
     limit?: number;

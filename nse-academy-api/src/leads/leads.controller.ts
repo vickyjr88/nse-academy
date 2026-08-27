@@ -79,4 +79,10 @@ export class LeadsController {
     );
     res.send(csv);
   }
+
+  @Get(':id')
+  @UseGuards(AdminAuthGuard)
+  getById(@Param('id') id: string) {
+    return this.service.getById(id);
+  }
 }

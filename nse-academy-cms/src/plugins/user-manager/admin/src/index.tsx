@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -96,6 +96,16 @@ export default {
     });
 
     app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/leads`,
+      icon: Mail,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.leads`,
+        defaultMessage: 'Leads',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
       to: `plugins/${PLUGIN_ID}/stock-prices`,
       icon: TrendUp,
       intlLabel: {
@@ -161,6 +171,11 @@ export default {
     });
 
     app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/leads`,
+      Component: React.lazy(() => import('./pages/LeadsList').then((m) => ({ default: m.LeadsList }))),
+    });
+
+    app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/stock-prices`,
       Component: React.lazy(() => import('./pages/StockPricesList').then((m) => ({ default: m.StockPricesList }))),
     });
@@ -203,6 +218,11 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/stock-prices/:ticker`,
       Component: React.lazy(() => import('./pages/StockPriceDetail').then((m) => ({ default: m.StockPriceDetail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/leads/:id`,
+      Component: React.lazy(() => import('./pages/LeadDetail').then((m) => ({ default: m.LeadDetail }))),
     });
 
     app.router.addRoute({

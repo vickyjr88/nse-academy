@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Lead, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 
 export interface CaptureLeadInput {
   email: string;
@@ -161,33 +162,17 @@ export class LeadsService {
 
   private renderDefaultMagnetEmail(firstName: string, downloadUrl: string): string {
     const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
-    return `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <h1 style="font-size: 22px; margin: 0 0 12px;">${greeting}</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    Thanks for grabbing the free chapter of the <strong>Complete NSE Investor's Guide</strong>.
-    Here's your download link:
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${downloadUrl}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Download the chapter
-    </a>
-  </p>
-  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-    Over the next few days we'll send you a short series with what we wish every Kenyan
-    investor knew before their first NSE trade - how CDS accounts work, which brokers to
-    consider, and how to read company filings.
-  </p>
-  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-    Reply to this email if you have any questions. We read every one.
-  </p>
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team<br/>
-    <a href="${this.siteUrl}" style="color: #047857;">${this.siteUrl.replace(/^https?:\/\//, '')}</a>
-  </p>
-</body></html>`;
+    return renderEmailHtml({
+      eyebrow: 'Your Free Chapter',
+      heading: greeting,
+      bodyHtml: [
+        "Thanks for grabbing the free chapter of the <strong>Complete NSE Investor's Guide</strong>. Here's your download link:",
+      ],
+      button: { label: 'Download the chapter', url: downloadUrl },
+      footNoteHtml:
+        "Over the next few days we'll send you a short series with what we wish every Kenyan investor knew before their first NSE trade - how CDS accounts work, which brokers to consider, and how to read company filings. Reply to this email if you have any questions - we read every one.",
+      siteUrl: this.siteUrl,
+    });
   }
 
   private renderDefaultMagnetEmailText(
@@ -195,21 +180,16 @@ export class LeadsService {
     downloadUrl: string,
   ): string {
     const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
-    return `${greeting}
-
-Thanks for grabbing the free chapter of the Complete NSE Investor's Guide.
-
-Download: ${downloadUrl}
-
-Over the next few days we'll send you a short series with what we wish every
-Kenyan investor knew before their first NSE trade - how CDS accounts work,
-which brokers to consider, and how to read company filings.
-
-Reply to this email if you have any questions. We read every one.
-
-- The NSE Academy team
-${this.siteUrl}
-`;
+    return renderEmailText({
+      heading: greeting,
+      bodyText: [
+        "Thanks for grabbing the free chapter of the Complete NSE Investor's Guide.",
+      ],
+      button: { label: 'Download the chapter', url: downloadUrl },
+      footNoteText:
+        "Over the next few days we'll send you a short series with what we wish every Kenyan investor knew before their first NSE trade - how CDS accounts work, which brokers to consider, and how to read company filings. Reply to this email if you have any questions - we read every one.",
+      siteUrl: this.siteUrl,
+    });
   }
 
   /**

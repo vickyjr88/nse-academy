@@ -53,7 +53,15 @@ describe('computePeriodEnd', () => {
 function makeService() {
   const subscriptionUpsert = jest.fn().mockResolvedValue({});
   const prisma = {
-    subscription: { upsert: subscriptionUpsert, findMany: jest.fn().mockResolvedValue([]) },
+    subscription: {
+      upsert: subscriptionUpsert,
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({}),
+    },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'u1', email: 'u1@test.com', name: 'Test User' }),
+    },
   };
   const configService = { get: jest.fn().mockReturnValue(undefined) };
   const referrals = { completeReferral: jest.fn().mockResolvedValue(undefined) };
@@ -70,7 +78,7 @@ function makeService() {
     paystack as never,
   );
 
-  return { service, prisma, referrals, ebookService, subscriptionUpsert };
+  return { service, prisma, referrals, ebookService, brevo, subscriptionUpsert };
 }
 
 describe('PaymentsService.handleWebhook', () => {
@@ -97,6 +105,39 @@ describe('PaymentsService.handleWebhook', () => {
       create: expect.objectContaining({ tier: 'premium', status: 'active' }),
     });
     expect(referrals.completeReferral).toHaveBeenCalledWith('u1');
+  });
+
+  it('sends a confirmation email for a brand-new subscription payment', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.subscription.findUnique as jest.Mock).mockResolvedValueOnce(null);
+    await service.handleWebhook({
+      event: 'charge.success',
+      data: {
+        reference: 'ref_new',
+        metadata: { type: 'subscription', userId: 'u1', plan: 'premium', months: 1 },
+      },
+    });
+    // The confirmation send is fire-and-forget (void), so flush microtasks.
+    await new Promise((r) => setImmediate(r));
+    expect(brevo.sendTransactional).toHaveBeenCalledTimes(1);
+    expect(brevo.sendTransactional.mock.calls[0][0].tags).toContain('subscription-confirmed');
+  });
+
+  it('does not re-send the confirmation email when the webhook retries the same reference', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.subscription.findUnique as jest.Mock).mockResolvedValueOnce({
+      paystackSubId: 'ref_dup',
+      tier: 'premium',
+    });
+    await service.handleWebhook({
+      event: 'charge.success',
+      data: {
+        reference: 'ref_dup',
+        metadata: { type: 'subscription', userId: 'u1', plan: 'premium', months: 1 },
+      },
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(brevo.sendTransactional).not.toHaveBeenCalled();
   });
 
   it('routes an ebook payment to EbookService instead of touching subscriptions', async () => {

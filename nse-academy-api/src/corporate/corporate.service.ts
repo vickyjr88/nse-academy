@@ -10,8 +10,15 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 
 type CorporatePlan = 'starter' | 'team' | 'sacco';
+
+const PLAN_LABELS: Record<CorporatePlan, string> = {
+  starter: 'Starter',
+  team: 'Team',
+  sacco: 'SACCO',
+};
 
 const PLAN_CONFIG: Record<CorporatePlan, { seats: number; amountKobo: number; amountKes: number }> = {
   starter: { seats: 5, amountKobo: 150000, amountKes: 1500 },
@@ -97,6 +104,7 @@ export class CorporateService {
     const plan: CorporatePlan = json.data?.metadata?.plan || 'starter';
     const config = PLAN_CONFIG[plan];
 
+    const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await this.prisma.corporateLicense.upsert({
       where: { orgId },
       create: {
@@ -105,7 +113,7 @@ export class CorporateService {
         seats: config.seats,
         seatsUsed: 1,
         status: 'active',
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd,
         paymentMethod: 'paystack',
         paystackReference: reference,
         amountKes: config.amountKes,
@@ -114,12 +122,17 @@ export class CorporateService {
         tier: 'premium',
         seats: config.seats,
         status: 'active',
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd,
         paymentMethod: 'paystack',
         paystackReference: reference,
         amountKes: config.amountKes,
       },
     });
+
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (org) {
+      void this.sendLicenseActivatedEmail(org.email, org.name, plan, config.seats, config.amountKes, currentPeriodEnd);
+    }
 
     return { success: true };
   }
@@ -196,41 +209,68 @@ export class CorporateService {
 
   private renderInviteEmailHtml(name: string, orgName: string, inviteLink: string): string {
     const firstName = name.split(' ')[0];
-    return `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
-  <h1 style="font-size: 22px; margin: 0 0 12px;">You're invited, ${firstName}</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    <strong>${orgName}</strong> has invited you to join their organization on NSE Academy,
-    unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${inviteLink}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Accept Invite
-    </a>
-  </p>
-  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-    If the button doesn't work, copy and paste this link into your browser:<br/>
-    <a href="${inviteLink}" style="color: #047857;">${inviteLink}</a>
-  </p>
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team
-  </p>
-</body></html>`;
+    return renderEmailHtml({
+      eyebrow: 'Corporate Invite',
+      heading: `You're invited, ${firstName}`,
+      bodyHtml: [
+        `<strong>${orgName}</strong> has invited you to join their organization on NSE Academy, unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.`,
+      ],
+      button: { label: 'Accept Invite', url: inviteLink },
+      footNoteHtml: `If the button doesn't work, copy and paste this link into your browser:<br/><a href="${inviteLink}" style="color:#047857;">${inviteLink}</a>`,
+      siteUrl: this.webUrl(),
+    });
   }
 
   private renderInviteEmailText(name: string, orgName: string, inviteLink: string): string {
     const firstName = name.split(' ')[0];
-    return `You're invited, ${firstName}
+    return renderEmailText({
+      heading: `You're invited, ${firstName}`,
+      bodyText: [
+        `${orgName} has invited you to join their organization on NSE Academy, unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.`,
+      ],
+      button: { label: 'Accept your invite', url: inviteLink },
+      siteUrl: this.webUrl(),
+    });
+  }
 
-${orgName} has invited you to join their organization on NSE Academy, unlocking premium access to personalised stock picks, deep-dive research, and portfolio tracking.
-
-Accept your invite: ${inviteLink}
-
-- The NSE Academy team
-`;
+  private async sendLicenseActivatedEmail(
+    email: string,
+    orgName: string,
+    plan: CorporatePlan,
+    seats: number,
+    amountKes: number,
+    currentPeriodEnd: Date,
+  ): Promise<void> {
+    const dashboardUrl = `${this.webUrl()}/dashboard/corporate`;
+    const planLabel = PLAN_LABELS[plan];
+    const infoBox = `Plan: <strong>${planLabel}</strong> &middot; Seats: <strong>${seats}</strong> &middot; KSh ${amountKes.toLocaleString()}/month &middot; Renews ${currentPeriodEnd.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name: orgName },
+        subject: `Your ${orgName} corporate license is active`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'License Activated',
+          heading: `${orgName} is all set`,
+          bodyHtml: [
+            `Your <strong>${planLabel}</strong> corporate license is now active. Invite your team from your corporate dashboard to start giving them premium access.`,
+          ],
+          infoBox,
+          button: { label: 'Go to Corporate Dashboard', url: dashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `${orgName} is all set`,
+          bodyText: [
+            `Your ${planLabel} corporate license is now active - ${seats} seats, KSh ${amountKes.toLocaleString()}/month, renews ${currentPeriodEnd.toLocaleDateString('en-KE')}. Invite your team from your corporate dashboard to start giving them premium access.`,
+          ],
+          button: { label: 'Corporate Dashboard', url: dashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['corporate-license-activated'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send license-activated email to ${email}: ${(err as Error).message}`);
+    }
   }
 
   async acceptInvite(token: string, userId: string) {

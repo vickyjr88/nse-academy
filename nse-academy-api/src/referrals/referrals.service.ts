@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 
 const FREE_MONTHS_REWARD = 1;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -8,7 +11,19 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export class ReferralsService {
   private readonly logger = new Logger(ReferralsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private brevo: BrevoService,
+    private config: ConfigService,
+  ) {}
+
+  private webUrl(): string {
+    return (
+      this.config.get<string>('WEB_URL') ||
+      this.config.get<string>('SITE_URL') ||
+      'https://nseacademy.vitaldigitalmedia.net'
+    );
+  }
 
   /** Called during registration when a referral code is provided. */
   async recordPendingReferral(referralCode: string, newUserId: string): Promise<void> {
@@ -42,16 +57,28 @@ export class ReferralsService {
     });
 
     // Grant free month to both referrer and referred user
-    await Promise.all([
+    const [referrer, referred] = await Promise.all([
       this.grantFreeMonth(referral.referrerId),
       this.grantFreeMonth(referral.referredId),
     ]);
 
     this.logger.log(`Referral completed: ${referral.referrerId} → ${referral.referredId}. Both rewarded.`);
+
+    if (referrer) {
+      void this.sendRewardEmail(referrer.email, referrer.name, 'referrer', referred?.name);
+    }
+    if (referred) {
+      void this.sendRewardEmail(referred.email, referred.name, 'referred', referrer?.name);
+    }
   }
 
-  /** Extends subscription by 30 days, or credits freeMonths for future billing. */
-  private async grantFreeMonth(userId: string): Promise<void> {
+  /**
+   * Extends subscription by 30 days, or credits freeMonths for future
+   * billing. Returns the user's name/email so the caller can send the
+   * reward email without a second lookup - null if the user doesn't exist
+   * (shouldn't happen in practice, but keeps this safe to call standalone).
+   */
+  private async grantFreeMonth(userId: string): Promise<{ name: string; email: string } | null> {
     const sub = await this.prisma.subscription.findUnique({ where: { userId } });
 
     if (sub) {
@@ -75,6 +102,57 @@ export class ReferralsService {
           currentPeriodEnd: new Date(Date.now() + THIRTY_DAYS_MS),
         },
       });
+    }
+
+    return this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  }
+
+  private async sendRewardEmail(
+    email: string,
+    name: string,
+    role: 'referrer' | 'referred',
+    otherPartyName?: string,
+  ): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const referralsUrl = `${this.webUrl()}/dashboard/referrals`;
+    const heading = role === 'referrer' ? `You earned a free month, ${firstName}!` : `Welcome bonus unlocked, ${firstName}!`;
+    const bodyHtml =
+      role === 'referrer'
+        ? [
+            `${otherPartyName ? `<strong>${otherPartyName}</strong>` : 'Someone you referred'} just subscribed to NSE Academy using your referral link - as a thank you, we've added <strong>1 free month</strong> to your subscription.`,
+          ]
+        : [
+            `Thanks for subscribing to NSE Academy${otherPartyName ? ` through <strong>${otherPartyName}</strong>'s referral` : ' through a referral'}! We've added <strong>1 free month</strong> to your subscription as a welcome bonus.`,
+          ];
+    const bodyText =
+      role === 'referrer'
+        ? [
+            `${otherPartyName ?? 'Someone you referred'} just subscribed to NSE Academy using your referral link - as a thank you, we've added 1 free month to your subscription.`,
+          ]
+        : [
+            `Thanks for subscribing to NSE Academy${otherPartyName ? ` through ${otherPartyName}'s referral` : ' through a referral'}! We've added 1 free month to your subscription as a welcome bonus.`,
+          ];
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: role === 'referrer' ? 'You earned a free month on NSE Academy' : 'Your NSE Academy welcome bonus',
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Referral Reward',
+          heading,
+          bodyHtml,
+          button: { label: 'View Your Referrals', url: referralsUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading,
+          bodyText,
+          button: { label: 'Your Referrals', url: referralsUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['referral-reward', `role:${role}`],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send referral reward email to ${email}: ${(err as Error).message}`);
     }
   }
 

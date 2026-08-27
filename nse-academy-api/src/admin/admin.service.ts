@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { AuthService } from '../auth/auth.service';
 import { CorporateService } from '../corporate/corporate.service';
 import { JournalService } from '../journal/journal.service';
@@ -563,12 +564,29 @@ export class AdminService {
       data: { approvalStatus: 'approved', approvedAt: new Date() },
     });
 
+    const firstName = advisor.user.name.split(' ')[0];
+    const advisorDashboardUrl = `${this.webUrl()}/dashboard/advisor`;
     try {
       await this.brevo.sendTransactional({
         to: { email: advisor.user.email, name: advisor.user.name },
         subject: "You're approved as an NSE Academy advisor",
-        htmlContent: `<p>Good news, ${advisor.user.name} - your financial advisor profile has been approved and is now live in the NSE Academy advisor directory.</p><p><a href="${this.webUrl()}/dashboard/advisor">Go to your advisor dashboard</a></p>`,
-        textContent: `Good news, ${advisor.user.name} - your financial advisor profile has been approved and is now live in the NSE Academy advisor directory.\n\n${this.webUrl()}/dashboard/advisor`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Advisor Approved',
+          heading: `Good news, ${firstName}`,
+          bodyHtml: [
+            'Your financial advisor profile has been approved and is now live in the NSE Academy advisor directory. You can now accept client connections and send buy/sell alerts.',
+          ],
+          button: { label: 'Go to Your Advisor Dashboard', url: advisorDashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Good news, ${firstName}`,
+          bodyText: [
+            'Your financial advisor profile has been approved and is now live in the NSE Academy advisor directory. You can now accept client connections and send buy/sell alerts.',
+          ],
+          button: { label: 'Advisor Dashboard', url: advisorDashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
         tags: ['advisor-approved'],
       });
     } catch (err) {
@@ -579,13 +597,47 @@ export class AdminService {
   }
 
   async suspendAdvisor(id: string) {
-    const advisor = await this.prisma.advisorProfile.findUnique({ where: { id } });
+    const advisor = await this.prisma.advisorProfile.findUnique({
+      where: { id },
+      include: { user: true },
+    });
     if (!advisor) throw new NotFoundException('Advisor not found');
 
-    return this.prisma.advisorProfile.update({
+    const updated = await this.prisma.advisorProfile.update({
       where: { id },
       data: { approvalStatus: 'suspended' },
     });
+
+    const firstName = advisor.user.name.split(' ')[0];
+    const supportEmail = this.configService.get<string>('SUPPORT_EMAIL') ?? 'hello@nseacademy.vitaldigitalmedia.net';
+    try {
+      await this.brevo.sendTransactional({
+        to: { email: advisor.user.email, name: advisor.user.name },
+        subject: 'Your NSE Academy advisor profile has been suspended',
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Advisor Suspended',
+          heading: `Your advisor profile has been suspended, ${firstName}`,
+          bodyHtml: [
+            'Your financial advisor profile is no longer visible in the NSE Academy advisor directory, and you will not be able to send buy/sell alerts to clients while suspended.',
+            `If you believe this is a mistake or would like more information, please reach out to us at <a href="mailto:${supportEmail}" style="color:#047857;">${supportEmail}</a>.`,
+          ],
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Your advisor profile has been suspended, ${firstName}`,
+          bodyText: [
+            'Your financial advisor profile is no longer visible in the NSE Academy advisor directory, and you will not be able to send buy/sell alerts to clients while suspended.',
+            `If you believe this is a mistake or would like more information, please reach out to us at ${supportEmail}.`,
+          ],
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['advisor-suspended'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send advisor-suspended email to ${advisor.user.email}: ${(err as Error).message}`);
+    }
+
+    return updated;
   }
 
   async listReferrals(params: {

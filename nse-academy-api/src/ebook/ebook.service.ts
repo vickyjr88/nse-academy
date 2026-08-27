@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { randomBytes } from 'crypto';
 import {
   checkoutPathFor,
@@ -692,37 +693,18 @@ export class EbookService {
     hasAccount: boolean;
   }): string {
     const accountLine = opts.hasAccount
-      ? `<p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-           Your account has unlimited downloads - grab it anytime from
-           <a href="${opts.libraryUrl}" style="color: #047857;">your library</a>.
-         </p>`
-      : `<p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-           Need more than ${MAX_GUEST_DOWNLOADS} downloads?
-           <a href="${opts.registerUrl}" style="color: #047857;">Create a free account</a>
-           with this email and this ebook is yours to download anytime.
-         </p>`;
-    return `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
-  <h1 style="font-size: 22px; margin: 0 0 12px;">Your ebook is ready</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    Thanks for your purchase. Download <strong>${opts.productName}</strong> using the button below.
-    This link is tied to your order and works for
-    <strong>${MAX_GUEST_DOWNLOADS} downloads</strong> - keep this email so you can come back to it.
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${opts.accessUrl}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Download the PDF
-    </a>
-  </p>
-  ${accountLine}
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team<br/>
-    <a href="${this.webUrl()}" style="color: #047857;">${this.webUrl().replace(/^https?:\/\//, '')}</a>
-  </p>
-</body></html>`;
+      ? `Your account has unlimited downloads - grab it anytime from <a href="${opts.libraryUrl}" style="color:#047857;">your library</a>.`
+      : `Need more than ${MAX_GUEST_DOWNLOADS} downloads? <a href="${opts.registerUrl}" style="color:#047857;">Create a free account</a> with this email and this ebook is yours to download anytime.`;
+    return renderEmailHtml({
+      eyebrow: 'Ebook Delivery',
+      heading: 'Your ebook is ready',
+      bodyHtml: [
+        `Thanks for your purchase. Download <strong>${opts.productName}</strong> using the button below. This link is tied to your order and works for <strong>${MAX_GUEST_DOWNLOADS} downloads</strong> - keep this email so you can come back to it.`,
+      ],
+      button: { label: 'Download the PDF', url: opts.accessUrl },
+      footNoteHtml: accountLine,
+      siteUrl: this.webUrl(),
+    });
   }
 
   private renderEbookEmailText(opts: {
@@ -735,16 +717,14 @@ export class EbookService {
     const accountLine = opts.hasAccount
       ? `Your account has unlimited downloads - grab it anytime from your library: ${opts.libraryUrl}`
       : `Need more than ${MAX_GUEST_DOWNLOADS} downloads? Create a free account with this email and this ebook is yours to download anytime: ${opts.registerUrl}`;
-    return `Your ebook is ready: ${opts.productName}
-
-Download: ${opts.accessUrl}
-
-This link works for ${MAX_GUEST_DOWNLOADS} downloads, so keep this email.
-
-${accountLine}
-
-- The NSE Academy team
-${this.webUrl()}
-`;
+    return renderEmailText({
+      heading: `Your ebook is ready: ${opts.productName}`,
+      bodyText: [
+        `This link is tied to your order and works for ${MAX_GUEST_DOWNLOADS} downloads - keep this email so you can come back to it.`,
+      ],
+      button: { label: 'Download the PDF', url: opts.accessUrl },
+      footNoteText: accountLine,
+      siteUrl: this.webUrl(),
+    });
   }
 }

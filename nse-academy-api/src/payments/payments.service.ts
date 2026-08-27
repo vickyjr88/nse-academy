@@ -7,6 +7,7 @@ import { EbookService } from '../ebook/ebook.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { computeEffectiveTier } from '../auth/effective-tier.util';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 export type BillingMonths = 1 | 3 | 6 | 12;
@@ -14,6 +15,11 @@ export type BillingMonths = 1 | 3 | 6 | 12;
 export const PLAN_PRICES: Record<SubscriptionPlan, number> = {
   intermediary: 30000, // KSh 300 in kobo
   premium: 50000,      // KSh 500 in kobo
+};
+
+const PLAN_LABELS: Record<SubscriptionPlan, string> = {
+  intermediary: 'Intermediary',
+  premium: 'Premium',
 };
 
 export const VALID_MONTHS: BillingMonths[] = [1, 3, 6, 12];
@@ -142,6 +148,8 @@ export class PaymentsService {
       const plan: SubscriptionPlan = data.metadata.plan || 'premium';
       const months: BillingMonths = VALID_MONTHS.includes(data.metadata.months) ? data.metadata.months : 1;
 
+      const existing = await this.prisma.subscription.findUnique({ where: { userId } });
+      const currentPeriodEnd = computePeriodEnd(months);
       await this.prisma.subscription.upsert({
         where: { userId },
         create: {
@@ -149,18 +157,29 @@ export class PaymentsService {
           tier: plan,
           status: 'active',
           paystackSubId: reference,
-          currentPeriodEnd: computePeriodEnd(months),
+          currentPeriodEnd,
         },
         update: {
           tier: plan,
           status: 'active',
-          currentPeriodEnd: computePeriodEnd(months),
+          currentPeriodEnd,
+          expiryWarningSentAt: null,
         },
       });
 
       this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
       // Complete referral if this is the user's first paid subscription
       await this.referrals.completeReferral(userId);
+
+      // Only email once per distinct payment - a retried webhook or a
+      // verify() call that arrives after the webhook already processed this
+      // exact reference would otherwise double-send the confirmation.
+      if (existing?.paystackSubId !== reference) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (user) {
+          void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
+        }
+      }
     }
 
     return { received: true };
@@ -227,6 +246,8 @@ export class PaymentsService {
     const plan: SubscriptionPlan = metadata?.plan || 'premium';
     const months: BillingMonths = VALID_MONTHS.includes(metadata?.months) ? metadata.months : 1;
 
+    const existing = await this.prisma.subscription.findUnique({ where: { userId } });
+    const currentPeriodEnd = computePeriodEnd(months);
     await this.prisma.subscription.upsert({
       where: { userId },
       create: {
@@ -234,18 +255,26 @@ export class PaymentsService {
         tier: plan,
         status: 'active',
         paystackSubId: reference,
-        currentPeriodEnd: computePeriodEnd(months),
+        currentPeriodEnd,
       },
       update: {
         tier: plan,
         status: 'active',
         paystackSubId: reference,
-        currentPeriodEnd: computePeriodEnd(months),
+        currentPeriodEnd,
+        expiryWarningSentAt: null,
       },
     });
 
     this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify - ref ${reference}`);
     await this.referrals.completeReferral(userId);
+
+    if (existing?.paystackSubId !== reference) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
+      }
+    }
 
     return { success: true, tier: plan, type: 'subscription' };
   }
@@ -294,6 +323,122 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * Warns users 3 days before their subscription lapses, so the expiry
+   * downgrade above isn't the first they hear of it. Guarded by
+   * expiryWarningSentAt so the daily cron doesn't resend the same warning
+   * every day in that 3-day window; cleared on any renewal (see
+   * handleWebhook/activateSubscription) so a later expiry gets its own warning.
+   */
+  @Cron('0 7 * * *')
+  async handleExpiringSoonSubscriptions() {
+    const in3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const expiringSoon = await this.prisma.subscription.findMany({
+      where: {
+        status: 'active',
+        tier: { in: ['intermediary', 'premium'] },
+        currentPeriodEnd: { gte: new Date(), lte: in3Days },
+        expiryWarningSentAt: null,
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (expiringSoon.length === 0) return;
+
+    this.logger.log(`Sending expiring-soon warning to ${expiringSoon.length} subscriber(s)`);
+
+    for (const sub of expiringSoon) {
+      try {
+        await this.sendExpiringSoonEmail(sub.user.email, sub.user.name, sub.tier as SubscriptionPlan, sub.currentPeriodEnd!);
+        await this.prisma.subscription.update({
+          where: { userId: sub.userId },
+          data: { expiryWarningSentAt: new Date() },
+        });
+      } catch (err) {
+        this.logger.error(`Failed to send expiring-soon email for user ${sub.userId}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  private async sendSubscriptionConfirmedEmail(
+    email: string,
+    name: string,
+    plan: SubscriptionPlan,
+    months: BillingMonths,
+    currentPeriodEnd: Date,
+  ): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const planLabel = PLAN_LABELS[plan];
+    const dashboardUrl = `${this.webUrl()}/dashboard`;
+    const renewsOn = currentPeriodEnd.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+    const infoBox = `Plan: <strong>${planLabel}</strong> &middot; Billed for ${months} month${months === 1 ? '' : 's'} &middot; Renews ${renewsOn}`;
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: `You're on ${planLabel} - welcome aboard`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Subscription Confirmed',
+          heading: `You're on ${planLabel}, ${firstName}`,
+          bodyHtml: [
+            `Thanks for upgrading! Your <strong>${planLabel}</strong> subscription is active now - personalised stock picks, deep-dive research, and everything else that tier unlocks is ready in your dashboard.`,
+          ],
+          infoBox,
+          button: { label: 'Go to Dashboard', url: dashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `You're on ${planLabel}, ${firstName}`,
+          bodyText: [
+            `Thanks for upgrading! Your ${planLabel} subscription is active now (billed for ${months} month${months === 1 ? '' : 's'}, renews ${renewsOn}) - everything that tier unlocks is ready in your dashboard.`,
+          ],
+          button: { label: 'Dashboard', url: dashboardUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['subscription-confirmed'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send subscription-confirmed email to ${email}: ${(err as Error).message}`);
+    }
+  }
+
+  private async sendExpiringSoonEmail(
+    email: string,
+    name: string,
+    tier: SubscriptionPlan,
+    currentPeriodEnd: Date,
+  ): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const planLabel = PLAN_LABELS[tier] ?? tier;
+    const renewUrl = `${this.webUrl()}/dashboard/billing`;
+    const expiresOn = currentPeriodEnd.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: `Your ${planLabel} subscription expires soon`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Expiring Soon',
+          heading: `Your subscription expires soon, ${firstName}`,
+          bodyHtml: [
+            `Your <strong>${planLabel}</strong> subscription renews or ends on <strong>${expiresOn}</strong>. Renew now to avoid losing access to personalised stock picks and deep-dive research.`,
+          ],
+          button: { label: 'Renew your subscription', url: renewUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Your subscription expires soon, ${firstName}`,
+          bodyText: [
+            `Your ${planLabel} subscription renews or ends on ${expiresOn}. Renew now to avoid losing access to personalised stock picks and deep-dive research.`,
+          ],
+          button: { label: 'Renew your subscription', url: renewUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['subscription-expiring-soon'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send expiring-soon email to ${email}: ${(err as Error).message}`);
+    }
+  }
+
   private async sendExpiryEmail(email: string, name: string): Promise<void> {
     const firstName = name.split(' ')[0];
     const upgradeUrl = `${this.webUrl()}/pricing`;
@@ -301,34 +446,23 @@ export class PaymentsService {
       await this.brevo.sendTransactional({
         to: { email, name },
         subject: 'Your NSE Academy subscription has expired',
-        htmlContent: `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
-  <h1 style="font-size: 22px; margin: 0 0 12px;">Your subscription has expired, ${firstName}</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    Your paid plan has ended and your account has moved to the free tier. You'll keep access to
-    everything free tier includes, but premium features like personalised stock picks and deep-dive
-    research are now paused.
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${upgradeUrl}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Renew your subscription
-    </a>
-  </p>
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team
-  </p>
-</body></html>`,
-        textContent: `Your subscription has expired, ${firstName}
-
-Your paid plan has ended and your account has moved to the free tier. You'll keep access to everything free tier includes, but premium features like personalised stock picks and deep-dive research are now paused.
-
-Renew your subscription: ${upgradeUrl}
-
-- The NSE Academy team
-`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Subscription Expired',
+          heading: `Your subscription has expired, ${firstName}`,
+          bodyHtml: [
+            "Your paid plan has ended and your account has moved to the free tier. You'll keep access to everything free tier includes, but premium features like personalised stock picks and deep-dive research are now paused.",
+          ],
+          button: { label: 'Renew your subscription', url: upgradeUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Your subscription has expired, ${firstName}`,
+          bodyText: [
+            "Your paid plan has ended and your account has moved to the free tier. You'll keep access to everything free tier includes, but premium features like personalised stock picks and deep-dive research are now paused.",
+          ],
+          button: { label: 'Renew your subscription', url: upgradeUrl },
+          siteUrl: this.webUrl(),
+        }),
         tags: ['subscription-expired'],
       });
     } catch (err) {

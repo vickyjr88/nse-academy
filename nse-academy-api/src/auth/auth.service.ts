@@ -8,6 +8,7 @@ import { ReferralsService } from '../referrals/referrals.service';
 import { LeadsService } from '../leads/leads.service';
 import { EbookService } from '../ebook/ebook.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -203,84 +204,55 @@ export class AuthService {
     const firstName = name.split(' ')[0];
     const dashboardUrl = `${this.webUrl()}/dashboard`;
     const profilerUrl = `${this.webUrl()}/investor-profiler`;
-    return `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
-  <h1 style="font-size: 22px; margin: 0 0 12px;">Welcome, ${firstName}</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    Your account is ready. Take the free 3-minute investor profiler quiz to get a
-    personalised learning path and stock picks matched to your risk tolerance and goals.
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${profilerUrl}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Take the Investor Profiler
-    </a>
-  </p>
-  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-    Or head straight to <a href="${dashboardUrl}" style="color: #047857;">your dashboard</a>.
-  </p>
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team<br/>
-    <a href="${this.webUrl()}" style="color: #047857;">${this.webUrl().replace(/^https?:\/\//, '')}</a>
-  </p>
-</body></html>`;
+    return renderEmailHtml({
+      eyebrow: 'Welcome',
+      heading: `Welcome, ${firstName}`,
+      bodyHtml: [
+        'Your account is ready. Take the free 3-minute investor profiler quiz to get a personalised learning path and stock picks matched to your risk tolerance and goals.',
+      ],
+      button: { label: 'Take the Investor Profiler', url: profilerUrl },
+      footNoteHtml: `Or head straight to <a href="${dashboardUrl}" style="color:#047857;">your dashboard</a>.`,
+      siteUrl: this.webUrl(),
+    });
   }
 
   private renderWelcomeEmailText(name: string): string {
     const firstName = name.split(' ')[0];
     const dashboardUrl = `${this.webUrl()}/dashboard`;
     const profilerUrl = `${this.webUrl()}/investor-profiler`;
-    return `Welcome, ${firstName}
-
-Your account is ready. Take the free 3-minute investor profiler quiz to get a personalised learning path and stock picks: ${profilerUrl}
-
-Or head straight to your dashboard: ${dashboardUrl}
-
-- The NSE Academy team
-${this.webUrl()}
-`;
+    return renderEmailText({
+      heading: `Welcome, ${firstName}`,
+      bodyText: [
+        'Your account is ready. Take the free 3-minute investor profiler quiz to get a personalised learning path and stock picks matched to your risk tolerance and goals.',
+      ],
+      button: { label: 'Take the Investor Profiler', url: profilerUrl },
+      footNoteText: `Or head straight to your dashboard: ${dashboardUrl}`,
+      siteUrl: this.webUrl(),
+    });
   }
 
   private renderResetPasswordEmailHtml(resetUrl: string): string {
-    return `<!DOCTYPE html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
-  <p style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; font-weight: 700; margin: 0 0 12px;">NSE Academy</p>
-  <h1 style="font-size: 22px; margin: 0 0 12px;">Reset your password</h1>
-  <p style="font-size: 16px; line-height: 1.6;">
-    We received a request to reset your password. Click the button below to choose a new one.
-    This link expires in 1 hour.
-  </p>
-  <p style="margin: 28px 0;">
-    <a href="${resetUrl}"
-       style="display: inline-block; background: #047857; color: #fff; text-decoration: none;
-              font-weight: 600; padding: 14px 28px; border-radius: 12px;">
-      Reset Password
-    </a>
-  </p>
-  <p style="font-size: 14px; line-height: 1.6; color: #52525b;">
-    If you didn't request this, you can safely ignore this email - your password won't change.
-  </p>
-  <p style="font-size: 14px; color: #52525b; margin-top: 32px;">
-    - The NSE Academy team<br/>
-    <a href="${this.webUrl()}" style="color: #047857;">${this.webUrl().replace(/^https?:\/\//, '')}</a>
-  </p>
-</body></html>`;
+    return renderEmailHtml({
+      eyebrow: 'Password Reset',
+      heading: 'Reset your password',
+      bodyHtml: [
+        "We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.",
+      ],
+      button: { label: 'Reset Password', url: resetUrl },
+      footNoteHtml: "If you didn't request this, you can safely ignore this email - your password won't change.",
+      siteUrl: this.webUrl(),
+    });
   }
 
   private renderResetPasswordEmailText(resetUrl: string): string {
-    return `Reset your password
-
-We received a request to reset your password. Use the link below to choose a new one.
-This link expires in 1 hour.
-
-${resetUrl}
-
-If you didn't request this, you can safely ignore this email - your password won't change.
-
-- The NSE Academy team
-${this.webUrl()}
-`;
+    return renderEmailText({
+      heading: 'Reset your password',
+      bodyText: [
+        "We received a request to reset your password. Use the link below to choose a new one. This link expires in 1 hour.",
+      ],
+      button: { label: 'Reset Password', url: resetUrl },
+      footNoteText: "If you didn't request this, you can safely ignore this email - your password won't change.",
+      siteUrl: this.webUrl(),
+    });
   }
 }

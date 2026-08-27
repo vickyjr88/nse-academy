@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { CorporateService } from '../corporate/corporate.service';
 import { JournalService } from '../journal/journal.service';
 import { CreateAdvisorProfileDto } from './dto/create-advisor-profile.dto';
@@ -10,6 +11,20 @@ import { SubmitQueryDto } from './dto/submit-query.dto';
 import { PostMessageDto } from './dto/post-message.dto';
 import { PublishInsightDto } from './dto/publish-insight.dto';
 import { SendAlertDto } from './dto/send-alert.dto';
+
+const NOTIFICATION_EYEBROWS: Record<string, string> = {
+  ADVISOR_QUERY: 'New Message',
+  ADVISOR_QUERY_ANSWERED: 'Advisor Reply',
+  ADVISOR_INSIGHT: 'New Insight',
+  ADVISOR_ALERT: 'Advisor Alert',
+};
+
+const NOTIFICATION_BUTTON_LABELS: Record<string, string> = {
+  ADVISOR_QUERY: 'View Conversation',
+  ADVISOR_QUERY_ANSWERED: 'View Reply',
+  ADVISOR_INSIGHT: 'View Insight',
+  ADVISOR_ALERT: 'View in Dashboard',
+};
 
 @Injectable()
 export class FinancialAdvisorService {
@@ -454,12 +469,26 @@ export class FinancialAdvisorService {
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
+
+    const eyebrow = NOTIFICATION_EYEBROWS[type] ?? 'NSE Academy';
+    const buttonLabel = NOTIFICATION_BUTTON_LABELS[type] ?? 'View in Dashboard';
     try {
       await this.brevo.sendTransactional({
         to: { email: user.email, name: user.name },
         subject: subjectOverride ?? title,
-        htmlContent: `<p>${body}</p><p><a href="${link}">View in your dashboard</a></p>`,
-        textContent: `${body}\n\n${link}`,
+        htmlContent: renderEmailHtml({
+          eyebrow,
+          heading: title,
+          bodyHtml: [body.replace(/\n/g, '<br/>')],
+          button: { label: buttonLabel, url: link },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: title,
+          bodyText: [body],
+          button: { label: buttonLabel, url: link },
+          siteUrl: this.webUrl(),
+        }),
         tags: ['advisor'],
       });
     } catch (err) {

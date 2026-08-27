@@ -77,6 +77,11 @@ model Subscription {
   currentPeriodEnd DateTime?
   status           String // active | cancelled | past_due
   freeMonths       Int       @default(0)
+  // Set when the "expiring soon" reminder email fires, so the daily cron
+  // doesn't resend it every day in the run-up to expiry. Cleared whenever
+  // currentPeriodEnd moves forward (renewal), so a later expiry gets its
+  // own fresh warning.
+  expiryWarningSentAt DateTime?
 }
 
 model LessonProgress {

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { CreateAlertDto } from './dto/create-alert.dto';
 
 interface NewNotification {
@@ -137,11 +138,24 @@ export class AlertsService {
 
     const user = await this.prisma.user.findUnique({ where: { id: alert.userId } });
     if (user) {
+      const infoBox = `Current price: <strong>KSh ${price}</strong> &middot; Target: KSh ${alert.targetPrice} &middot; ${alert.direction === 'ABOVE' ? 'Above' : 'Below'}`;
       await this.brevo.sendTransactional({
         to: { email: user.email, name: user.name },
         subject: title,
-        htmlContent: `<p>${body}</p><p><a href="${link}">View your trade journal</a></p>`,
-        textContent: `${body}\n\n${link}`,
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Price Alert',
+          heading: title,
+          bodyHtml: [`Your price alert for <strong>${alert.ticker}</strong> has been triggered.`],
+          infoBox,
+          button: { label: 'View Your Trade Journal', url: link },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: title,
+          bodyText: [body],
+          button: { label: 'Trade Journal', url: link },
+          siteUrl: this.webUrl(),
+        }),
         tags: ['price-alert'],
       });
     }

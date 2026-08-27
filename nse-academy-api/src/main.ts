@@ -6,10 +6,17 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 function corsOrigins(): string[] {
-  const configured = [process.env.WEB_URL, process.env.SITE_URL].filter(
+  const configured = [process.env.WEB_URL, process.env.SITE_URL, process.env.CMS_ADMIN_URL].filter(
     (v): v is string => !!v,
   );
-  const defaults = ['https://nseacademy.vitaldigitalmedia.net'];
+  // The CMS admin panel runs entirely in the browser (Strapi's React admin)
+  // and calls this API directly with the x-admin-key header - it's a real
+  // cross-origin request, not just server-to-server, so its origin has to
+  // be allowlisted the same way WEB_URL is.
+  const defaults = [
+    'https://nseacademy.vitaldigitalmedia.net',
+    'https://nseacademy-admin.vitaldigitalmedia.net',
+  ];
   // Only add localhost when nothing production-like is configured, rather
   // than gating on NODE_ENV - this deployment doesn't reliably set it, and
   // trusting an unset NODE_ENV would let localhost through in production.

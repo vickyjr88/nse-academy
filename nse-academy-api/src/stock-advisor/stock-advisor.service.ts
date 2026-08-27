@@ -1,7 +1,8 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { OpenRouterService } from '../openrouter/openrouter.service';
+import { TavilyService } from '../tavily/tavily.service';
 
 export type InvestorType = 'conservative' | 'moderate' | 'aggressive' | 'dividend' | 'growth';
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -125,6 +126,8 @@ export class StockAdvisorService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private openRouter: OpenRouterService,
+    private tavily: TavilyService,
   ) {
     this.cmsUrl = this.configService.get<string>('CMS_URL', 'http://localhost:1337');
     this.cmsToken = this.configService.get<string>('CMS_API_TOKEN')!;
@@ -253,33 +256,40 @@ export class StockAdvisorService {
     );
     if (!stock) throw new NotFoundException(`Ticker "${ticker}" not found`);
 
-    const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
-    const geminiModel = this.configService.get<string>('GEMINI_MODEL', 'gemini-1.5-flash-latest');
-    if (!geminiKey) throw new InternalServerErrorException('AI service not configured');
-
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel(
-      { model: geminiModel, tools: [{ googleSearch: {} } as any] },
-      { apiVersion: 'v1beta' },
-    );
+    if (!this.openRouter.hasCredentials()) {
+      throw new InternalServerErrorException('AI service not configured');
+    }
 
     const profileContext = profile
       ? `The investor is a ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score: ${profile.riskScore}/100. Investment horizon: ${profile.horizonYears} years. Capital range: ${profile.capitalRange}.`
       : 'The investor has not completed a profile yet - provide general analysis.';
 
-    const prompt = `You are a senior NSE (Nairobi Securities Exchange) investment analyst providing real-time personalised advice to a Kenyan retail investor.
+    // Ground the model in current information the same way the previous
+    // Gemini implementation did via its built-in googleSearch tool - since
+    // OpenRouter is a completions proxy with no equivalent, search results
+    // are fetched separately and folded into the prompt as context instead.
+    const searchResults = await this.tavily.search({
+      query: `${stock.company_name} ${stock.ticker} NSE Nairobi Securities Exchange latest news earnings price`,
+      topic: 'finance',
+      timeRange: 'month',
+      maxResults: 5,
+    });
+
+    const groundingContext = searchResults.length
+      ? searchResults
+          .map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content}`)
+          .join('\n\n')
+      : 'No current search results are available - base the analysis on general knowledge of the company and sector, and note that live data was unavailable.';
+
+    const prompt = `You are a senior NSE (Nairobi Securities Exchange) investment analyst providing personalised advice to a Kenyan retail investor.
 
 COMPANY: ${stock.company_name} (${stock.ticker}) - ${stock.sector} sector
 INVESTOR PROFILE: ${profileContext}
 
-Use Google Search to find the latest available information about ${stock.company_name} (${stock.ticker}) on the NSE, including:
-1. Current market sentiment and latest news from 2024-2025.
-2. Recent earnings reports or half-year results.
-3. Market price action over the last few months.
-4. Corporate actions (dividends declared, bonuses, etc.).
-5. Potential threats or opportunities in their specific industry in Kenya.
+RECENT SEARCH RESULTS (use these for anything time-sensitive - news, earnings, price action, corporate actions):
+${groundingContext}
 
-Based on this real-time data and the investor's profile, provide a JSON response with exactly this structure:
+Based on the search results above and the investor's profile, provide a JSON response with exactly this structure:
 {
   "situation": "2-3 sentence summary of what is happening with this company in the Kenyan market right now",
   "keyMetrics": ["Latest Price: KSh XX.XX", "52-Week Range: ...", "P/E Ratio: ...", "any other relevant metrics found"],
@@ -288,15 +298,16 @@ Based on this real-time data and the investor's profile, provide a JSON response
   "reasons": ["Specific reason based on latest news", "Specific reason based on fundamentals", "Specific reason based on technicals"],
   "risks": ["Immediate risk 1", "Immediate risk 2", "Immediate risk 3"],
   "outlook": "A forward-looking paragraph on the 6-12 month expectation for this stock.",
-  "sources": ["List the specific news outlets or reports you found information from"]
+  "sources": ["List the specific news outlets or reports the search results came from"]
 }
 
-Return ONLY the JSON object. Do not include markdown code blocks.`;
+If the search results don't cover something, say so plainly rather than inventing figures. Return ONLY the JSON object. Do not include markdown code blocks.`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const text = await this.openRouter.chatCompletion({
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const jsonMatch = text.trim().match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
       return {
@@ -316,7 +327,7 @@ Return ONLY the JSON object. Do not include markdown code blocks.`;
         generatedAt: new Date().toISOString(),
       };
     } catch (err) {
-      this.logger.error(`Gemini AI advice error: ${(err as Error).message}`);
+      this.logger.error(`AI advice error: ${(err as Error).message}`);
       throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
     }
   }

@@ -34,6 +34,7 @@ model User {
   advisorConnections  AdvisorClient[]
   advisorQueries      AdvisorQuery[]
   tags                UserTag[]
+  flowEntries         FlowEntry[]
   // Lifecycle-email dedupe flags - each nullable timestamp is set the one
   // time its email fires so the daily lifecycle cron never resends it,
   // mirroring Subscription.expiryWarningSentAt below.
@@ -93,6 +94,10 @@ model Subscription {
   // flips to expired), same dedupe idiom as expiryWarningSentAt. Cleared
   // on reactivation so a future churn gets its own fresh win-back attempt.
   winbackSentAt       DateTime?
+  // Set once the "still not renewed" nudge fires (5 days after status
+  // flips to expired) - an earlier, distinct touchpoint from winbackSentAt
+  // at day 7, not a duplicate of it. Cleared on reactivation.
+  renewalNudgeSentAt  DateTime?
 }
 
 model LessonProgress {
@@ -503,4 +508,36 @@ model UserTag {
   tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([userId, tagId])
+}
+
+// One row per user per engagement flow, written the moment a user becomes
+// eligible for that flow (not just when the email happens to send) - this
+// is what makes the funnel visualization and campaign reporting possible.
+// Before this, entry was purely implicit: each cron re-derived "who
+// qualifies today" from date math and a sentAt flag, with no persisted
+// record of when someone actually entered a flow or what happened to them.
+//
+// `flow` values match the LifecycleFlow enum in lifecycle.service.ts:
+// day1-nurture | day7-nurture | day14-nurture | engaged-free-tagging |
+// corporate-expiry-warning | winback
+model FlowEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flow        String
+  enteredAt   DateTime  @default(now())
+  // Null while pending (queued for the next cron pass that acts on it);
+  // set the moment the flow's terminal action succeeds (email sent, tag
+  // applied). completedAt without outcome='sent' would be a contradiction -
+  // outcome is the source of truth, completedAt is just its timestamp.
+  completedAt DateTime?
+  outcome     String    @default("pending") // pending | sent | skipped | failed
+  // Flow-specific context for the funnel/reporting UI - e.g. which
+  // CorporateLicense id for corporate-expiry-warning, or the lesson count
+  // that triggered engaged-free-tagging. Optional, never required to
+  // interpret the row.
+  metadata    Json?
+
+  @@index([flow, enteredAt])
+  @@index([userId, flow])
 }

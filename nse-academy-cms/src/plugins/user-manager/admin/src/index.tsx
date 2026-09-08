@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail, ChartBubble, ChartCircle } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -125,6 +125,26 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/engagement`,
+      icon: ChartBubble,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.engagement`,
+        defaultMessage: 'Engagement Automation',
+      },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/campaign-reports`,
+      icon: ChartCircle,
+      intlLabel: {
+        id: `${PLUGIN_ID}.plugin.campaign-reports`,
+        defaultMessage: 'Campaign Reports',
+      },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
@@ -183,6 +203,16 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/compose-email`,
       Component: React.lazy(() => import('./pages/ComposeEmail').then((m) => ({ default: m.ComposeEmail }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/engagement`,
+      Component: React.lazy(() => import('./pages/EngagementDashboard').then((m) => ({ default: m.EngagementDashboard }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/campaign-reports`,
+      Component: React.lazy(() => import('./pages/CampaignReports').then((m) => ({ default: m.CampaignReports }))),
     });
 
     app.router.addRoute({

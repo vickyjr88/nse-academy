@@ -165,6 +165,7 @@ export class PaymentsService {
           currentPeriodEnd,
           expiryWarningSentAt: null,
           winbackSentAt: null,
+          renewalNudgeSentAt: null,
         },
       });
 
@@ -265,6 +266,7 @@ export class PaymentsService {
         currentPeriodEnd,
         expiryWarningSentAt: null,
         winbackSentAt: null,
+        renewalNudgeSentAt: null,
       },
     });
 

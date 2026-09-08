@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { LifecycleService } from './lifecycle.service';
 
 function makeService() {
@@ -7,6 +7,7 @@ function makeService() {
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
     },
     subscription: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -27,6 +28,11 @@ function makeService() {
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       count: jest.fn().mockResolvedValue(0),
+    },
+    flowEntry: {
+      create: jest.fn().mockResolvedValue({ id: 'fe1' }),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      update: jest.fn().mockResolvedValue({}),
     },
   };
   const brevo = { sendTransactional: jest.fn().mockResolvedValue(undefined) };
@@ -54,6 +60,34 @@ describe('LifecycleService cron jobs', () => {
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'u1' },
       data: { day1EmailSentAt: expect.any(Date) },
+    });
+  });
+
+  it('handleDay1Nurture writes a FlowEntry on entry and marks it sent on success', async () => {
+    const { service, prisma } = makeService();
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'u1', email: 'u1@test.com', name: 'Test User' },
+    ]);
+    await service.handleDay1Nurture();
+    expect(prisma.flowEntry.create).toHaveBeenCalledWith({
+      data: { userId: 'u1', flow: 'day1-nurture', metadata: undefined },
+    });
+    expect(prisma.flowEntry.update).toHaveBeenCalledWith({
+      where: { id: 'fe1' },
+      data: { outcome: 'sent', completedAt: expect.any(Date) },
+    });
+  });
+
+  it('handleDay1Nurture marks the FlowEntry failed when the send throws', async () => {
+    const { service, prisma } = makeService();
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'u1', email: 'u1@test.com', name: 'Test User' },
+    ]);
+    (prisma.user.update as jest.Mock).mockRejectedValueOnce(new Error('db down'));
+    await service.handleDay1Nurture();
+    expect(prisma.flowEntry.update).toHaveBeenCalledWith({
+      where: { id: 'fe1' },
+      data: { outcome: 'failed', completedAt: expect.any(Date) },
     });
   });
 
@@ -121,6 +155,57 @@ describe('LifecycleService cron jobs', () => {
       data: [{ userId: 'u1', tagId: 't1', addedBy: 'system:lesson-engagement' }],
       skipDuplicates: true,
     });
+    expect(prisma.flowEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: 'u1',
+          flow: 'engaged-free-tagging',
+          completedAt: expect.any(Date),
+          outcome: 'sent',
+          metadata: { completedLessons: 3 },
+        },
+      ],
+    });
+  });
+
+  it('handleRenewalNudge queries subscriptions in the 5-6 day expired window, distinct from the 7-8 day winback window', async () => {
+    const { service, prisma } = makeService();
+    await service.handleRenewalNudge();
+    const where = (prisma.subscription.findMany as jest.Mock).mock.calls[0][0].where;
+    expect(where.renewalNudgeSentAt).toBeNull();
+    const daysFromNow = (d: Date) => (d.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(daysFromNow(where.currentPeriodEnd.gte)).toBeCloseTo(-6, 0);
+    expect(daysFromNow(where.currentPeriodEnd.lt)).toBeCloseTo(-5, 0);
+  });
+});
+
+describe('LifecycleService manual trigger', () => {
+  it('rejects a flow that is not backfillable', async () => {
+    const { service } = makeService();
+    await expect(service.previewManualTrigger('winback')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.triggerManually('engaged-free-tagging')).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('previewManualTrigger counts eligible users without sending anything', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.user.count as jest.Mock).mockResolvedValueOnce(42);
+    const result = await service.previewManualTrigger('day1-nurture');
+    expect(result).toEqual({ count: 42 });
+    expect(brevo.sendTransactional).not.toHaveBeenCalled();
+  });
+
+  it('triggerManually for day14-nurture ignores signup date and reaches every eligible user', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'old-user', email: 'old@test.com', name: 'Old User' },
+    ]);
+    const result = await service.triggerManually('day14-nurture');
+    // No createdAt filter should appear in the where clause at all - this
+    // is the whole point of the manual trigger versus the daily cron.
+    const where = (prisma.user.findMany as jest.Mock).mock.calls[0][0].where;
+    expect(where.createdAt).toBeUndefined();
+    expect(brevo.sendTransactional).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ sent: 1, failed: 0 });
   });
 });
 

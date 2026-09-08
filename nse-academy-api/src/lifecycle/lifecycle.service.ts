@@ -1,9 +1,26 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+
+/**
+ * Every engagement flow a user can move through. Kept as a single source
+ * of truth so FlowEntry.flow values, the funnel/reporting queries, and the
+ * architecture diagram all agree on the same six names.
+ */
+export const LIFECYCLE_FLOWS = [
+  'day1-nurture',
+  'day7-nurture',
+  'day14-nurture',
+  'engaged-free-tagging',
+  'corporate-expiry-warning',
+  'renewal-nudge',
+  'winback',
+] as const;
+export type LifecycleFlow = (typeof LIFECYCLE_FLOWS)[number];
 
 /**
  * New-user and win-back lifecycle emails, plus the Tag/UserTag segmentation
@@ -61,29 +78,7 @@ export class LifecycleService {
   @Cron('0 8 * * *')
   async handleDay1Nurture() {
     const { start, end } = this.dayRange(1);
-    const users = await this.prisma.user.findMany({
-      where: {
-        ...this.freeTierWhere(),
-        createdAt: { gte: start, lt: end },
-        day1EmailSentAt: null,
-      },
-      select: { id: true, email: true, name: true },
-    });
-
-    if (users.length === 0) return;
-    this.logger.log(`Sending Day 1 nurture email to ${users.length} user(s)`);
-
-    for (const user of users) {
-      try {
-        await this.sendDay1Email(user.email, user.name);
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { day1EmailSentAt: new Date() },
-        });
-      } catch (err) {
-        this.logger.error(`Day 1 nurture failed for user ${user.id}: ${(err as Error).message}`);
-      }
-    }
+    await this.runDay1Nurture({ createdAt: { gte: start, lt: end } });
   }
 
   /**
@@ -94,30 +89,7 @@ export class LifecycleService {
   @Cron('0 8 * * *')
   async handleDay7Nurture() {
     const { start, end } = this.dayRange(7);
-    const users = await this.prisma.user.findMany({
-      where: {
-        ...this.freeTierWhere(),
-        createdAt: { gte: start, lt: end },
-        day7EmailSentAt: null,
-        progress: { none: { completed: true } },
-      },
-      select: { id: true, email: true, name: true },
-    });
-
-    if (users.length === 0) return;
-    this.logger.log(`Sending Day 7 nurture email to ${users.length} user(s)`);
-
-    for (const user of users) {
-      try {
-        await this.sendDay7Email(user.email, user.name);
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { day7EmailSentAt: new Date() },
-        });
-      } catch (err) {
-        this.logger.error(`Day 7 nurture failed for user ${user.id}: ${(err as Error).message}`);
-      }
-    }
+    await this.runDay7Nurture({ createdAt: { gte: start, lt: end } });
   }
 
   /**
@@ -129,29 +101,73 @@ export class LifecycleService {
   @Cron('0 8 * * *')
   async handleDay14Nurture() {
     const { start, end } = this.dayRange(14);
+    await this.runDay14Nurture({ createdAt: { gte: start, lt: end } });
+  }
+
+  // -----------------------------------------------------------------------
+  // Shared eligibility + send logic for the three signup-nurture flows.
+  // Each cron above calls its run* method with a "createdAt on exactly this
+  // day" filter; the manual-trigger admin endpoint (see
+  // LifecycleController.trigger) calls the same run* method with no date
+  // filter at all, so it reaches every eligible existing user regardless of
+  // when they signed up - the one thing the daily crons structurally can't
+  // do, since they only ever look at "today's" cohort.
+  // -----------------------------------------------------------------------
+
+  private async runDay1Nurture(extraWhere: Record<string, unknown> = {}) {
+    const users = await this.prisma.user.findMany({
+      where: { ...this.freeTierWhere(), ...extraWhere, day1EmailSentAt: null },
+      select: { id: true, email: true, name: true },
+    });
+    return this.sendNurtureBatch(users, 'day1-nurture', 'day1EmailSentAt', (u) => this.sendDay1Email(u.email, u.name));
+  }
+
+  private async runDay7Nurture(extraWhere: Record<string, unknown> = {}) {
     const users = await this.prisma.user.findMany({
       where: {
         ...this.freeTierWhere(),
-        createdAt: { gte: start, lt: end },
-        day14EmailSentAt: null,
+        ...extraWhere,
+        day7EmailSentAt: null,
+        progress: { none: { completed: true } },
       },
       select: { id: true, email: true, name: true },
     });
+    return this.sendNurtureBatch(users, 'day7-nurture', 'day7EmailSentAt', (u) => this.sendDay7Email(u.email, u.name));
+  }
 
-    if (users.length === 0) return;
-    this.logger.log(`Sending Day 14 nurture email to ${users.length} user(s)`);
+  private async runDay14Nurture(extraWhere: Record<string, unknown> = {}) {
+    const users = await this.prisma.user.findMany({
+      where: { ...this.freeTierWhere(), ...extraWhere, day14EmailSentAt: null },
+      select: { id: true, email: true, name: true },
+    });
+    return this.sendNurtureBatch(users, 'day14-nurture', 'day14EmailSentAt', (u) => this.sendDay14Email(u.email, u.name));
+  }
 
+  private async sendNurtureBatch(
+    users: { id: string; email: string; name: string }[],
+    flow: LifecycleFlow,
+    sentAtField: 'day1EmailSentAt' | 'day7EmailSentAt' | 'day14EmailSentAt',
+    send: (user: { id: string; email: string; name: string }) => Promise<void>,
+  ): Promise<{ sent: number; failed: number }> {
+    if (users.length === 0) return { sent: 0, failed: 0 };
+    this.logger.log(`Running ${flow} for ${users.length} user(s)`);
+
+    let sent = 0;
+    let failed = 0;
     for (const user of users) {
+      const entryId = await this.enterFlow(user.id, flow);
       try {
-        await this.sendDay14Email(user.email, user.name);
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { day14EmailSentAt: new Date() },
-        });
+        await send(user);
+        await this.prisma.user.update({ where: { id: user.id }, data: { [sentAtField]: new Date() } });
+        await this.completeFlow(entryId, 'sent');
+        sent++;
       } catch (err) {
-        this.logger.error(`Day 14 nurture failed for user ${user.id}: ${(err as Error).message}`);
+        this.logger.error(`${flow} failed for user ${user.id}: ${(err as Error).message}`);
+        await this.completeFlow(entryId, 'failed');
+        failed++;
       }
     }
+    return { sent, failed };
   }
 
   /**
@@ -188,6 +204,19 @@ export class LifecycleService {
       data: toTag.map((u) => ({ userId: u.id, tagId: tag.id, addedBy: 'system:lesson-engagement' })),
       skipDuplicates: true,
     });
+    // Bulk-written as already-complete rows (rather than enterFlow +
+    // completeFlow) since tagging is a single atomic step with no
+    // send-that-can-fail in between - there's no meaningful "pending" state
+    // to represent here, unlike the email flows above.
+    await this.prisma.flowEntry.createMany({
+      data: toTag.map((u) => ({
+        userId: u.id,
+        flow: 'engaged-free-tagging' as LifecycleFlow,
+        completedAt: new Date(),
+        outcome: 'sent',
+        metadata: { completedLessons: u._count.progress },
+      })),
+    });
   }
 
   /**
@@ -212,19 +241,61 @@ export class LifecycleService {
     this.logger.log(`Sending corporate expiring-soon warning for ${expiringSoon.length} license(s)`);
 
     for (const license of expiringSoon) {
+      const admin = await this.prisma.user.findUnique({ where: { id: license.org.adminUserId } });
+      if (!admin) {
+        this.logger.warn(`Corporate license ${license.id} has no resolvable admin user - skipping`);
+        continue;
+      }
+      const entryId = await this.enterFlow(admin.id, 'corporate-expiry-warning', { licenseId: license.id, orgId: license.orgId });
       try {
-        const admin = await this.prisma.user.findUnique({ where: { id: license.org.adminUserId } });
-        if (!admin) {
-          this.logger.warn(`Corporate license ${license.id} has no resolvable admin user - skipping`);
-          continue;
-        }
         await this.sendCorporateExpiringSoonEmail(admin.email, admin.name, license.org.name, license.seats, license.currentPeriodEnd);
         await this.prisma.corporateLicense.update({
           where: { id: license.id },
           data: { expiryWarningSentAt: new Date() },
         });
+        await this.completeFlow(entryId, 'sent');
       } catch (err) {
         this.logger.error(`Corporate expiring-soon email failed for license ${license.id}: ${(err as Error).message}`);
+        await this.completeFlow(entryId, 'failed');
+      }
+    }
+  }
+
+  /**
+   * 5 days after a personal subscription lapses to free with no renewal -
+   * an earlier, distinct touchpoint from the 7-day win-back below, not a
+   * duplicate of it. Same window-based approximation as handleWinback since
+   * Subscription has no updatedAt to check the exact downgrade moment against.
+   */
+  @Cron('0 10 * * *')
+  async handleRenewalNudge() {
+    const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+    const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    const candidates = await this.prisma.subscription.findMany({
+      where: {
+        tier: 'free',
+        status: 'cancelled',
+        currentPeriodEnd: { gte: sixDaysAgo, lt: fiveDaysAgo },
+        renewalNudgeSentAt: null,
+      },
+      include: { user: { select: { id: true, email: true, name: true } } },
+    });
+
+    if (candidates.length === 0) return;
+    this.logger.log(`Sending renewal-nudge email to ${candidates.length} lapsed subscriber(s)`);
+
+    for (const sub of candidates) {
+      const entryId = await this.enterFlow(sub.userId, 'renewal-nudge');
+      try {
+        await this.sendRenewalNudgeEmail(sub.user.email, sub.user.name);
+        await this.prisma.subscription.update({
+          where: { userId: sub.userId },
+          data: { renewalNudgeSentAt: new Date() },
+        });
+        await this.completeFlow(entryId, 'sent');
+      } catch (err) {
+        this.logger.error(`Renewal-nudge email failed for user ${sub.userId}: ${(err as Error).message}`);
+        await this.completeFlow(entryId, 'failed');
       }
     }
   }
@@ -257,14 +328,17 @@ export class LifecycleService {
     this.logger.log(`Sending win-back email to ${candidates.length} lapsed subscriber(s)`);
 
     for (const sub of candidates) {
+      const entryId = await this.enterFlow(sub.userId, 'winback');
       try {
         await this.sendWinbackEmail(sub.user.email, sub.user.name);
         await this.prisma.subscription.update({
           where: { userId: sub.userId },
           data: { winbackSentAt: new Date() },
         });
+        await this.completeFlow(entryId, 'sent');
       } catch (err) {
         this.logger.error(`Win-back email failed for user ${sub.userId}: ${(err as Error).message}`);
+        await this.completeFlow(entryId, 'failed');
       }
     }
   }
@@ -276,6 +350,29 @@ export class LifecycleService {
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
     return { start, end };
+  }
+
+  // -----------------------------------------------------------------------
+  // FlowEntry bookkeeping - every cron below calls enterFlow the moment a
+  // user becomes eligible (before attempting the send), then completeFlow
+  // once the outcome is known. Two calls rather than one create-with-result
+  // because "entered but not yet resolved" is itself a real, visible state
+  // in the funnel (a user queued for today's run, mid-cron-execution) - not
+  // just an implementation detail to hide.
+  // -----------------------------------------------------------------------
+
+  private async enterFlow(userId: string, flow: LifecycleFlow, metadata?: Record<string, unknown>): Promise<string> {
+    const entry = await this.prisma.flowEntry.create({
+      data: { userId, flow, metadata: (metadata ?? undefined) as Prisma.InputJsonValue | undefined },
+    });
+    return entry.id;
+  }
+
+  private async completeFlow(entryId: string, outcome: 'sent' | 'skipped' | 'failed'): Promise<void> {
+    await this.prisma.flowEntry.update({
+      where: { id: entryId },
+      data: { outcome, completedAt: new Date() },
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -337,6 +434,62 @@ export class LifecycleService {
   async getTagAudiencePreview(tagId: string) {
     const count = await this.prisma.userTag.count({ where: { tagId } });
     return { count };
+  }
+
+  // ---------------------------------------------------------------------
+  // Manual trigger - backfills existing users into a signup-nurture flow
+  // right now, ignoring the exact-day-of-signup filter the daily cron uses.
+  // Without this, a user who signed up before this system existed (or on
+  // any day other than "exactly N days ago" at the moment the cron ran)
+  // would never enter these flows at all - the crons alone can only ever
+  // catch today's cohort going forward.
+  // ---------------------------------------------------------------------
+
+  private readonly TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture'] as const;
+
+  private assertTriggerable(flow: string): asserts flow is (typeof this.TRIGGERABLE_FLOWS)[number] {
+    if (!this.TRIGGERABLE_FLOWS.includes(flow as never)) {
+      throw new BadRequestException(
+        `"${flow}" cannot be manually triggered - only ${this.TRIGGERABLE_FLOWS.join(', ')} support backfilling existing users. The other flows (tagging, expiry warnings, winback) are already date/state-driven and re-check the whole user base on every cron run.`,
+      );
+    }
+  }
+
+  /**
+   * Preview-only count of how many existing users would receive this flow
+   * right now if triggered - mirrors BroadcastService.getAudiencePreview's
+   * "show the number before you commit to sending" pattern.
+   */
+  async previewManualTrigger(flow: string): Promise<{ count: number }> {
+    this.assertTriggerable(flow);
+    if (flow === 'day1-nurture') {
+      const count = await this.prisma.user.count({ where: { ...this.freeTierWhere(), day1EmailSentAt: null } });
+      return { count };
+    }
+    if (flow === 'day7-nurture') {
+      const count = await this.prisma.user.count({
+        where: { ...this.freeTierWhere(), day7EmailSentAt: null, progress: { none: { completed: true } } },
+      });
+      return { count };
+    }
+    const count = await this.prisma.user.count({ where: { ...this.freeTierWhere(), day14EmailSentAt: null } });
+    return { count };
+  }
+
+  /**
+   * Actually sends the flow's email to every currently-eligible user,
+   * regardless of signup date. Reuses the exact same eligibility query and
+   * send/dedupe logic as the daily cron (runDay1Nurture etc, with no date
+   * filter) so a manually-triggered send behaves identically to what the
+   * cron would eventually do on its own - this is a "run it now instead of
+   * waiting," not a separate code path with its own rules.
+   */
+  async triggerManually(flow: string): Promise<{ sent: number; failed: number }> {
+    this.assertTriggerable(flow);
+    this.logger.log(`Manually triggering ${flow} for all eligible existing users`);
+    if (flow === 'day1-nurture') return this.runDay1Nurture();
+    if (flow === 'day7-nurture') return this.runDay7Nurture();
+    return this.runDay14Nurture();
   }
 
   // ---------------------------------------------------------------------
@@ -476,6 +629,39 @@ export class LifecycleService {
       });
     } catch (err) {
       this.logger.error(`Failed to send corporate expiring-soon email to ${email}: ${(err as Error).message}`);
+    }
+  }
+
+  private async sendRenewalNudgeEmail(email: string, name: string): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const pricingUrl = `${this.webUrl()}/pricing`;
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: 'Your subscription lapsed - still want it back?',
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Not Renewed Yet',
+          heading: `Your plan moved to free 5 days ago, ${firstName}`,
+          bodyHtml: [
+            "No renewal yet, so this is a quick check-in rather than a full win-back pitch - your account and data are exactly as you left them.",
+            'Renewing takes under a minute if you\'re ready: KSh 300/month for Intermediary, KSh 500/month for Premium, either way cancel anytime.',
+          ],
+          button: { label: 'Renew now', url: pricingUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Your plan moved to free 5 days ago, ${firstName}`,
+          bodyText: [
+            'No renewal yet, so this is a quick check-in rather than a full win-back pitch - your account and data are exactly as you left them.',
+            "Renewing takes under a minute if you're ready: KSh 300/month for Intermediary, KSh 500/month for Premium, either way cancel anytime.",
+          ],
+          button: { label: 'Renew now', url: pricingUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['subscription-renewal-nudge'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send renewal-nudge email to ${email}: ${(err as Error).message}`);
     }
   }
 

@@ -32,10 +32,18 @@ interface Campaign {
   createdAt: string;
 }
 
+interface TagOption {
+  id: string;
+  name: string;
+  memberCount: number;
+}
+
 export function ComposeEmail() {
   const [subject, setSubject] = useState('');
   const [htmlContent, setHtmlContent] = useState('');
   const [tier, setTier] = useState<Tier>('');
+  const [tagId, setTagId] = useState<string>('');
+  const [tags, setTags] = useState<TagOption[]>([]);
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
   const [audienceLoading, setAudienceLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -66,8 +74,21 @@ export function ComposeEmail() {
     }
   }
 
+  async function fetchTags() {
+    try {
+      const res = await fetch(`${NSE_API_URL}/admin/tags`, {
+        headers: { 'x-admin-key': NSE_ADMIN_KEY },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setTags(await res.json());
+    } catch {
+      setTags([]);
+    }
+  }
+
   useEffect(() => {
     fetchCampaigns();
+    fetchTags();
   }, []);
 
   useEffect(() => {
@@ -76,6 +97,7 @@ export function ComposeEmail() {
       try {
         const params = new URLSearchParams();
         if (tier) params.append('tier', tier);
+        if (tagId) params.append('tagId', tagId);
         const res = await fetch(`${NSE_API_URL}/admin/broadcast/audience?${params.toString()}`, {
           headers: { 'x-admin-key': NSE_ADMIN_KEY },
         });
@@ -89,14 +111,14 @@ export function ComposeEmail() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [tier]);
+  }, [tier, tagId]);
 
   // Any change to the message invalidates a previous confirmation, so a
   // stale checkbox can't carry over into an edited message.
   useEffect(() => {
     setConfirmed(false);
     setSuccess(null);
-  }, [subject, htmlContent, tier]);
+  }, [subject, htmlContent, tier, tagId]);
 
   const canSend =
     subject.trim().length > 0 &&
@@ -112,7 +134,7 @@ export function ComposeEmail() {
       const res = await fetch(`${NSE_API_URL}/admin/broadcast/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': NSE_ADMIN_KEY },
-        body: JSON.stringify({ subject, htmlContent, tier: tier || undefined }),
+        body: JSON.stringify({ subject, htmlContent, tier: tier || undefined, tagId: tagId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
@@ -192,19 +214,38 @@ export function ComposeEmail() {
           style={{ minHeight: '260px', fontFamily: 'monospace' }}
         />
 
-        <Box style={{ width: '260px' }}>
-          <SingleSelect
-            label="Audience"
-            placeholder="All users"
-            value={tier}
-            onChange={(v: string) => setTier(v as Tier)}
-            onClear={() => setTier('')}
-          >
-            <SingleSelectOption value="free">Free tier only</SingleSelectOption>
-            <SingleSelectOption value="intermediary">Intermediary tier only</SingleSelectOption>
-            <SingleSelectOption value="premium">Premium tier only</SingleSelectOption>
-          </SingleSelect>
-        </Box>
+        <Flex gap={4}>
+          <Box style={{ width: '260px' }}>
+            <SingleSelect
+              label="Audience"
+              placeholder="All users"
+              value={tier}
+              onChange={(v: string) => setTier(v as Tier)}
+              onClear={() => setTier('')}
+            >
+              <SingleSelectOption value="free">Free tier only</SingleSelectOption>
+              <SingleSelectOption value="intermediary">Intermediary tier only</SingleSelectOption>
+              <SingleSelectOption value="premium">Premium tier only</SingleSelectOption>
+            </SingleSelect>
+          </Box>
+
+          <Box style={{ width: '260px' }}>
+            <SingleSelect
+              label="AND has tag"
+              placeholder="Any tag"
+              value={tagId}
+              onChange={(v: string) => setTagId(v)}
+              onClear={() => setTagId('')}
+              disabled={tags.length === 0}
+            >
+              {tags.map((t) => (
+                <SingleSelectOption key={t.id} value={t.id}>
+                  {t.name} ({t.memberCount})
+                </SingleSelectOption>
+              ))}
+            </SingleSelect>
+          </Box>
+        </Flex>
 
         <Typography variant="pi" textColor="neutral600">
           {audienceLoading

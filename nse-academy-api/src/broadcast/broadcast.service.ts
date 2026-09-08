@@ -19,28 +19,41 @@ export class BroadcastService {
     private readonly config: ConfigService,
   ) {}
 
-  private audienceWhere(tier?: Tier) {
-    if (!tier) return {};
-    if (tier === 'free') {
-      // A user with no Subscription row at all is free tier by definition
-      // (see deriveEffectiveTier) - without this, "free" would only match
-      // users who happen to have an explicit tier='free' row, missing most
-      // of the actual free-tier user base.
-      return { OR: [{ subscription: null }, { subscription: { tier: 'free' } }] };
+  private audienceWhere(tier?: Tier, tagId?: string) {
+    const clauses: Record<string, unknown>[] = [];
+    if (tier) {
+      if (tier === 'free') {
+        // A user with no Subscription row at all is free tier by definition
+        // (see deriveEffectiveTier) - without this, "free" would only match
+        // users who happen to have an explicit tier='free' row, missing most
+        // of the actual free-tier user base.
+        clauses.push({ OR: [{ subscription: null }, { subscription: { tier: 'free' } }] });
+      } else {
+        clauses.push({ subscription: { tier } });
+      }
     }
-    return { subscription: { tier } };
+    // Tag is an additive AND filter on top of tier, not a replacement for
+    // it - e.g. "free tier AND tagged engaged-free" narrows the tier
+    // audience further rather than picking one or the other.
+    if (tagId) {
+      clauses.push({ tags: { some: { tagId } } });
+    }
+    if (clauses.length === 0) return {};
+    if (clauses.length === 1) return clauses[0];
+    return { AND: clauses };
   }
 
-  async getAudiencePreview(tier?: Tier): Promise<{ count: number }> {
-    const count = await this.prisma.user.count({ where: this.audienceWhere(tier) });
+  async getAudiencePreview(tier?: Tier, tagId?: string): Promise<{ count: number }> {
+    const count = await this.prisma.user.count({ where: this.audienceWhere(tier, tagId) });
     return { count };
   }
 
   private async syncAudienceToBrevo(
     tier: Tier | undefined,
+    tagId: string | undefined,
     listId: number,
   ): Promise<{ synced: number; failedEmails: string[] }> {
-    const where = this.audienceWhere(tier);
+    const where = this.audienceWhere(tier, tagId);
     let skip = 0;
     let synced = 0;
     const failedEmails: string[] = [];
@@ -94,7 +107,7 @@ export class BroadcastService {
       );
     }
 
-    const { synced: audienceCount, failedEmails } = await this.syncAudienceToBrevo(dto.tier, listId);
+    const { synced: audienceCount, failedEmails } = await this.syncAudienceToBrevo(dto.tier, dto.tagId, listId);
     if (audienceCount === 0) {
       throw new BadRequestException(
         failedEmails.length > 0

@@ -14,8 +14,12 @@ export class BroadcastController {
   @Get('audience')
   @ApiOperation({ summary: 'Preview how many users a broadcast would reach' })
   @ApiQuery({ name: 'tier', required: false, enum: ['free', 'intermediary', 'premium'] })
-  getAudience(@Query('tier') tier?: 'free' | 'intermediary' | 'premium') {
-    return this.broadcast.getAudiencePreview(tier);
+  @ApiQuery({ name: 'tagId', required: false, description: 'Restrict to users with this tag, combined with tier as an AND filter' })
+  getAudience(
+    @Query('tier') tier?: 'free' | 'intermediary' | 'premium',
+    @Query('tagId') tagId?: string,
+  ) {
+    return this.broadcast.getAudiencePreview(tier, tagId);
   }
 
   @Post('send')

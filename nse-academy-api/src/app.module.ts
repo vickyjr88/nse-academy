@@ -25,6 +25,7 @@ import { JournalModule } from './journal/journal.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
+import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -60,6 +61,7 @@ import { AppService } from './app.service';
     BrokersModule,
     AlertsModule,
     BroadcastModule,
+    LifecycleModule,
   ],
   controllers: [AppController],
   providers: [

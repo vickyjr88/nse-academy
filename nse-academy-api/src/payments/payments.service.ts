@@ -164,6 +164,7 @@ export class PaymentsService {
           status: 'active',
           currentPeriodEnd,
           expiryWarningSentAt: null,
+          winbackSentAt: null,
         },
       });
 
@@ -263,6 +264,7 @@ export class PaymentsService {
         paystackSubId: reference,
         currentPeriodEnd,
         expiryWarningSentAt: null,
+        winbackSentAt: null,
       },
     });
 

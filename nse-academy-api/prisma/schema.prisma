@@ -33,6 +33,13 @@ model User {
   advisorProfile      AdvisorProfile?
   advisorConnections  AdvisorClient[]
   advisorQueries      AdvisorQuery[]
+  tags                UserTag[]
+  // Lifecycle-email dedupe flags - each nullable timestamp is set the one
+  // time its email fires so the daily lifecycle cron never resends it,
+  // mirroring Subscription.expiryWarningSentAt below.
+  day1EmailSentAt     DateTime?
+  day7EmailSentAt     DateTime?
+  day14EmailSentAt    DateTime?
 }
 
 model EbookPurchase {
@@ -82,6 +89,10 @@ model Subscription {
   // currentPeriodEnd moves forward (renewal), so a later expiry gets its
   // own fresh warning.
   expiryWarningSentAt DateTime?
+  // Set once the post-expiry win-back email fires (7 days after status
+  // flips to expired), same dedupe idiom as expiryWarningSentAt. Cleared
+  // on reactivation so a future churn gets its own fresh win-back attempt.
+  winbackSentAt       DateTime?
 }
 
 model LessonProgress {
@@ -134,6 +145,10 @@ model CorporateLicense {
   amountKes         Int
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+  // Same dedupe idiom as Subscription.expiryWarningSentAt - the existing
+  // subscription-expiry cron never covered corporate licenses, so this had
+  // no reminder at all before the lifecycle module added one.
+  expiryWarningSentAt DateTime?
 }
 
 model OrgMember {
@@ -462,4 +477,30 @@ model BroadcastCampaign {
   audienceCount  Int
   failedCount    Int       @default(0)
   createdAt      DateTime  @default(now())
+}
+
+// A named marketing segment (e.g. "engaged-free", "high-value-trader").
+// Real Postgres rows rather than Brevo contact attributes, so cron jobs and
+// the admin broadcast tool can query "who has tag X" without a Brevo API
+// round-trip - Brevo stays the delivery layer, this stays the system of
+// record, same division of responsibility as Subscription.tier already has.
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  users     UserTag[]
+}
+
+model UserTag {
+  userId  String
+  tagId   String
+  addedAt DateTime @default(now())
+  // Who/what applied this tag, e.g. "system:lesson-engagement" or
+  // "admin:manual" - lets the admin UI distinguish automated tags from
+  // ones a human applied by hand.
+  addedBy String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tagId])
 }

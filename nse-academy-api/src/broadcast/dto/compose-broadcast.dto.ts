@@ -20,4 +20,12 @@ export class ComposeBroadcastDto {
   @IsOptional()
   @IsIn(['free', 'intermediary', 'premium'])
   tier?: 'free' | 'intermediary' | 'premium';
+
+  @ApiPropertyOptional({
+    example: 'clx1a2b3c4d5e6f7g8h9',
+    description: 'Restrict the send to users with this tag (see /admin/tags). Combines with tier as an AND filter, not a replacement for it.',
+  })
+  @IsOptional()
+  @IsString()
+  tagId?: string;
 }

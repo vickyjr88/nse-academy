@@ -54,6 +54,10 @@ flowchart TD
     WBSend -.-> FE
     CESend -.-> FE
 
+    Brevo[Brevo mail server] -.opened/click webhook.-> WH["POST /webhooks/brevo?key=...<br/>BrevoWebhookController"]
+    WH --> WHService[BrevoWebhookService<br/>maps Brevo tag -> flow,<br/>matches most recent sent FlowEntry]
+    WHService -.stamps openedAt/clickedAt.-> FE
+
     FE --> Analytics[AnalyticsService<br/>funnel + flow-health queries]
     Analytics --> Dashboard[Strapi CMS:<br/>Engagement Automation page]
 ```
@@ -94,6 +98,35 @@ eligible right now regardless of signup date — the one gap a purely
 date-driven cron can't close on its own, needed both for backfilling users
 who existed before this system shipped and for re-running a flow on demand
 without waiting for the next scheduled window.
+
+## Click/open tracking
+
+Every send passes a `tags: [...]` array to Brevo (e.g. `['lifecycle-day14']`)
+purely for Brevo's own dashboard analytics - `BREVO_TAG_TO_FLOW` in
+`brevo-webhook.service.ts` is the one place that reconciles those tag
+strings back to `FlowEntry.flow` values, since the two vocabularies were
+never meant to be identical. When a webhook event arrives:
+
+1. Match the event's `email` to a `User` row.
+2. Map the event's `tags` to a `LifecycleFlow` via `BREVO_TAG_TO_FLOW`.
+3. Find that user's most recent `FlowEntry` for that flow with
+   `outcome: 'sent'` (there is always at most one live one, given the
+   `sentAt` dedupe on the owning row).
+4. Stamp `openedAt` (on an `opened` event) or `openedAt`+`clickedAt`+
+   `clickedUrl` (on a `click` event - a click implies an open even if the
+   separate open-pixel event was lost, a known quirk of some mail clients).
+
+**Setup step required outside this codebase**: Brevo doesn't push these
+events anywhere until a webhook is configured in the Brevo dashboard
+(Transactional → Settings → Webhooks), pointed at
+`https://<api-host>/webhooks/brevo?key=<BREVO_WEBHOOK_SECRET>` for the
+`opened` and `click` event types. This is a manual one-time step - there is
+no Brevo API call in this codebase that registers a webhook automatically.
+
+Not every transactional email is flow-tracked - `subscription-confirmed`,
+`subscription-expiring-soon`, and every non-lifecycle tag (referrals,
+corporate invites, ebook delivery) have no `FlowEntry` equivalent, so a
+click on those is currently just ignored rather than recorded anywhere.
 
 ## Table of flows
 

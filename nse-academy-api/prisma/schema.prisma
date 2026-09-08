@@ -537,6 +537,16 @@ model FlowEntry {
   // that triggered engaged-free-tagging. Optional, never required to
   // interpret the row.
   metadata    Json?
+  // Set from the Brevo transactional-webhook listener (see BrevoWebhookService)
+  // when the corresponding "opened"/"click" event arrives for this send's
+  // tag. Null forever for a row nobody engaged with - that's a real, visible
+  // funnel outcome (sent but ignored), not missing data.
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  // The specific link clicked, when Brevo's click event includes one -
+  // lets the dashboard show which CTA in a multi-link email actually got
+  // clicked, not just that something in it did.
+  clickedUrl  String?
 
   @@index([flow, enteredAt])
   @@index([userId, flow])

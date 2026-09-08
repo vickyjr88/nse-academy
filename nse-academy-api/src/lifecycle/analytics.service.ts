@@ -9,6 +9,8 @@ export interface FlowSummary {
   failed: number;
   pending: number;
   skipped: number;
+  opened: number;
+  clicked: number;
 }
 
 export interface FunnelStageCount {
@@ -42,15 +44,18 @@ export class AnalyticsService {
    */
   async getFlowSummaries(since?: Date): Promise<FlowSummary[]> {
     const where = since ? { enteredAt: { gte: since } } : {};
-    const grouped = await this.prisma.flowEntry.groupBy({
-      by: ['flow', 'outcome'],
-      where,
-      _count: { _all: true },
-    });
+    const [grouped, openedGrouped, clickedGrouped] = await Promise.all([
+      this.prisma.flowEntry.groupBy({ by: ['flow', 'outcome'], where, _count: { _all: true } }),
+      // opened/clicked are independent timestamps on top of a 'sent' row,
+      // not their own outcome value, so they need their own grouped counts
+      // rather than falling out of the outcome breakdown above.
+      this.prisma.flowEntry.groupBy({ by: ['flow'], where: { ...where, openedAt: { not: null } }, _count: { _all: true } }),
+      this.prisma.flowEntry.groupBy({ by: ['flow'], where: { ...where, clickedAt: { not: null } }, _count: { _all: true } }),
+    ]);
 
     const summaries = new Map<LifecycleFlow, FlowSummary>();
     for (const flow of LIFECYCLE_FLOWS) {
-      summaries.set(flow, { flow, entered: 0, sent: 0, failed: 0, pending: 0, skipped: 0 });
+      summaries.set(flow, { flow, entered: 0, sent: 0, failed: 0, pending: 0, skipped: 0, opened: 0, clicked: 0 });
     }
     for (const row of grouped) {
       const flow = row.flow as LifecycleFlow;
@@ -62,6 +67,14 @@ export class AnalyticsService {
       else if (row.outcome === 'failed') summary.failed += count;
       else if (row.outcome === 'pending') summary.pending += count;
       else if (row.outcome === 'skipped') summary.skipped += count;
+    }
+    for (const row of openedGrouped) {
+      const summary = summaries.get(row.flow as LifecycleFlow);
+      if (summary) summary.opened = row._count._all;
+    }
+    for (const row of clickedGrouped) {
+      const summary = summaries.get(row.flow as LifecycleFlow);
+      if (summary) summary.clicked = row._count._all;
     }
     return Array.from(summaries.values());
   }
@@ -75,11 +88,16 @@ export class AnalyticsService {
    * the sentAt dedupe, but the query doesn't assume it) isn't double-counted.
    */
   async getSignupFunnel(): Promise<FunnelStageCount[]> {
-    const [totalUsers, day1, day7, day14, engaged, paid] = await Promise.all([
+    const [totalUsers, day1, day7, day14, day14Clicked, engaged, paid] = await Promise.all([
       this.prisma.user.count(),
       this.countDistinctUsersSent('day1-nurture'),
       this.countDistinctUsersSent('day7-nurture'),
       this.countDistinctUsersSent('day14-nurture'),
+      // Broken out separately from "sent" since this is the pitch email -
+      // the gap between "sent" and "clicked" here is the most actionable
+      // number in the whole funnel: people who got the direct Intermediary
+      // ask and did nothing with it.
+      this.countDistinctUsersSent('day14-nurture', { clickedAt: { not: null } }),
       this.countDistinctUsersSent('engaged-free-tagging'),
       this.prisma.subscription.count({ where: { tier: { in: ['intermediary', 'premium'] }, status: 'active' } }),
     ]);
@@ -89,14 +107,18 @@ export class AnalyticsService {
       { stage: 'Day 1 email sent', count: day1 },
       { stage: 'Day 7 email sent', count: day7 },
       { stage: 'Day 14 pitch sent', count: day14 },
+      { stage: 'Day 14 pitch clicked', count: day14Clicked },
       { stage: 'Tagged engaged-free', count: engaged },
       { stage: 'Converted to paid', count: paid },
     ];
   }
 
-  private async countDistinctUsersSent(flow: LifecycleFlow): Promise<number> {
+  private async countDistinctUsersSent(
+    flow: LifecycleFlow,
+    extraWhere: Record<string, unknown> = {},
+  ): Promise<number> {
     const rows = await this.prisma.flowEntry.findMany({
-      where: { flow, outcome: 'sent' },
+      where: { flow, outcome: 'sent', ...extraWhere },
       distinct: ['userId'],
       select: { userId: true },
     });

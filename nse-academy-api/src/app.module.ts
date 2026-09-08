@@ -26,6 +26,7 @@ import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
+import { BrevoWebhookModule } from './brevo-webhook/brevo-webhook.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -62,6 +63,7 @@ import { AppService } from './app.service';
     AlertsModule,
     BroadcastModule,
     LifecycleModule,
+    BrevoWebhookModule,
   ],
   controllers: [AppController],
   providers: [

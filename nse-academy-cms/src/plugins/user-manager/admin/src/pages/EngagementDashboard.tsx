@@ -36,6 +36,8 @@ interface FlowSummary {
   failed: number;
   pending: number;
   skipped: number;
+  opened: number;
+  clicked: number;
 }
 
 interface FunnelStage {
@@ -265,12 +267,14 @@ export function EngagementDashboard() {
       <Box background="neutral0" padding={5} shadow="filterShadow" hasRadius marginBottom={6}>
         <Typography variant="delta">Flow Health (All-Time)</Typography>
         <Box paddingTop={4}>
-          <Table colCount={6} rowCount={(flowSummaries ?? []).length}>
+          <Table colCount={8} rowCount={(flowSummaries ?? []).length}>
             <Thead>
               <Tr>
                 <Th><Typography variant="sigma">Flow</Typography></Th>
                 <Th><Typography variant="sigma">Entered</Typography></Th>
                 <Th><Typography variant="sigma">Sent</Typography></Th>
+                <Th><Typography variant="sigma">Opened</Typography></Th>
+                <Th><Typography variant="sigma">Clicked</Typography></Th>
                 <Th><Typography variant="sigma">Failed</Typography></Th>
                 <Th><Typography variant="sigma">Pending</Typography></Th>
                 <Th><Typography variant="sigma">Skipped</Typography></Th>
@@ -282,6 +286,18 @@ export function EngagementDashboard() {
                   <Td><Typography fontWeight="semiBold">{FLOW_LABELS[f.flow] || f.flow}</Typography></Td>
                   <Td><Typography>{f.entered.toLocaleString()}</Typography></Td>
                   <Td><Typography textColor="success600">{f.sent.toLocaleString()}</Typography></Td>
+                  <Td>
+                    <Typography>
+                      {f.opened.toLocaleString()}
+                      {f.sent > 0 ? ` (${Math.round((f.opened / f.sent) * 100)}%)` : ''}
+                    </Typography>
+                  </Td>
+                  <Td>
+                    <Typography>
+                      {f.clicked.toLocaleString()}
+                      {f.sent > 0 ? ` (${Math.round((f.clicked / f.sent) * 100)}%)` : ''}
+                    </Typography>
+                  </Td>
                   <Td>
                     <Typography textColor={f.failed > 0 ? 'danger600' : undefined}>
                       {f.failed.toLocaleString()}

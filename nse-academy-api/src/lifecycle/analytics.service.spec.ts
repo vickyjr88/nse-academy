@@ -96,6 +96,43 @@ describe('AnalyticsService.getSignupFunnel', () => {
   });
 });
 
+describe('AnalyticsService.getVariantResults', () => {
+  it('aggregates sent/opened/clicked per variant from FlowEntry.metadata.variant', async () => {
+    const { service, prisma } = makeService();
+    (prisma.flowEntry.findMany as jest.Mock).mockResolvedValueOnce([
+      { userId: 'u1', metadata: { variant: 'trade-journal' }, openedAt: new Date(), clickedAt: new Date() },
+      { userId: 'u2', metadata: { variant: 'trade-journal' }, openedAt: new Date(), clickedAt: null },
+      { userId: 'u3', metadata: { variant: 'stock-advisor' }, openedAt: null, clickedAt: null },
+    ]);
+    (prisma.user.count as jest.Mock).mockResolvedValueOnce(1).mockResolvedValueOnce(0); // converted per variant
+
+    const results = await service.getVariantResults('day14-nurture');
+    expect(results).toEqual([
+      { variant: 'stock-advisor', sent: 1, opened: 0, clicked: 0, converted: 0 },
+      { variant: 'trade-journal', sent: 2, opened: 2, clicked: 1, converted: 1 },
+    ]);
+  });
+
+  it('buckets a row with no variant in metadata as "unknown" rather than dropping it', async () => {
+    const { service, prisma } = makeService();
+    (prisma.flowEntry.findMany as jest.Mock).mockResolvedValueOnce([
+      { userId: 'u1', metadata: null, openedAt: null, clickedAt: null },
+    ]);
+    const results = await service.getVariantResults('winback');
+    expect(results.map((r) => r.variant)).toEqual(['unknown']);
+  });
+
+  it('counts a userId only once per variant even with multiple FlowEntry rows (defensive - sentAt dedupe should prevent this)', async () => {
+    const { service, prisma } = makeService();
+    (prisma.flowEntry.findMany as jest.Mock).mockResolvedValueOnce([
+      { userId: 'u1', metadata: { variant: 'social-proof' }, openedAt: null, clickedAt: null },
+      { userId: 'u1', metadata: { variant: 'social-proof' }, openedAt: null, clickedAt: null },
+    ]);
+    const results = await service.getVariantResults('winback');
+    expect(results[0].sent).toBe(1);
+  });
+});
+
 describe('AnalyticsService.getCampaignReport', () => {
   it('computes a failure rate from total sent vs failed across all campaigns', async () => {
     const { service, prisma } = makeService();

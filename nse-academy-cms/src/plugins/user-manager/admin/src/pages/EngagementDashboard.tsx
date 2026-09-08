@@ -52,6 +52,22 @@ interface DailyVolume {
   sent: number;
 }
 
+interface VariantResult {
+  variant: string;
+  sent: number;
+  opened: number;
+  clicked: number;
+  converted: number;
+}
+
+const VARIANT_LABELS: Record<string, string> = {
+  'trade-journal': 'Trade Journal angle',
+  'stock-advisor': 'Stock Advisor angle',
+  'data-still-there': 'Data-still-there angle',
+  'social-proof': 'Advisors-directory angle',
+  unknown: 'Unknown (sent before variants existed)',
+};
+
 const TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture'] as const;
 
 const FLOW_LABELS: Record<string, string> = {
@@ -75,6 +91,8 @@ export function EngagementDashboard() {
   const [signupFunnel, setSignupFunnel] = useState<FunnelStage[] | null>(null);
   const [churnFunnel, setChurnFunnel] = useState<FunnelStage[] | null>(null);
   const [dailyVolume, setDailyVolume] = useState<DailyVolume[] | null>(null);
+  const [day14Variants, setDay14Variants] = useState<VariantResult[] | null>(null);
+  const [winbackVariants, setWinbackVariants] = useState<VariantResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,16 +105,20 @@ export function EngagementDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [flows, signup, churn, daily] = await Promise.all([
+      const [flows, signup, churn, daily, day14Var, winbackVar] = await Promise.all([
         fetchJson('/admin/analytics/flows'),
         fetchJson('/admin/analytics/funnel/signup'),
         fetchJson('/admin/analytics/funnel/churn-recovery'),
         fetchJson('/admin/analytics/daily-volume?days=30'),
+        fetchJson('/admin/analytics/variants/day14-nurture'),
+        fetchJson('/admin/analytics/variants/winback'),
       ]);
       setFlowSummaries(flows);
       setSignupFunnel(signup);
       setChurnFunnel(churn);
       setDailyVolume(daily);
+      setDay14Variants(day14Var);
+      setWinbackVariants(winbackVar);
     } catch (e: any) {
       setError(e.message || 'Failed to load analytics');
     } finally {
@@ -263,6 +285,10 @@ export function EngagementDashboard() {
         </Box>
       )}
 
+      {/* A/B variant results */}
+      <VariantResultsCard title="Day 14 Pitch — A/B Results" results={day14Variants} />
+      <VariantResultsCard title="Win-back Email — A/B Results" results={winbackVariants} />
+
       {/* Flow health table */}
       <Box background="neutral0" padding={5} shadow="filterShadow" hasRadius marginBottom={6}>
         <Typography variant="delta">Flow Health (All-Time)</Typography>
@@ -370,6 +396,55 @@ export function EngagementDashboard() {
           })}
         </Flex>
       </Box>
+    </Box>
+  );
+}
+
+function VariantResultsCard({ title, results }: { title: string; results: VariantResult[] | null }) {
+  const rows = results ?? [];
+  const hasData = rows.some((r) => r.sent > 0);
+
+  return (
+    <Box background="neutral0" padding={5} shadow="filterShadow" hasRadius marginBottom={6}>
+      <Typography variant="delta">{title}</Typography>
+      <Box paddingTop={1} paddingBottom={4}>
+        <Typography variant="pi" textColor="neutral600">
+          Each variant is a genuinely different sales angle, assigned deterministically per user - the same
+          person always sees the same variant. "Converted" means currently on an active paid subscription.
+        </Typography>
+      </Box>
+      {!hasData ? (
+        <Typography textColor="neutral600">No sends yet.</Typography>
+      ) : (
+        <Table colCount={6} rowCount={rows.length}>
+          <Thead>
+            <Tr>
+              <Th><Typography variant="sigma">Variant</Typography></Th>
+              <Th><Typography variant="sigma">Sent</Typography></Th>
+              <Th><Typography variant="sigma">Opened</Typography></Th>
+              <Th><Typography variant="sigma">Clicked</Typography></Th>
+              <Th><Typography variant="sigma">Converted</Typography></Th>
+              <Th><Typography variant="sigma">Conversion Rate</Typography></Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {rows.map((r) => (
+              <Tr key={r.variant}>
+                <Td><Typography fontWeight="semiBold">{VARIANT_LABELS[r.variant] || r.variant}</Typography></Td>
+                <Td><Typography>{r.sent.toLocaleString()}</Typography></Td>
+                <Td><Typography>{r.opened.toLocaleString()}</Typography></Td>
+                <Td><Typography>{r.clicked.toLocaleString()}</Typography></Td>
+                <Td><Typography textColor="success600">{r.converted.toLocaleString()}</Typography></Td>
+                <Td>
+                  <Typography fontWeight="semiBold">
+                    {r.sent > 0 ? `${((r.converted / r.sent) * 100).toFixed(1)}%` : '—'}
+                  </Typography>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
     </Box>
   );
 }

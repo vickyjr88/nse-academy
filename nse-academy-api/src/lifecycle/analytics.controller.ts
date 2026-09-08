@@ -1,5 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { AnalyticsService } from './analytics.service';
 
@@ -41,5 +41,15 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Broadcast campaign send history and totals' })
   getCampaignReport() {
     return this.analytics.getCampaignReport();
+  }
+
+  @Get('variants/:flow')
+  @ApiOperation({ summary: 'A/B variant results (sent/opened/clicked/converted) for day14-nurture or winback' })
+  @ApiParam({ name: 'flow', enum: ['day14-nurture', 'winback'] })
+  getVariantResults(@Param('flow') flow: string) {
+    if (flow !== 'day14-nurture' && flow !== 'winback') {
+      throw new BadRequestException('Only day14-nurture and winback have A/B variants');
+    }
+    return this.analytics.getVariantResults(flow);
   }
 }

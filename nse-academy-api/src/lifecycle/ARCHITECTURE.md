@@ -128,6 +128,34 @@ Not every transactional email is flow-tracked - `subscription-confirmed`,
 corporate invites, ebook delivery) have no `FlowEntry` equivalent, so a
 click on those is currently just ignored rather than recorded anywhere.
 
+## A/B testing on the two money emails
+
+`day14-nurture` (the first direct paid pitch) and `winback` (the last
+recovery attempt) each have two variants - genuinely different sales
+angles, not copy tweaks, since the whole point is to learn something from
+a difference in results:
+
+- **Day 14**: `trade-journal` (the original angle - fee tracking) vs.
+  `stock-advisor` (leads with the Premium-tier advisor/fit-score pitch
+  instead).
+- **Winback**: `data-still-there` (original - reassurance about account
+  continuity) vs. `social-proof` (points at the real, visitable Financial
+  Advisors directory rather than a fabricated stat - the brand's voice
+  rules explicitly ban vague hype like "thousands of investors").
+
+**Assignment** (`ab-variant.util.ts`) is a deterministic hash of
+`userId + testName`, not `Math.random()` - the same user always gets the
+same variant, with nothing to persist or look up to guarantee that. The
+variant is written into `FlowEntry.metadata.variant` at entry time (before
+the send is attempted) and also appended to the Brevo `tags` array as
+`variant:<name>`, so it's visible in Brevo's own dashboard too.
+
+**Results** (`AnalyticsService.getVariantResults`) aggregate sent/opened/
+clicked/converted per variant. "Converted" means the user currently holds
+an active paid subscription - for Day 14 that's a direct read on whether
+the pitch worked; for winback it specifically measures reactivation, the
+only outcome that email is trying to produce.
+
 ## Table of flows
 
 | Flow | Cron | Eligibility | Terminal action | Dedupe field |

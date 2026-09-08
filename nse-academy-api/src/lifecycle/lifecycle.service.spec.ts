@@ -168,6 +168,56 @@ describe('LifecycleService cron jobs', () => {
     });
   });
 
+  it('handleDay14Nurture assigns a variant per user and records it in FlowEntry.metadata', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'u1', email: 'u1@test.com', name: 'User One' },
+    ]);
+    await service.handleDay14Nurture();
+    expect(prisma.flowEntry.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'u1',
+        flow: 'day14-nurture',
+        metadata: { variant: expect.stringMatching(/^(trade-journal|stock-advisor)$/) },
+      },
+    });
+    const sendCall = brevo.sendTransactional.mock.calls[0][0];
+    expect(sendCall.tags).toEqual(
+      expect.arrayContaining(['lifecycle-day14', expect.stringMatching(/^variant:(trade-journal|stock-advisor)$/)]),
+    );
+  });
+
+  it('handleDay14Nurture is deterministic - the same user always gets the same variant across separate runs', async () => {
+    const { service, prisma } = makeService();
+    (prisma.user.findMany as jest.Mock)
+      .mockResolvedValueOnce([{ id: 'stable-user', email: 'a@test.com', name: 'A' }])
+      .mockResolvedValueOnce([{ id: 'stable-user', email: 'a@test.com', name: 'A' }]);
+    await service.handleDay14Nurture();
+    const firstVariant = (prisma.flowEntry.create as jest.Mock).mock.calls[0][0].data.metadata.variant;
+    await service.handleDay14Nurture();
+    const secondVariant = (prisma.flowEntry.create as jest.Mock).mock.calls[1][0].data.metadata.variant;
+    expect(secondVariant).toBe(firstVariant);
+  });
+
+  it('handleWinback assigns a variant per user and records it in FlowEntry.metadata', async () => {
+    const { service, prisma, brevo } = makeService();
+    (prisma.subscription.findMany as jest.Mock).mockResolvedValueOnce([
+      { userId: 'u1', user: { id: 'u1', email: 'u1@test.com', name: 'User One' } },
+    ]);
+    await service.handleWinback();
+    expect(prisma.flowEntry.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'u1',
+        flow: 'winback',
+        metadata: { variant: expect.stringMatching(/^(data-still-there|social-proof)$/) },
+      },
+    });
+    const sendCall = brevo.sendTransactional.mock.calls[0][0];
+    expect(sendCall.tags).toEqual(
+      expect.arrayContaining(['subscription-winback', expect.stringMatching(/^variant:(data-still-there|social-proof)$/)]),
+    );
+  });
+
   it('handleRenewalNudge queries subscriptions in the 5-6 day expired window, distinct from the 7-8 day winback window', async () => {
     const { service, prisma } = makeService();
     await service.handleRenewalNudge();

@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { assignVariant } from './ab-variant.util';
 
 /**
  * Every engagement flow a user can move through. Kept as a single source
@@ -21,6 +22,21 @@ export const LIFECYCLE_FLOWS = [
   'winback',
 ] as const;
 export type LifecycleFlow = (typeof LIFECYCLE_FLOWS)[number];
+
+/**
+ * A/B variants for the two money emails - Day 14 (the first direct paid
+ * pitch) and win-back (the last recovery attempt before a lapsed user goes
+ * untouched). Each variant is a genuinely different sales angle, not a
+ * copy tweak, so a difference in click/conversion rate actually means
+ * something. Assignment is deterministic (see ab-variant.util.ts) and
+ * recorded in FlowEntry.metadata.variant so AnalyticsService can break
+ * down click-through and conversion by variant.
+ */
+export const DAY14_VARIANTS = ['trade-journal', 'stock-advisor'] as const;
+export type Day14Variant = (typeof DAY14_VARIANTS)[number];
+
+export const WINBACK_VARIANTS = ['data-still-there', 'social-proof'] as const;
+export type WinbackVariant = (typeof WINBACK_VARIANTS)[number];
 
 /**
  * New-user and win-back lifecycle emails, plus the Tag/UserTag segmentation
@@ -119,7 +135,9 @@ export class LifecycleService {
       where: { ...this.freeTierWhere(), ...extraWhere, day1EmailSentAt: null },
       select: { id: true, email: true, name: true },
     });
-    return this.sendNurtureBatch(users, 'day1-nurture', 'day1EmailSentAt', (u) => this.sendDay1Email(u.email, u.name));
+    return this.sendNurtureBatch(users, 'day1-nurture', 'day1EmailSentAt', (u) => ({
+      send: () => this.sendDay1Email(u.email, u.name),
+    }));
   }
 
   private async runDay7Nurture(extraWhere: Record<string, unknown> = {}) {
@@ -132,7 +150,9 @@ export class LifecycleService {
       },
       select: { id: true, email: true, name: true },
     });
-    return this.sendNurtureBatch(users, 'day7-nurture', 'day7EmailSentAt', (u) => this.sendDay7Email(u.email, u.name));
+    return this.sendNurtureBatch(users, 'day7-nurture', 'day7EmailSentAt', (u) => ({
+      send: () => this.sendDay7Email(u.email, u.name),
+    }));
   }
 
   private async runDay14Nurture(extraWhere: Record<string, unknown> = {}) {
@@ -140,14 +160,17 @@ export class LifecycleService {
       where: { ...this.freeTierWhere(), ...extraWhere, day14EmailSentAt: null },
       select: { id: true, email: true, name: true },
     });
-    return this.sendNurtureBatch(users, 'day14-nurture', 'day14EmailSentAt', (u) => this.sendDay14Email(u.email, u.name));
+    return this.sendNurtureBatch(users, 'day14-nurture', 'day14EmailSentAt', (u) => {
+      const variant = assignVariant(u.id, 'day14-pitch', DAY14_VARIANTS);
+      return { metadata: { variant }, send: () => this.sendDay14Email(u.email, u.name, variant) };
+    });
   }
 
   private async sendNurtureBatch(
     users: { id: string; email: string; name: string }[],
     flow: LifecycleFlow,
     sentAtField: 'day1EmailSentAt' | 'day7EmailSentAt' | 'day14EmailSentAt',
-    send: (user: { id: string; email: string; name: string }) => Promise<void>,
+    plan: (user: { id: string; email: string; name: string }) => { metadata?: Record<string, unknown>; send: () => Promise<void> },
   ): Promise<{ sent: number; failed: number }> {
     if (users.length === 0) return { sent: 0, failed: 0 };
     this.logger.log(`Running ${flow} for ${users.length} user(s)`);
@@ -155,9 +178,10 @@ export class LifecycleService {
     let sent = 0;
     let failed = 0;
     for (const user of users) {
-      const entryId = await this.enterFlow(user.id, flow);
+      const { metadata, send } = plan(user);
+      const entryId = await this.enterFlow(user.id, flow, metadata);
       try {
-        await send(user);
+        await send();
         await this.prisma.user.update({ where: { id: user.id }, data: { [sentAtField]: new Date() } });
         await this.completeFlow(entryId, 'sent');
         sent++;
@@ -328,9 +352,10 @@ export class LifecycleService {
     this.logger.log(`Sending win-back email to ${candidates.length} lapsed subscriber(s)`);
 
     for (const sub of candidates) {
-      const entryId = await this.enterFlow(sub.userId, 'winback');
+      const variant = assignVariant(sub.userId, 'winback-pitch', WINBACK_VARIANTS);
+      const entryId = await this.enterFlow(sub.userId, 'winback', { variant });
       try {
-        await this.sendWinbackEmail(sub.user.email, sub.user.name);
+        await this.sendWinbackEmail(sub.user.email, sub.user.name, variant);
         await this.prisma.subscription.update({
           where: { userId: sub.userId },
           data: { winbackSentAt: new Date() },
@@ -560,37 +585,62 @@ export class LifecycleService {
     }
   }
 
-  private async sendDay14Email(email: string, name: string): Promise<void> {
+  /**
+   * Two genuinely different sales angles, A/B tested (see assignVariant):
+   * "trade-journal" leads with fee-tracking (the original copy, kept as
+   * the baseline), "stock-advisor" leads with the Premium-tier advisor/
+   * fit-score pitch instead. Both still mention pricing plainly and link
+   * to the same /pricing page - only the hook and CTA differ.
+   */
+  private async sendDay14Email(email: string, name: string, variant: Day14Variant): Promise<void> {
     const firstName = name.split(' ')[0];
     const pricingUrl = `${this.webUrl()}/pricing`;
+    const tradeJournalCopy = {
+      subject: 'What are your NSE trades actually costing you?',
+      eyebrow: 'Two Weeks In',
+      heading: `Quick question, ${firstName}`,
+      body: [
+        "Do you know what your last NSE trade cost you in broker fees, versus what you think you paid? Most free-tier investors don't track this at all.",
+        'Intermediary (KSh 300/month) adds a trade journal that tracks your real broker fees automatically, plus the full 62-company deep dive and the Complete Trading Guide.',
+      ],
+      infoBox: 'Intermediary: KSh 300/month &middot; cancel anytime &middot; M-Pesa or card',
+      buttonLabel: 'Start Intermediary',
+    };
+    const stockAdvisorCopy = {
+      subject: 'Buying NSE stocks on a hunch, or a framework?',
+      eyebrow: 'Two Weeks In',
+      heading: `Second opinion, ${firstName}?`,
+      body: [
+        'Most retail investors pick NSE stocks off a tip or a hunch, with no check against their own risk tolerance or timeline - it usually shows up in the results.',
+        'Premium (KSh 500/month) adds a personalised stock advisor with fit scores across all 62 companies, plus access to independent Financial Advisors when a tool alone isn\'t enough.',
+      ],
+      infoBox: 'Premium: KSh 500/month &middot; includes the Complete Investor\'s Guide ebook (worth KSh 999) &middot; cancel anytime',
+      buttonLabel: 'Start Premium',
+    };
+    const copy = variant === 'stock-advisor' ? stockAdvisorCopy : tradeJournalCopy;
+
     try {
       await this.brevo.sendTransactional({
         to: { email, name },
-        subject: 'What are your NSE trades actually costing you?',
+        subject: copy.subject,
         htmlContent: renderEmailHtml({
-          eyebrow: 'Two Weeks In',
-          heading: `Quick question, ${firstName}`,
-          bodyHtml: [
-            'Do you know what your last NSE trade cost you in broker fees, versus what you think you paid? Most free-tier investors don\'t track this at all.',
-            'Intermediary (KSh 300/month) adds a trade journal that tracks your real broker fees automatically, plus the full 62-company deep dive and the Complete Trading Guide.',
-          ],
-          infoBox: 'Intermediary: KSh 300/month &middot; cancel anytime &middot; M-Pesa or card',
-          button: { label: 'Start Intermediary', url: pricingUrl },
+          eyebrow: copy.eyebrow,
+          heading: copy.heading,
+          bodyHtml: copy.body,
+          infoBox: copy.infoBox,
+          button: { label: copy.buttonLabel, url: pricingUrl },
           siteUrl: this.webUrl(),
         }),
         textContent: renderEmailText({
-          heading: `Quick question, ${firstName}`,
-          bodyText: [
-            "Do you know what your last NSE trade cost you in broker fees, versus what you think you paid? Most free-tier investors don't track this at all.",
-            'Intermediary (KSh 300/month) adds a trade journal that tracks your real broker fees automatically, plus the full 62-company deep dive and the Complete Trading Guide.',
-          ],
-          button: { label: 'Start Intermediary', url: pricingUrl },
+          heading: copy.heading,
+          bodyText: copy.body,
+          button: { label: copy.buttonLabel, url: pricingUrl },
           siteUrl: this.webUrl(),
         }),
-        tags: ['lifecycle-day14'],
+        tags: ['lifecycle-day14', `variant:${variant}`],
       });
     } catch (err) {
-      this.logger.error(`Failed to send Day 14 email to ${email}: ${(err as Error).message}`);
+      this.logger.error(`Failed to send Day 14 email (variant ${variant}) to ${email}: ${(err as Error).message}`);
     }
   }
 
@@ -665,36 +715,63 @@ export class LifecycleService {
     }
   }
 
-  private async sendWinbackEmail(email: string, name: string): Promise<void> {
+  /**
+   * "data-still-there" (original copy, baseline) reassures about account
+   * continuity. "social-proof" instead points at something real and
+   * checkable - the Financial Advisors directory - rather than fabricated
+   * numbers ("thousands of investors!"); the voice rules for this brand
+   * (see the NSE Academy content package) explicitly ban vague hype, so
+   * the "proof" here is a real, visitable feature, not a made-up stat.
+   */
+  private async sendWinbackEmail(email: string, name: string, variant: WinbackVariant): Promise<void> {
     const firstName = name.split(' ')[0];
     const pricingUrl = `${this.webUrl()}/pricing`;
+    const advisorsUrl = `${this.webUrl()}/advisors`;
+    const dataStillThereCopy = {
+      subject: 'Come back to NSE Academy?',
+      eyebrow: 'We Kept Your Seat',
+      heading: `Still interested in tracking your NSE portfolio, ${firstName}?`,
+      body: [
+        "Your subscription lapsed a week ago and your account moved to the free tier - your data is still there, nothing was deleted.",
+        'If the timing was the issue, Intermediary starts at KSh 300/month with no long-term contract - cancel anytime.',
+      ],
+      buttonLabel: 'See pricing',
+      buttonUrl: pricingUrl,
+    };
+    const socialProofCopy = {
+      subject: 'What you left on the table',
+      eyebrow: 'Still Available',
+      heading: `A quick reason to come back, ${firstName}`,
+      body: [
+        "Premium members get access to NSE Academy's Financial Advisors directory - independent professionals covering NSE stocks, dividend investing, and capital growth, billed separately from your subscription.",
+        'Your account and history are still here exactly as you left them. Reactivating takes under a minute.',
+      ],
+      buttonLabel: 'See advisors and pricing',
+      buttonUrl: advisorsUrl,
+    };
+    const copy = variant === 'social-proof' ? socialProofCopy : dataStillThereCopy;
+
     try {
       await this.brevo.sendTransactional({
         to: { email, name },
-        subject: 'Come back to NSE Academy?',
+        subject: copy.subject,
         htmlContent: renderEmailHtml({
-          eyebrow: 'We Kept Your Seat',
-          heading: `Still interested in tracking your NSE portfolio, ${firstName}?`,
-          bodyHtml: [
-            "Your subscription lapsed a week ago and your account moved to the free tier - your data is still there, nothing was deleted.",
-            'If the timing was the issue, Intermediary starts at KSh 300/month with no long-term contract - cancel anytime.',
-          ],
-          button: { label: 'See pricing', url: pricingUrl },
+          eyebrow: copy.eyebrow,
+          heading: copy.heading,
+          bodyHtml: copy.body,
+          button: { label: copy.buttonLabel, url: copy.buttonUrl },
           siteUrl: this.webUrl(),
         }),
         textContent: renderEmailText({
-          heading: `Still interested in tracking your NSE portfolio, ${firstName}?`,
-          bodyText: [
-            'Your subscription lapsed a week ago and your account moved to the free tier - your data is still there, nothing was deleted.',
-            'If the timing was the issue, Intermediary starts at KSh 300/month with no long-term contract - cancel anytime.',
-          ],
-          button: { label: 'See pricing', url: pricingUrl },
+          heading: copy.heading,
+          bodyText: copy.body,
+          button: { label: copy.buttonLabel, url: copy.buttonUrl },
           siteUrl: this.webUrl(),
         }),
-        tags: ['subscription-winback'],
+        tags: ['subscription-winback', `variant:${variant}`],
       });
     } catch (err) {
-      this.logger.error(`Failed to send win-back email to ${email}: ${(err as Error).message}`);
+      this.logger.error(`Failed to send win-back email (variant ${variant}) to ${email}: ${(err as Error).message}`);
     }
   }
 }

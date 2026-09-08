@@ -18,6 +18,14 @@ export interface FunnelStageCount {
   count: number;
 }
 
+export interface VariantResult {
+  variant: string;
+  sent: number;
+  opened: number;
+  clicked: number;
+  converted: number;
+}
+
 export interface DailyFlowVolume {
   date: string; // YYYY-MM-DD
   flow: LifecycleFlow;
@@ -185,6 +193,46 @@ export class AnalyticsService {
       if (entry.outcome === 'sent') bucket.sent++;
     }
     return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /**
+   * A/B results for the two money emails (day14-nurture, winback). Prisma
+   * can't groupBy a Json field, so this fetches sent rows for the flow and
+   * aggregates by metadata.variant in JS - fine at this data volume, and
+   * avoids a raw SQL escape hatch for something this simple.
+   *
+   * "Converted" means: the user is currently on an active paid
+   * subscription. For day14-nurture that's a straightforward "did the
+   * pitch work"; for winback it specifically captures reactivation, since
+   * that's the only outcome a win-back email is trying to produce.
+   */
+  async getVariantResults(flow: 'day14-nurture' | 'winback'): Promise<VariantResult[]> {
+    const entries = await this.prisma.flowEntry.findMany({
+      where: { flow, outcome: 'sent' },
+      select: { userId: true, metadata: true, openedAt: true, clickedAt: true },
+    });
+
+    const byVariant = new Map<string, { userIds: Set<string>; opened: number; clicked: number }>();
+    for (const entry of entries) {
+      const variant = (entry.metadata as { variant?: string } | null)?.variant ?? 'unknown';
+      if (!byVariant.has(variant)) byVariant.set(variant, { userIds: new Set(), opened: 0, clicked: 0 });
+      const bucket = byVariant.get(variant)!;
+      bucket.userIds.add(entry.userId);
+      if (entry.openedAt) bucket.opened++;
+      if (entry.clickedAt) bucket.clicked++;
+    }
+
+    const results: VariantResult[] = [];
+    for (const [variant, bucket] of byVariant) {
+      const converted = await this.prisma.user.count({
+        where: {
+          id: { in: Array.from(bucket.userIds) },
+          subscription: { status: 'active', tier: { in: ['intermediary', 'premium'] } },
+        },
+      });
+      results.push({ variant, sent: bucket.userIds.size, opened: bucket.opened, clicked: bucket.clicked, converted });
+    }
+    return results.sort((a, b) => a.variant.localeCompare(b.variant));
   }
 
   /**

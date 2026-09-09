@@ -46,6 +46,13 @@ flowchart TD
         CESend --> CEFlag[CorporateLicense.expiryWarningSentAt set]
     end
 
+    subgraph Referrals["Referral flow (ReferralsService, not LifecycleService)"]
+        RefPay[Referred user subscribes] --> RefComplete[Referral marked completed<br/>both parties rewarded 1 free month]
+        RefSignup[Referred user signs up,<br/>Referral row created pending] --> RefStale{Still pending<br/>7 days later?}
+        RefStale -->|cron 11:00| RefSend[Nudge email to REFERRED user only<br/>- not the referrer, avoids<br/>surveillance framing]
+        RefSend --> RefFlag[Referral.nudgeSentAt set]
+    end
+
     D1Send -.every send.-> FE[(FlowEntry table<br/>one row per user per flow)]
     D7Send -.-> FE
     D14Send -.-> FE
@@ -53,6 +60,7 @@ flowchart TD
     RNSend -.-> FE
     WBSend -.-> FE
     CESend -.-> FE
+    RefSend -.via LifecycleService.enterFlow/completeFlow,<br/>exported for this exact purpose.-> FE
 
     Brevo[Brevo mail server] -.opened/click webhook.-> WH["POST /webhooks/brevo?key=...<br/>BrevoWebhookController"]
     WH --> WHService[BrevoWebhookService<br/>maps Brevo tag -> flow,<br/>matches most recent sent FlowEntry]
@@ -98,6 +106,32 @@ eligible right now regardless of signup date — the one gap a purely
 date-driven cron can't close on its own, needed both for backfilling users
 who existed before this system shipped and for re-running a flow on demand
 without waiting for the next scheduled window.
+
+## Referral nudge: a flow that lives outside LifecycleService
+
+Every other flow's `@Cron` lives directly on `LifecycleService`. The
+stale-referral nudge is the one exception - it's a `@Cron` on
+`ReferralsService`, because `ReferralsService` already owns the `Referral`
+model, `completeReferral`, and the reward-email logic; duplicating that
+ownership inside `LifecycleService` (or moving referral logic wholesale
+into it) would work against the established convention that each domain
+service owns the data/crons for the feature it's responsible for.
+
+To still get a `FlowEntry` row out of it, `LifecycleService.enterFlow`/
+`completeFlow` were changed from `private` to public and `LifecycleModule`
+now exports `LifecycleService`, which `ReferralsModule` imports. This
+establishes the pattern for any *future* flow that belongs to another
+domain service: inject `LifecycleService`, call `enterFlow`/`completeFlow`
+directly, rather than adding a flow-specific method to `LifecycleService`
+itself or reinventing FlowEntry bookkeeping in the owning service.
+
+**Why the referred user, not the referrer, gets nudged**: a `Referral` row
+stuck at `status: 'pending'` forever (referred user signed up but never
+subscribed) previously had nothing acting on it - `completeReferral` only
+ever runs on a successful payment. Emailing the *referrer* ("your friend
+hasn't subscribed yet") would read as surveillance of someone else's
+choices; emailing the *referred user* ("your free month is still waiting")
+is a direct, real incentive aimed at the person who can actually act on it.
 
 ## Click/open tracking
 
@@ -167,6 +201,7 @@ only outcome that email is trying to produce.
 | `corporate-expiry-warning` | `0 9 * * *` | Active license, expires within 3 days | Email to org admin | `CorporateLicense.expiryWarningSentAt` |
 | `renewal-nudge` | `0 10 * * *` | Personal sub lapsed to free 5-6 days ago | Renewal check-in email | `Subscription.renewalNudgeSentAt` |
 | `winback` | `0 10 * * *` | Personal sub lapsed to free 7-8 days ago | Win-back email | `Subscription.winbackSentAt` |
+| `referral-nudge` | `0 11 * * *` (on `ReferralsService`, not `LifecycleService`) | Referral still `pending` 7+ days after signup | Nudge email to the referred user | `Referral.nudgeSentAt` |
 
 Only the first three (`day1/7/14-nurture`) support the manual-trigger
 backfill — the rest are already fully state-driven and re-evaluate the

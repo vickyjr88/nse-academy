@@ -10,5 +10,11 @@ import { AnalyticsService } from './analytics.service';
   imports: [PrismaModule],
   controllers: [LifecycleController, LifecycleTriggerController, AnalyticsController],
   providers: [LifecycleService, AnalyticsService],
+  // LifecycleService is exported so other domain services (e.g.
+  // ReferralsService) can record their own FlowEntry rows via its public
+  // enterFlow/completeFlow methods, rather than duplicating that
+  // bookkeeping or making FlowEntry writes go through a growing pile of
+  // flow-specific methods on LifecycleService itself.
+  exports: [LifecycleService],
 })
 export class LifecycleModule {}

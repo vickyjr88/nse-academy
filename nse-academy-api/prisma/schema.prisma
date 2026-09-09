@@ -120,6 +120,11 @@ model Referral {
   status     String    @default("pending") // pending | completed
   rewardedAt DateTime?
   createdAt  DateTime  @default(now())
+  // Set once the stale-referral nudge fires (7 days pending, still
+  // unconverted) - same sentAt-dedupe idiom as every other flow. Never
+  // cleared, since a referral only transitions pending -> completed once
+  // and there is no "un-completing" to reset it for.
+  nudgeSentAt DateTime?
 }
 
 model Organization {

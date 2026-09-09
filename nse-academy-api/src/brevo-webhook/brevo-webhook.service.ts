@@ -24,6 +24,7 @@ const BREVO_TAG_TO_FLOW: Record<string, LifecycleFlow> = {
   'corporate-license-expiring-soon': 'corporate-expiry-warning',
   'subscription-renewal-nudge': 'renewal-nudge',
   'subscription-winback': 'winback',
+  'referral-nudge': 'referral-nudge',
 };
 
 export interface BrevoWebhookEvent {

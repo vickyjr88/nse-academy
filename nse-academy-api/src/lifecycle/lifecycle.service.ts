@@ -20,6 +20,7 @@ export const LIFECYCLE_FLOWS = [
   'corporate-expiry-warning',
   'renewal-nudge',
   'winback',
+  'referral-nudge',
 ] as const;
 export type LifecycleFlow = (typeof LIFECYCLE_FLOWS)[number];
 
@@ -384,16 +385,22 @@ export class LifecycleService {
   // because "entered but not yet resolved" is itself a real, visible state
   // in the funnel (a user queued for today's run, mid-cron-execution) - not
   // just an implementation detail to hide.
+  //
+  // Public: other domain services that own a flow's underlying data (e.g.
+  // ReferralsService for referral-nudge) call these directly rather than
+  // duplicating this bookkeeping or routing every flow through a method on
+  // this service - LifecycleService owns the FlowEntry table, not every
+  // flow that writes to it.
   // -----------------------------------------------------------------------
 
-  private async enterFlow(userId: string, flow: LifecycleFlow, metadata?: Record<string, unknown>): Promise<string> {
+  async enterFlow(userId: string, flow: LifecycleFlow, metadata?: Record<string, unknown>): Promise<string> {
     const entry = await this.prisma.flowEntry.create({
       data: { userId, flow, metadata: (metadata ?? undefined) as Prisma.InputJsonValue | undefined },
     });
     return entry.id;
   }
 
-  private async completeFlow(entryId: string, outcome: 'sent' | 'skipped' | 'failed'): Promise<void> {
+  async completeFlow(entryId: string, outcome: 'sent' | 'skipped' | 'failed'): Promise<void> {
     await this.prisma.flowEntry.update({
       where: { id: entryId },
       data: { outcome, completedAt: new Date() },

@@ -78,6 +78,7 @@ const FLOW_LABELS: Record<string, string> = {
   'corporate-expiry-warning': 'Corporate Expiry Warning',
   'renewal-nudge': 'Renewal Nudge (5-day)',
   winback: 'Win-back (7-day)',
+  'referral-nudge': 'Stale Referral Nudge (7-day)',
 };
 
 async function fetchJson(path: string) {

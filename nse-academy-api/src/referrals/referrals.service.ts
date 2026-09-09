@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { LifecycleService } from '../lifecycle/lifecycle.service';
 
 const FREE_MONTHS_REWARD = 1;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const REFERRAL_NUDGE_AFTER_DAYS = 7;
 
 @Injectable()
 export class ReferralsService {
@@ -15,6 +18,7 @@ export class ReferralsService {
     private prisma: PrismaService,
     private brevo: BrevoService,
     private config: ConfigService,
+    private lifecycle: LifecycleService,
   ) {}
 
   private webUrl(): string {
@@ -69,6 +73,70 @@ export class ReferralsService {
     }
     if (referred) {
       void this.sendRewardEmail(referred.email, referred.name, 'referred', referrer?.name);
+    }
+  }
+
+  /**
+   * A Referral row that stays 'pending' forever (the referred user signed
+   * up but never subscribed) previously had nothing acting on it at all -
+   * completeReferral only ever fires on a successful payment. This nudges
+   * the referred user specifically, not the referrer - "your friend hasn't
+   * subscribed yet" would read as surveillance, whereas "your free month
+   * is still waiting" is a real, direct incentive aimed at the person who
+   * can actually act on it.
+   */
+  @Cron('0 11 * * *')
+  async handleStaleReferralNudge() {
+    const cutoff = new Date(Date.now() - REFERRAL_NUDGE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+    const stale = await this.prisma.referral.findMany({
+      where: { status: 'pending', createdAt: { lte: cutoff }, nudgeSentAt: null },
+      include: { referred: { select: { id: true, email: true, name: true } } },
+    });
+
+    if (stale.length === 0) return;
+    this.logger.log(`Sending stale-referral nudge to ${stale.length} referred user(s)`);
+
+    for (const referral of stale) {
+      const entryId = await this.lifecycle.enterFlow(referral.referredId, 'referral-nudge');
+      try {
+        await this.sendStaleReferralNudgeEmail(referral.referred.email, referral.referred.name);
+        await this.prisma.referral.update({ where: { id: referral.id }, data: { nudgeSentAt: new Date() } });
+        await this.lifecycle.completeFlow(entryId, 'sent');
+      } catch (err) {
+        this.logger.error(`Stale-referral nudge failed for user ${referral.referredId}: ${(err as Error).message}`);
+        await this.lifecycle.completeFlow(entryId, 'failed');
+      }
+    }
+  }
+
+  private async sendStaleReferralNudgeEmail(email: string, name: string): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const pricingUrl = `${this.webUrl()}/pricing`;
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: 'Your free month is still waiting',
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Referral Bonus',
+          heading: `Your free month is still there, ${firstName}`,
+          bodyHtml: [
+            "You signed up through a referral link a week ago - subscribe to Intermediary or Premium and you'll get a free month added automatically, same as the person who referred you.",
+          ],
+          button: { label: 'See pricing', url: pricingUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Your free month is still there, ${firstName}`,
+          bodyText: [
+            "You signed up through a referral link a week ago - subscribe to Intermediary or Premium and you'll get a free month added automatically, same as the person who referred you.",
+          ],
+          button: { label: 'See pricing', url: pricingUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['referral-nudge'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send stale-referral nudge email to ${email}: ${(err as Error).message}`);
     }
   }
 

@@ -168,6 +168,36 @@ describe('LifecycleService cron jobs', () => {
     });
   });
 
+  it('handleActiveTraderTagging only tags users with 3+ price alerts, as a separate tag from engaged-free', async () => {
+    const { service, prisma } = makeService();
+    (prisma.tag.upsert as jest.Mock).mockResolvedValueOnce({ id: 't2', name: 'active-trader-free' });
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'u1', _count: { priceAlerts: 3 } },
+      { id: 'u2', _count: { priceAlerts: 2 } },
+    ]);
+    await service.handleActiveTraderTagging();
+    expect(prisma.tag.upsert).toHaveBeenCalledWith({
+      where: { name: 'active-trader-free' },
+      create: { name: 'active-trader-free' },
+      update: {},
+    });
+    expect(prisma.userTag.createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'u1', tagId: 't2', addedBy: 'system:price-alert-engagement' }],
+      skipDuplicates: true,
+    });
+    expect(prisma.flowEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: 'u1',
+          flow: 'active-trader-tagging',
+          completedAt: expect.any(Date),
+          outcome: 'sent',
+          metadata: { priceAlertCount: 3 },
+        },
+      ],
+    });
+  });
+
   it('handleDay14Nurture assigns a variant per user and records it in FlowEntry.metadata', async () => {
     const { service, prisma, brevo } = makeService();
     (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([

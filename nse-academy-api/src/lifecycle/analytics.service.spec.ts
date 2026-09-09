@@ -24,7 +24,7 @@ describe('AnalyticsService.getFlowSummaries', () => {
   it('returns a zeroed row for every known flow even with no data', async () => {
     const { service } = makeService();
     const result = await service.getFlowSummaries();
-    expect(result).toHaveLength(8);
+    expect(result).toHaveLength(9);
     expect(result.every((r) => r.entered === 0)).toBe(true);
   });
 

@@ -24,6 +24,9 @@ flowchart TD
 
         Signup1 --> Eng{3+ completed lessons<br/>AND still free tier?}
         Eng -->|cron 08:30, daily rescan| EngTag[Tag: engaged-free applied]
+
+        Signup1 --> Trader{3+ price alerts set<br/>AND still free tier?}
+        Trader -->|cron 08:35, daily rescan| TraderTag["Tag: active-trader-free applied<br/>(separate tag from engaged-free -<br/>independently targetable)"]
     end
 
     subgraph Billing["Billing-triggered flows"]
@@ -57,6 +60,7 @@ flowchart TD
     D7Send -.-> FE
     D14Send -.-> FE
     EngTag -.-> FE
+    TraderTag -.-> FE
     RNSend -.-> FE
     WBSend -.-> FE
     CESend -.-> FE
@@ -190,6 +194,20 @@ an active paid subscription - for Day 14 that's a direct read on whether
 the pitch worked; for winback it specifically measures reactivation, the
 only outcome that email is trying to produce.
 
+## Two engagement signals, two tags
+
+`engaged-free-tagging` (3+ completed lessons) and `active-trader-tagging`
+(3+ price alerts set) are deliberately **separate** tags rather than one
+condition OR'd together into a single "engaged-free" tag. Someone actively
+watching real NSE tickers is a meaningfully different audience from
+someone reading lessons - they may already understand the product's value
+and just need a different pitch (or none at all, if they're close to
+converting on their own), whereas a lesson-reader is still in an
+educational phase. Keeping them as separate tags means the broadcast
+tool's segment filter (see `BroadcastService.audienceWhere`) can target
+either group independently from day one, rather than needing this split
+retrofitted later once it turns out the two respond differently.
+
 ## Table of flows
 
 | Flow | Cron | Eligibility | Terminal action | Dedupe field |
@@ -198,6 +216,7 @@ only outcome that email is trying to produce.
 | `day7-nurture` | `0 8 * * *` | Free tier, signed up 7 days ago, 0 completed lessons | Re-engagement email | `User.day7EmailSentAt` |
 | `day14-nurture` | `0 8 * * *` | Free tier, signed up 14 days ago | Intermediary pitch email | `User.day14EmailSentAt` |
 | `engaged-free-tagging` | `30 8 * * *` | Free tier, 3+ completed lessons, not already tagged | Apply `engaged-free` tag | UserTag row itself (idempotent) |
+| `active-trader-tagging` | `35 8 * * *` | Free tier, 3+ price alerts set, not already tagged | Apply `active-trader-free` tag | UserTag row itself (idempotent) |
 | `corporate-expiry-warning` | `0 9 * * *` | Active license, expires within 3 days | Email to org admin | `CorporateLicense.expiryWarningSentAt` |
 | `renewal-nudge` | `0 10 * * *` | Personal sub lapsed to free 5-6 days ago | Renewal check-in email | `Subscription.renewalNudgeSentAt` |
 | `winback` | `0 10 * * *` | Personal sub lapsed to free 7-8 days ago | Win-back email | `Subscription.winbackSentAt` |

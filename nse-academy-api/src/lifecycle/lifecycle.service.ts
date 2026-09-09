@@ -17,6 +17,7 @@ export const LIFECYCLE_FLOWS = [
   'day7-nurture',
   'day14-nurture',
   'engaged-free-tagging',
+  'active-trader-tagging',
   'corporate-expiry-warning',
   'renewal-nudge',
   'winback',
@@ -240,6 +241,53 @@ export class LifecycleService {
         completedAt: new Date(),
         outcome: 'sent',
         metadata: { completedLessons: u._count.progress },
+      })),
+    });
+  }
+
+  /**
+   * Daily: tags free-tier users who've set 3+ price alerts as
+   * "active-trader-free" - a deliberately SEPARATE tag from engaged-free
+   * rather than an additional condition on it, so the two engagement
+   * signals stay independently targetable (someone actively watching real
+   * tickers is a meaningfully different audience from someone reading
+   * lessons, and may respond better to a different pitch later). Same
+   * idempotent upsert-tag + skipDuplicates pattern as handleEngagedFreeTagging.
+   */
+  @Cron('35 8 * * *')
+  async handleActiveTraderTagging() {
+    const tag = await this.prisma.tag.upsert({
+      where: { name: 'active-trader-free' },
+      create: { name: 'active-trader-free' },
+      update: {},
+    });
+
+    const candidates = await this.prisma.user.findMany({
+      where: {
+        ...this.freeTierWhere(),
+        tags: { none: { tagId: tag.id } },
+      },
+      select: {
+        id: true,
+        _count: { select: { priceAlerts: true } },
+      },
+    });
+
+    const toTag = candidates.filter((u) => u._count.priceAlerts >= 3);
+    if (toTag.length === 0) return;
+
+    this.logger.log(`Tagging ${toTag.length} user(s) as active-trader-free`);
+    await this.prisma.userTag.createMany({
+      data: toTag.map((u) => ({ userId: u.id, tagId: tag.id, addedBy: 'system:price-alert-engagement' })),
+      skipDuplicates: true,
+    });
+    await this.prisma.flowEntry.createMany({
+      data: toTag.map((u) => ({
+        userId: u.id,
+        flow: 'active-trader-tagging' as LifecycleFlow,
+        completedAt: new Date(),
+        outcome: 'sent',
+        metadata: { priceAlertCount: u._count.priceAlerts },
       })),
     });
   }

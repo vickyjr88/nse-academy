@@ -72,8 +72,8 @@ export default function ContactClient() {
                 {
                   icon: "🐦",
                   label: "Twitter / X",
-                  value: "@infinitydigy",
-                  href: "https://twitter.com/infinitydigy",
+                  value: "@Vickyjr",
+                  href: "https://twitter.com/Vickyjr",
                 },
                 {
                   icon: "🏢",

@@ -45,3 +45,6 @@ yarn-error.log*
 *.pem
 .idea
 .vscode
+
+# Local Claude Code preview config for the web app (root .claude/launch.json stays tracked)
+nse-academy-web/.claude/

@@ -8,6 +8,7 @@ import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { computeEffectiveTier } from '../auth/effective-tier.util';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 export type BillingMonths = 1 | 3 | 6 | 12;
@@ -48,6 +49,7 @@ export class PaymentsService {
     private ebookService: EbookService,
     private brevo: BrevoService,
     private paystack: PaystackService,
+    private adminNotifier: AdminNotifierService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -180,6 +182,7 @@ export class PaymentsService {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (user) {
           void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
+          void this.alertAdminOfSubscription(user, plan, months, reference);
         }
       }
     }
@@ -277,6 +280,7 @@ export class PaymentsService {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       if (user) {
         void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
+        void this.alertAdminOfSubscription(user, plan, months, reference);
       }
     }
 
@@ -362,6 +366,22 @@ export class PaymentsService {
         this.logger.error(`Failed to send expiring-soon email for user ${sub.userId}: ${(err as Error).message}`);
       }
     }
+  }
+
+  private async alertAdminOfSubscription(
+    user: { id: string; name: string; email: string },
+    plan: SubscriptionPlan,
+    months: BillingMonths,
+    reference: string,
+  ): Promise<void> {
+    await this.adminNotifier.paymentReceived({
+      kind: 'Subscription',
+      summary: `${PLAN_LABELS[plan]} plan, ${months} month${months === 1 ? '' : 's'}`,
+      customer: `${user.name} <${user.email}>`,
+      amountKes: computeAmountKobo(plan, months) / 100,
+      reference,
+      adminPath: user.id,
+    });
   }
 
   private async sendSubscriptionConfirmedEmail(

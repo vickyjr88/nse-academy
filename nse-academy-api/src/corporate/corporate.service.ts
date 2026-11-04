@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 
 type CorporatePlan = 'starter' | 'team' | 'sacco';
 
@@ -36,6 +37,7 @@ export class CorporateService {
     private configService: ConfigService,
     private brevo: BrevoService,
     private paystack: PaystackService,
+    private adminNotifier: AdminNotifierService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -65,6 +67,7 @@ export class CorporateService {
       },
       include: { members: true },
     });
+    void this.adminNotifier.organizationCreated({ id: org.id, name: org.name, type: org.type, email: org.email });
     return org;
   }
 
@@ -105,6 +108,7 @@ export class CorporateService {
     const config = PLAN_CONFIG[plan];
 
     const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const priorLicense = await this.prisma.corporateLicense.findUnique({ where: { orgId } });
     await this.prisma.corporateLicense.upsert({
       where: { orgId },
       create: {
@@ -130,6 +134,16 @@ export class CorporateService {
     });
 
     const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (org && priorLicense?.paystackReference !== reference) {
+      void this.adminNotifier.paymentReceived({
+        kind: 'Corporate license',
+        summary: `${org.name} - ${PLAN_LABELS[plan]} license`,
+        customer: `${org.name} <${org.email}>`,
+        amountKes: config.amountKes,
+        reference,
+        adminPath: `organizations/${orgId}`,
+      });
+    }
     if (org) {
       void this.sendLicenseActivatedEmail(org.email, org.name, plan, config.seats, config.amountKes, currentPeriodEnd);
     }

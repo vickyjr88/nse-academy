@@ -39,6 +39,7 @@ function makeService(overrides: { prisma?: Record<string, unknown> } = {}) {
     corporate as never,
     journal as never,
     config as never,
+    { advisorApplied: jest.fn().mockResolvedValue(undefined) } as never,
   );
 
   return { service, prisma, brevo };

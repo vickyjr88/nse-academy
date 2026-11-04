@@ -57,6 +57,9 @@ ADMIN_API_KEY=generate_strong_secret_here
 OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL=inclusionai/ling-3.0-flash-fin:free
 TAVILY_API_KEY=your_tavily_api_key
+# Who receives admin alerts + the daily report (comma-separated). Defaults to info@vitaldigitalmedia.net
+ADMIN_NOTIFY_EMAIL=info@vitaldigitalmedia.net
+CMS_ADMIN_URL=https://nseacademy-admin.vitaldigitalmedia.net
 RAPID_API_KEY=your_rapid_api_key_here
 
 # --- GOOGLE ANALYTICS ---

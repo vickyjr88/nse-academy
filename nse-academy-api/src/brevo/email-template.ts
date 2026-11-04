@@ -35,10 +35,16 @@ export interface EmailLayoutInput {
   footNoteHtml?: string;
   /** Optional highlighted info box (light emerald background) for a key fact - amount, date, code, etc. */
   infoBox?: string;
+  /**
+   * Pre-built block-level HTML (tables, lists) rendered after the body
+   * paragraphs and before the info box/button, unwrapped - <p> can't contain
+   * a <table>. Callers must escape anything user-supplied themselves.
+   */
+  rawHtml?: string;
   siteUrl: string;
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -53,7 +59,7 @@ function escapeHtml(s: string): string {
  * by the caller before interpolating.
  */
 export function renderEmailHtml(input: EmailLayoutInput): string {
-  const { eyebrow, heading, bodyHtml, button, footNoteHtml, infoBox, siteUrl } = input;
+  const { eyebrow, heading, bodyHtml, button, footNoteHtml, infoBox, rawHtml, siteUrl } = input;
   const bareSite = siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
   const eyebrowHtml = eyebrow
@@ -126,6 +132,7 @@ export function renderEmailHtml(input: EmailLayoutInput): string {
             ${eyebrowHtml}
             <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:${TEXT_COLOR};">${escapeHtml(heading)}</h1>
             ${paragraphsHtml}
+            ${rawHtml ?? ''}
             ${infoBoxHtml}
             ${buttonHtml}
             ${footNoteHtmlBlock}

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class SubmitContactDto {
   @ApiProperty({ example: 'Jane Wanjiku' })
@@ -23,4 +23,10 @@ export class SubmitContactDto {
   @MinLength(1)
   @MaxLength(5000)
   message: string;
+
+  @ApiProperty({ required: false, description: 'Honeypot - must stay empty. Real users never see this field.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  website?: string;
 }

@@ -68,6 +68,7 @@ function makeService() {
   const ebookService = { activateFromWebhook: jest.fn().mockResolvedValue(undefined) };
   const brevo = { sendTransactional: jest.fn().mockResolvedValue(undefined) };
   const paystack = { initializeTransaction: jest.fn(), verifyTransaction: jest.fn() };
+  const adminNotifier = { paymentReceived: jest.fn().mockResolvedValue(undefined) };
 
   const service = new PaymentsService(
     prisma as never,
@@ -76,9 +77,10 @@ function makeService() {
     ebookService as never,
     brevo as never,
     paystack as never,
+    adminNotifier as never,
   );
 
-  return { service, prisma, referrals, ebookService, brevo, subscriptionUpsert };
+  return { service, prisma, referrals, ebookService, brevo, subscriptionUpsert, adminNotifier };
 }
 
 describe('PaymentsService.handleWebhook', () => {
@@ -186,5 +188,29 @@ describe('PaymentsService.handleWebhook', () => {
         },
       }),
     ).rejects.toThrow('DB unavailable');
+  });
+
+  it('alerts the admin once about a new subscription payment, with the discounted amount', async () => {
+    const { service, adminNotifier } = makeService();
+    await service.handleWebhook({
+      event: 'charge.success',
+      data: { reference: 'ref_new', metadata: { type: 'subscription', userId: 'u1', plan: 'premium', months: 12 } },
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(adminNotifier.paymentReceived).toHaveBeenCalledTimes(1);
+    expect(adminNotifier.paymentReceived).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'Subscription', amountKes: 5100, reference: 'ref_new' }),
+    );
+  });
+
+  it('does not alert again when Paystack retries a webhook for a reference already recorded', async () => {
+    const { service, prisma, adminNotifier } = makeService();
+    (prisma.subscription.findUnique as jest.Mock).mockResolvedValue({ paystackSubId: 'ref_dup' });
+    await service.handleWebhook({
+      event: 'charge.success',
+      data: { reference: 'ref_dup', metadata: { type: 'subscription', userId: 'u1', plan: 'premium', months: 1 } },
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(adminNotifier.paymentReceived).not.toHaveBeenCalled();
   });
 });

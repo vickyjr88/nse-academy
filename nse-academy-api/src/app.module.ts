@@ -19,6 +19,8 @@ import { BrevoModule } from './brevo/brevo.module';
 import { PaystackModule } from './paystack/paystack.module';
 import { OpenRouterModule } from './openrouter/openrouter.module';
 import { TavilyModule } from './tavily/tavily.module';
+import { AdminNotifierModule } from './admin-notifier/admin-notifier.module';
+import { ReportsModule } from './reports/reports.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
@@ -56,6 +58,8 @@ import { AppService } from './app.service';
     PaystackModule,
     OpenRouterModule,
     TavilyModule,
+    AdminNotifierModule,
+    ReportsModule,
     LeadsModule,
     MarketDataModule,
     JournalModule,

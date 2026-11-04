@@ -29,6 +29,8 @@ export interface BrevoTransactionalEmailInput {
   params?: Record<string, unknown>;
   /** Optional sender override; defaults to BREVO_SENDER_EMAIL/NAME. */
   sender?: { email: string; name?: string };
+  /** Where a reply goes - lets an admin answer a contact message by hitting Reply. */
+  replyTo?: { email: string; name?: string };
   /** Optional tags Brevo indexes for analytics. */
   tags?: string[];
 }
@@ -141,6 +143,7 @@ export class BrevoService {
       if (input.textContent) body.textContent = input.textContent;
     }
     if (input.tags?.length) body.tags = input.tags;
+    if (input.replyTo) body.replyTo = input.replyTo;
     try {
       await this.request('POST', '/smtp/email', body);
     } catch (err) {

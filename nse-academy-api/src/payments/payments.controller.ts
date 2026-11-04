@@ -7,12 +7,16 @@ import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import * as crypto from 'crypto';
 import { VerifyReferenceDto } from '../ebook/dto/verify-reference.dto';
+import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 
 @ApiTags('payments')
 @Controller()
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly adminNotifier: AdminNotifierService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -52,7 +56,18 @@ export class PaymentsController {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    return this.paymentsService.handleWebhook(body);
+    try {
+      return await this.paymentsService.handleWebhook(body);
+    } catch (err) {
+      // Still rethrow so Paystack gets a non-2xx and retries; the alert is
+      // for a human - the customer may have paid without getting access.
+      void this.adminNotifier.webhookFailed({
+        reference: body?.data?.reference,
+        event: body?.event,
+        error: (err as Error).message,
+      });
+      throw err;
+    }
   }
 
   @ApiBearerAuth()

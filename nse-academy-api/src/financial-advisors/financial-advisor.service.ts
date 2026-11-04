@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { CorporateService } from '../corporate/corporate.service';
 import { JournalService } from '../journal/journal.service';
@@ -36,6 +37,7 @@ export class FinancialAdvisorService {
     private corporate: CorporateService,
     private journal: JournalService,
     private config: ConfigService,
+    private adminNotifier: AdminNotifierService,
   ) {}
 
   private webUrl(): string {
@@ -65,6 +67,18 @@ export class FinancialAdvisorService {
         isPublic: dto.isPublic ?? true,
       },
     });
+
+    // New advisors start 'pending' and stay hidden until approved - tell the
+    // admin there is something waiting instead of leaving it to be discovered.
+    const applicant = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+    if (applicant) {
+      void this.adminNotifier.advisorApplied({
+        name: applicant.name,
+        email: applicant.email,
+        headline: dto.headline,
+        specialties: dto.specialties ?? [],
+      });
+    }
 
     if (orgId) {
       const orgMembers = await this.prisma.orgMember.findMany({ where: { orgId, inviteAccepted: true } });

@@ -15,7 +15,7 @@ const SUBJECTS = [
 type Status = "idle" | "sending" | "success" | "error";
 
 export default function ContactClient() {
-  const [form, setForm] = useState({ name: "", email: "", subject: SUBJECTS[0], message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: SUBJECTS[0], message: "", website: "" });
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -35,7 +35,7 @@ export default function ContactClient() {
       });
       if (!res.ok) throw new Error("Failed to send");
       setStatus("success");
-      setForm({ name: "", email: "", subject: SUBJECTS[0], message: "" });
+      setForm({ name: "", email: "", subject: SUBJECTS[0], message: "", website: "" });
     } catch {
       setStatus("error");
       setErrorMsg("Something went wrong. Please try again or email us directly.");
@@ -127,6 +127,21 @@ export default function ContactClient() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Honeypot: invisible to people and assistive tech, skipped by keyboard.
+                    Bots fill every field; the API drops any submission where this has a value. */}
+                <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+                  <label>
+                    Leave this field empty
+                    <input
+                      type="text"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.website}
+                      onChange={(e) => set("website", e.target.value)}
+                    />
+                  </label>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>

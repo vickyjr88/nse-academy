@@ -50,6 +50,8 @@ services:
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-NSE Academy}
       BREVO_LEAD_MAGNET_TEMPLATE_ID: ${BREVO_LEAD_MAGNET_TEMPLATE_ID:-}
       SITE_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-info@vitaldigitalmedia.net}
+      CMS_ADMIN_URL: ${CMS_ADMIN_URL:-https://nseacademy-admin.vitaldigitalmedia.net}
       PORT: 3011
     depends_on:
       postgres:

@@ -21,6 +21,7 @@ import {
 } from './ebook-access';
 import { InitializePurchaseDto } from './dto/initialize-purchase.dto';
 import { Prisma } from '@prisma/client';
+import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 
 const DEXTER_DOWNLOAD_BASE =
   'https://dexter-api.vitaldigitalmedia.net/api/external/download';
@@ -56,6 +57,7 @@ export class EbookService {
     private config: ConfigService,
     private brevo: BrevoService,
     private paystack: PaystackService,
+    private adminNotifier: AdminNotifierService,
   ) {
     this.paystackSecret = this.config.get<string>('PAYSTACK_SECRET_KEY')!;
     this.dexterApiKey = this.config.get<string>('DEXTER_API_KEY')!;
@@ -319,6 +321,14 @@ export class EbookService {
     this.logger.log(
       `Product ${params.productId} purchased by ${email}${userId ? ` (user ${userId})` : ' (guest)'} - ref ${params.reference}`,
     );
+    void this.adminNotifier.paymentReceived({
+      kind: 'Ebook',
+      summary: `Ebook purchase`,
+      customer: userId ? `${email} (account)` : `${email} (guest)`,
+      amountKes: purchase.amountKes,
+      reference: params.reference,
+      adminPath: `ebook-purchases/${purchase.id}`,
+    });
     void this.ensureEbookEmailed(purchase.id);
     return {
       success: true,

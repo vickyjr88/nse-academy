@@ -41,7 +41,8 @@ function makeService(prisma: ReturnType<typeof mockPrisma>) {
     initializeTransaction: jest.fn(),
     verifyTransaction: jest.fn(),
   };
-  return new EbookService(prisma as never, config as never, brevo as never, paystack as never);
+  const adminNotifier = { paymentReceived: jest.fn().mockResolvedValue(undefined) };
+  return new EbookService(prisma as never, config as never, brevo as never, paystack as never, adminNotifier as never);
 }
 
 describe('EbookService.getStatus', () => {

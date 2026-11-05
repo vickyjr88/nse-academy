@@ -1,5 +1,5 @@
 import { buildFacts } from './market-facts';
-import { Narrative, URL_PLACEHOLDER, buildPrompt, fillUrl, parseNarrative, templateNarrative, verifyNarrative } from './narrative';
+import { Narrative, URL_PLACEHOLDER, buildPrompt, closeUnbalanced, fillUrl, parseNarrative, templateNarrative, verifyNarrative } from './narrative';
 
 const facts = buildFacts({
   sessionYmd: '2026-11-04',
@@ -192,6 +192,32 @@ describe('parseNarrative', () => {
     const n = good();
     n.social.hashtags = ['NSE', '#Investing', 'Kenya'];
     expect(parseNarrative(JSON.stringify(n)).narrative?.social.hashtags).toEqual(['#NSE', '#Investing', '#Kenya']);
+  });
+});
+
+describe('closeUnbalanced / a model that stops one brace short', () => {
+  it('parses a narrative whose final closing brace is missing (the real Haiku failure)', () => {
+    const full = JSON.stringify(good());
+    const short = full.slice(0, -1);
+    expect(() => JSON.parse(short)).toThrow();
+    expect(parseNarrative(short).narrative?.headline).toBe(good().headline);
+  });
+
+  it('closes nested objects and arrays in the right order, and ignores braces inside strings', () => {
+    expect(closeUnbalanced('{"a":"cut off mid-sentence')).toBeNull(); // unterminated string: not repaired
+    expect(closeUnbalanced('{"a":[{"b":"x}"')).toBe('{"a":[{"b":"x}"}]}'); // the } inside the string is text
+  });
+
+  it('does not repair mismatched structure or text that is already balanced', () => {
+    expect(closeUnbalanced('{"a":[}')).toBeNull();
+    expect(closeUnbalanced('{"a":1}')).toBeNull();
+  });
+
+  it('still rejects a repaired narrative that fails the shape checks', () => {
+    const n = good();
+    n.social.hashtags = ['#one'];
+    const short = JSON.stringify(n).slice(0, -1);
+    expect(parseNarrative(short).errors.join('|')).toMatch(/hashtags/);
   });
 });
 

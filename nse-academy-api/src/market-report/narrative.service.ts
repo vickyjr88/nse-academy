@@ -14,7 +14,8 @@ export interface NarrativeResult {
   problems?: string[];
 }
 
-const MAX_ATTEMPTS = 2;
+// Haiku passes the verifier first time roughly one run in three and nearly always on the corrected retry; a third try is cheap insurance against the template.
+const MAX_ATTEMPTS = 3;
 
 @Injectable()
 export class NarrativeService {

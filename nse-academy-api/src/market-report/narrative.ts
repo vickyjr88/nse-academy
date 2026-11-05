@@ -212,6 +212,30 @@ export function buildPrompt(facts: MarketFacts): { system: string; user: string 
 const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
 
+/**
+ * Models occasionally stop one closing brace short of valid JSON (seen with Haiku on the 4 Nov report).
+ * If the only thing wrong is unclosed objects/arrays at the very end, append the closers. Nothing else
+ * is touched, and the result still goes through the same shape checks and the numeric verifier.
+ */
+export function closeUnbalanced(json: string): string | null {
+  const stack: string[] = [];
+  let inString = false;
+  for (let i = 0; i < json.length; i++) {
+    const c = json[i];
+    if (inString) {
+      if (c === '\\') i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === '{') stack.push('}');
+    else if (c === '[') stack.push(']');
+    else if (c === '}' || c === ']') {
+      if (stack.pop() !== c) return null;
+    }
+  }
+  if (inString || stack.length === 0) return null;
+  return json + stack.reverse().join('');
+}
+
 /** Extracts and validates the model's JSON. Returns the narrative, or a list of everything wrong with it. */
 export function parseNarrative(raw: string): { narrative: Narrative | null; errors: string[] } {
   const m = raw.match(/\{[\s\S]*\}/);
@@ -220,7 +244,13 @@ export function parseNarrative(raw: string): { narrative: Narrative | null; erro
   try {
     j = JSON.parse(m[0]);
   } catch (e) {
-    return { narrative: null, errors: [`the JSON did not parse: ${(e as Error).message}`] };
+    const repaired = closeUnbalanced(m[0]);
+    try {
+      if (!repaired) throw e;
+      j = JSON.parse(repaired);
+    } catch {
+      return { narrative: null, errors: [`the JSON did not parse: ${(e as Error).message}`] };
+    }
   }
   const errors: string[] = [];
   const need = (cond: boolean, msg: string) => { if (!cond) errors.push(msg); };

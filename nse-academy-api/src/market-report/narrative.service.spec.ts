@@ -53,13 +53,13 @@ describe('NarrativeService.write', () => {
   });
 
   it('falls back to the template - never to unverified AI text - after repeated failures, keeping the reasons', async () => {
-    const { service, openRouter } = make([badJson(), badJson()]);
+    const { service, openRouter } = make([badJson(), badJson(), badJson()]);
     const r = await service.write(facts);
     expect(r.aiGenerated).toBe(false);
     expect(r.narrative).toEqual(templateNarrative(facts));
     expect(r.note).toMatch(/failed verification/);
     expect(r.problems?.join('|')).toContain('88.8%');
-    expect(openRouter.chatCompletionDetailed).toHaveBeenCalledTimes(2);
+    expect(openRouter.chatCompletionDetailed).toHaveBeenCalledTimes(3);
   });
 
   it('treats non-JSON output as a failure to retry, not a crash', async () => {

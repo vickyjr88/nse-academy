@@ -18,6 +18,7 @@ export default function PublicFooter() {
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
           <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
           <Link href="/companies" className="hover:text-gray-600 transition-colors">Companies</Link>
+          <Link href="/market-report" className="hover:text-gray-600 transition-colors">Market Report</Link>
           <Link href="/store" className="hover:text-gray-600 transition-colors">Store</Link>
           <Link href="/calculators" className="hover:text-gray-600 transition-colors">Calculators</Link>
           <Link href="/pricing" className="hover:text-gray-600 transition-colors">Pricing</Link>

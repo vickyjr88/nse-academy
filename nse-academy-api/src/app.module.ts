@@ -21,6 +21,7 @@ import { OpenRouterModule } from './openrouter/openrouter.module';
 import { TavilyModule } from './tavily/tavily.module';
 import { AdminNotifierModule } from './admin-notifier/admin-notifier.module';
 import { ReportsModule } from './reports/reports.module';
+import { MarketReportModule } from './market-report/market-report.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
@@ -60,6 +61,7 @@ import { AppService } from './app.service';
     TavilyModule,
     AdminNotifierModule,
     ReportsModule,
+    MarketReportModule,
     LeadsModule,
     MarketDataModule,
     JournalModule,

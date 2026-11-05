@@ -106,8 +106,8 @@ export interface MarketSummary {
  */
 export const MIN_MOVER_VALUE_KES = 100_000;
 
-export function computeMovers(rows: PriceRow[], n = 5, minValue = MIN_MOVER_VALUE_KES): MarketSummary {
-  const all: Mover[] = rows.map((r) => {
+export function toMovers(rows: PriceRow[]): Mover[] {
+  return rows.map((r) => {
     const volume = parseNumber(r.volume);
     return {
       ticker: r.ticker,
@@ -118,6 +118,10 @@ export function computeMovers(rows: PriceRow[], n = 5, minValue = MIN_MOVER_VALU
       value: r.price * volume,
     };
   });
+}
+
+export function computeMovers(rows: PriceRow[], n = 5, minValue = MIN_MOVER_VALUE_KES): MarketSummary {
+  const all = toMovers(rows);
   // A stock that never traded carries a stale/zero change - keep it out of the rankings.
   const traded = all.filter((m) => m.volume > 0);
   const liquid = traded.filter((m) => m.value >= minValue);

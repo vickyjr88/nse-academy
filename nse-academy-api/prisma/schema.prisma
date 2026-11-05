@@ -556,3 +556,23 @@ model FlowEntry {
   @@index([flow, enteredAt])
   @@index([userId, flow])
 }
+
+// One public "daily market report" per NSE trading session. The facts are
+// computed from StockPrice; the story/social copy is AI-written (or a
+// deterministic template when the AI is unavailable or fails numeric
+// verification) and checked against those facts before it is saved.
+model MarketReport {
+  id          String    @id @default(cuid())
+  sessionDate String    @unique // YYYY-MM-DD, the Nairobi trading day covered
+  status      String    @default("published") // published | unpublished
+  facts       Json
+  story       Json // headline, summary, story[], lessons[]
+  social      Json // xPost, xThread, whatsapp, reel, caption, hashtags
+  aiGenerated Boolean   @default(false)
+  aiModel     String?
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, sessionDate])
+}

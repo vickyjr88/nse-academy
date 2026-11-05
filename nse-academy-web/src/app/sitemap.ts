@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllArticleSlugs, getStockProfiles } from "@/lib/cms";
 import { listPublicAdvisors } from "@/lib/advisor-public";
+import { listMarketReports } from "@/lib/market-report";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
 
@@ -24,11 +25,12 @@ async function getPublicProfileSlugs(): Promise<PublicSlug[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articleSlugs, profileSlugs, { profiles: companies }, { data: advisors }] = await Promise.all([
+  const [articleSlugs, profileSlugs, { profiles: companies }, { data: advisors }, reports] = await Promise.all([
     getAllArticleSlugs(),
     getPublicProfileSlugs(),
     getStockProfiles({ limit: 100 }),
     listPublicAdvisors({ limit: 100 }),
+    listMarketReports(100),
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -42,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/investor-profiler`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/companies`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE_URL}/advisors`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE_URL}/market-report`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/brokers-compare`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   ];
 
@@ -73,5 +76,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticPages, ...articlePages, ...profilePages, ...companyPages, ...advisorPages];
+  const reportPages: MetadataRoute.Sitemap = reports.map((r) => ({
+    url: `${SITE_URL}/market-report/${r.sessionYmd}`,
+    lastModified: new Date(`${r.sessionYmd}T12:00:00+03:00`),
+    changeFrequency: "never" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...articlePages, ...profilePages, ...companyPages, ...advisorPages, ...reportPages];
 }

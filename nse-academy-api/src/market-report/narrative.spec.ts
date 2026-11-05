@@ -133,6 +133,13 @@ describe('verifyNarrative', () => {
     }
   });
 
+  it('does not flag a correct sentence that names both a gainer and a faller - a false positive seen on the live run', () => {
+    // JUB +5.06 and OCH -9.91 are both real; "gainer"/"faller" are direction words that make the sentence mixed.
+    const mixed = 'The biggest gainer was JUB, rising 5.06% to KSh 405, while the steepest faller was OCH at 9.91%, near the 10% limit.';
+    expect(verifyNarrative(withStory([mixed, 'x']), facts).filter((v) => v.startsWith('direction'))).toEqual([]);
+    // (a plainly wrong single-direction sentence is still caught - see the 'faller described as a riser' test above)
+  });
+
   it('rejects sentiment labels the numbers do not support', () => {
     for (const bad of ['The NSE closes flat on Wednesday.', 'A bearish session for banks.', 'SCOM plunged on the day.', 'Markets rallied.']) {
       expect(verifyNarrative(withStory([bad, 'x']), facts).join('|')).toMatch(/sentiment wording/);

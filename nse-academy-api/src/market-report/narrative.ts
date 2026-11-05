@@ -342,8 +342,9 @@ const KSH_GAIN_LOSS = /\b(?:gains?|gained|loss(?:es)?|lost|profits?)\b[^.\n]{0,6
 /** "76% of the average" - every comparison in these facts is above/below, so this phrasing is always a misreading. */
 const OF_AVERAGE = /\d[\d.,]*\s?%\s+of\s+(?:the\s+|its\s+|their\s+)?(?:recent\s+|usual\s+|typical\s+|normal\s+|daily\s+|20[- ]\w+\s+)*average/i;
 
-const RISE_WORDS = /\b(?:rose|rise|rises|rising|gain|gains|gained|climb|climbed|climbs|jump|jumped|jumps|surge|surged|advance|advanced|up)\b/i;
-const FALL_WORDS = /\b(?:fell|fall|falls|falling|drop|dropped|drops|decline|declined|declines|lost|loss|slid|slip|slipped|down)\b/i;
+// Nouns count too ("the biggest gainer ... the steepest faller"): a sentence naming both a riser and a faller is mixed and must be skipped, not flagged.
+const RISE_WORDS = /\b(?:rose|rise|rises|rising|riser|risers|gain|gains|gained|gainer|gainers|climb|climbed|climbs|climber|jump|jumped|jumps|surge|surged|advance|advanced|advancer|advancers|up)\b/i;
+const FALL_WORDS = /\b(?:fell|fall|falls|falling|faller|fallers|drop|dropped|drops|decline|declined|declines|decliner|decliners|loser|losers|lost|loss|slid|slip|slipped|slump|slumped|down)\b/i;
 
 const ADVICE_PATTERNS: RegExp[] = [
   /\byou should (?:buy|sell|hold|invest|avoid)\b/i,

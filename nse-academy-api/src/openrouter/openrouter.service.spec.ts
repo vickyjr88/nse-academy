@@ -130,4 +130,17 @@ describe('OpenRouterService', () => {
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.models).toEqual(['p/a:free', 'f/b:free', 'f/c:free']);
   });
+
+  it('a per-call fallback list replaces the global one, and [] means no fallbacks at all', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const config = { get: jest.fn((k: string, d?: unknown) => ({ OPENROUTER_API_KEY: 'k', OPENROUTER_MODEL: 'free/a:free', OPENROUTER_FALLBACK_MODELS: 'free/b:free' } as Record<string, unknown>)[k] ?? d) };
+    const svc = new OpenRouterService(config as never);
+    await svc.chatCompletionDetailed({ messages: [{ role: 'user', content: 'hi' }], model: 'paid/x', fallbackModels: ['paid/y'] });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string).models).toEqual(['paid/x', 'paid/y']);
+    await svc.chatCompletionDetailed({ messages: [{ role: 'user', content: 'hi' }], model: 'paid/x', fallbackModels: [] });
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect(body.model).toBe('paid/x');
+    expect(body.models).toBeUndefined();
+  });
 });

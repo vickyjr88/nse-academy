@@ -57,6 +57,8 @@ ADMIN_API_KEY=generate_strong_secret_here
 OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free
 OPENROUTER_FALLBACK_MODELS=nvidia/nemotron-3.5-super-vl:free,openrouter/free
+MARKET_REPORT_MODEL=anthropic/claude-haiku-5.5
+MARKET_REPORT_FALLBACK_MODELS=openai/gpt-6-luna,deepseek/deepseek-v4-flash
 TAVILY_API_KEY=your_tavily_api_key
 # Who receives admin alerts + the daily report (comma-separated). Defaults to info@vitaldigitalmedia.net
 ADMIN_NOTIFY_EMAIL=info@vitaldigitalmedia.net
@@ -217,7 +219,7 @@ weekends and holidays simply re-use Friday's.
 
 **How the story is made:**
 1. Facts are computed from the stored `StockPrice` snapshots (breadth, top movers with a KSh 100,000 liquidity floor, most active, volume spikes vs each stock's 20-session baseline, sectors from the CMS, concentration, 10% limit moves).
-2. The model (`OPENROUTER_MODEL`, with up to 2 fallbacks in `OPENROUTER_FALLBACK_MODELS` - OpenRouter allows 3 models in total) writes the story, lessons and social copy from those facts only.
+2. The model (`MARKET_REPORT_MODEL`, default Claude Haiku 5.5 at about $0.0014 a report, with fallbacks in `MARKET_REPORT_FALLBACK_MODELS` - OpenRouter allows 3 models in total; unset to inherit `OPENROUTER_MODEL`) writes the story, lessons and social copy from those facts only.
 3. A verifier rejects any figure that is not in the facts, "X% of the average" misreadings, faller/riser direction errors, KSh turnover described as a gain or loss, sentiment labels, causes ("news", "due to") and advice wording. The model gets one retry with the exact problems listed.
 4. If it still fails, or `OPENROUTER_API_KEY` is unset, a deterministic template story is published instead - **unverified AI text is never published.** `aiGenerated` records which one it was.
 
@@ -230,4 +232,4 @@ weekends and holidays simply re-use Friday's.
 
 Public read endpoints: `GET /public/market-reports`, `/public/market-reports/latest`, `/public/market-reports/<date>`.
 
-**Free models are unreliable** (rate limits, silent retirement - the original default was retired without notice). If reports keep falling back to the template, check the API logs for `NarrativeService` warnings and consider a low-cost paid model in `OPENROUTER_MODEL`.
+**Model choice:** the report uses a paid model because free ones were unreliable (rate limits, silent retirement). Candidates were tested on the real task (first-attempt pass rate against the verifier): Haiku 5.5 2/2, GPT-6 Luna 2/2, DeepSeek V4 Flash 2/2 (but slower and looser), Mistral Small 1/2, Gemini 2.5 Flash 0/2, Qwen 3.7 Flash 0/2. If reports fall back to the template, check the API logs for `NarrativeService` warnings. The user-facing stock advisor stays on the free `OPENROUTER_MODEL` because any logged-in user can trigger it.

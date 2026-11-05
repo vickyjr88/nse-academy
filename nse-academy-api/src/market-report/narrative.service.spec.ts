@@ -19,17 +19,18 @@ const facts = buildFacts({
 const goodJson = () => JSON.stringify(templateNarrative(facts));
 const badJson = () => JSON.stringify({ ...templateNarrative(facts), story: ['SCOM soared 88.8% on the day.', 'Second paragraph.'] });
 
-function make(responses: (string | Error)[], hasKey = true) {
+function make(responses: (string | Error)[], hasKey = true, env: Record<string, string> = {}) {
   const queue = [...responses];
   const openRouter = {
     hasCredentials: jest.fn().mockReturnValue(hasKey),
-    chatCompletionDetailed: jest.fn(async (_input: { messages: { role: string; content: string }[] }) => {
+    chatCompletionDetailed: jest.fn(async (_input: { messages: { role: string; content: string }[]; model?: string; fallbackModels?: string[] }) => {
       const next = queue.shift();
       if (next instanceof Error) throw next;
       return { content: next as string, model: 'free/test-model:free' };
     }),
   };
-  return { service: new NarrativeService(openRouter as never), openRouter };
+  const config = { get: jest.fn((k: string) => env[k]) };
+  return { service: new NarrativeService(openRouter as never, config as never), openRouter };
 }
 
 describe('NarrativeService.write', () => {
@@ -79,6 +80,28 @@ describe('NarrativeService.write', () => {
     const r = await service.write(facts);
     expect(r.aiGenerated).toBe(false);
     expect(r.note).toMatch(/request failed/);
+  });
+});
+
+describe('NarrativeService model selection', () => {
+  it('uses the report-specific model and fallbacks when MARKET_REPORT_MODEL is set', async () => {
+    const { service, openRouter } = make([goodJson()], true, { MARKET_REPORT_MODEL: 'anthropic/claude-haiku-5.5', MARKET_REPORT_FALLBACK_MODELS: ' openai/gpt-6-luna , deepseek/deepseek-v4-flash ' });
+    await service.write(facts);
+    expect(openRouter.chatCompletionDetailed.mock.calls[0][0]).toMatchObject({ model: 'anthropic/claude-haiku-5.5', fallbackModels: ['openai/gpt-6-luna', 'deepseek/deepseek-v4-flash'] });
+  });
+
+  it('a report model with no fallbacks means no fallbacks - it must not inherit the free-model chain', async () => {
+    const { service, openRouter } = make([goodJson()], true, { MARKET_REPORT_MODEL: 'anthropic/claude-haiku-5.5' });
+    await service.write(facts);
+    expect(openRouter.chatCompletionDetailed.mock.calls[0][0].fallbackModels).toEqual([]);
+  });
+
+  it('leaves the model to the global OPENROUTER settings when MARKET_REPORT_MODEL is unset', async () => {
+    const { service, openRouter } = make([goodJson()]);
+    await service.write(facts);
+    const arg = openRouter.chatCompletionDetailed.mock.calls[0][0];
+    expect(arg.model).toBeUndefined();
+    expect(arg.fallbackModels).toBeUndefined();
   });
 });
 

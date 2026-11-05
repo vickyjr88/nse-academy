@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { OpenRouterService, ChatMessage } from '../openrouter/openrouter.service';
 import { MarketFacts } from './market-facts';
 import { Narrative, buildPrompt, parseNarrative, templateNarrative, verifyNarrative } from './narrative';
@@ -19,7 +20,26 @@ const MAX_ATTEMPTS = 2;
 export class NarrativeService {
   private readonly logger = new Logger(NarrativeService.name);
 
-  constructor(private openRouter: OpenRouterService) {}
+  constructor(
+    private openRouter: OpenRouterService,
+    private config: ConfigService,
+  ) {}
+
+  /**
+   * The report runs on its own model chain (MARKET_REPORT_MODEL / _FALLBACK_MODELS)
+   * so it can use a reliable low-cost paid model while the user-facing stock
+   * advisor, which any logged-in user can trigger, stays on the free default.
+   * Unset = inherit OPENROUTER_MODEL and its fallbacks.
+   */
+  private modelChain(): { model?: string; fallbackModels?: string[] } {
+    const model = this.config.get<string>('MARKET_REPORT_MODEL')?.trim();
+    if (!model) return {};
+    const fallbackModels = (this.config.get<string>('MARKET_REPORT_FALLBACK_MODELS') ?? '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
+    return { model, fallbackModels };
+  }
 
   /**
    * Asks the AI for the story, checks it against the facts, and - if it can't
@@ -43,7 +63,7 @@ export class NarrativeService {
       let content: string;
       let model: string;
       try {
-        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.4, timeoutMs: 90_000 }));
+        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.4, timeoutMs: 90_000, ...this.modelChain() }));
       } catch (err) {
         this.logger.error(`AI request failed on attempt ${attempt}: ${(err as Error).message}`);
         return { narrative: templateNarrative(facts), aiGenerated: false, model: null, note: 'The AI request failed - used the template story' };

@@ -175,7 +175,8 @@ describe('StockAdvisorService.getAiAdvice', () => {
     expect(prompt).toContain('Safaricom FY results');
     expect(prompt).not.toContain('banking ETF');
     expect(r.sources).toEqual(['Safaricom FY results (businessdailyafrica.com)']);
-    expect((tavily.search.mock.calls as any[][])[0][0].query).not.toMatch(/Nairobi Securities Exchange/);
+    // The query names the company and its ticker; relevance is enforced by the filter, not by leaving words out.
+    expect((tavily.search.mock.calls as any[][])[0][0].query).toMatch(/Safaricom PLC SCOM/);
   });
 
   it('treats a search that returns only irrelevant pages as no news', async () => {

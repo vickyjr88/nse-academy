@@ -500,9 +500,11 @@ export class StockAdvisorService {
     const key = stock.ticker.toUpperCase();
     const hit = this.fresh(this.newsCache, key, NEWS_TTL_MS);
     if (hit) return hit;
-    // No "Nairobi Securities Exchange" in the query: it pulls in the exchange's own pages instead of the company's.
+    // The ticker and "NSE" keep the search on this company's Kenyan coverage (without them Safaricom and Home Afrika
+    // return nothing relevant). Searches still drift to the exchange's own pages, so results are filtered to those
+    // that name the company before the model sees them.
     const found = await this.tavily.search({
-      query: `${stock.company_name} Kenya shares results dividend news`,
+      query: `${stock.company_name} ${stock.ticker} NSE Nairobi Securities Exchange latest news earnings dividend`,
       topic: 'finance',
       timeRange: 'month',
       maxResults: 8,

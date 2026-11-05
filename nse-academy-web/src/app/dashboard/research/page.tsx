@@ -34,6 +34,11 @@ interface AiAdvice {
   outlook: string;
   sources: string[];
   disclaimer: string;
+  /** True only when the AI wrote the narrative and it passed our checks against our own price data. */
+  aiGenerated: boolean;
+  note?: string | null;
+  /** Date of the latest closing price the figures are based on. */
+  dataAsOf: string | null;
 }
 
 interface ResearchResult {
@@ -402,12 +407,31 @@ export default function ResearchPage() {
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
                   <p className="text-emerald-400 font-bold animate-pulse">Scanning news & financial reports for {result.company.ticker}...</p>
-                  <p className="text-slate-500 text-xs mt-2 italic">This takes about 10-15 seconds</p>
+                  <p className="text-slate-500 text-xs mt-2 italic">This can take up to a minute</p>
                 </div>
               )}
 
               {aiAdvice && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  {aiAdvice.keyMetrics.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Our data{aiAdvice.dataAsOf ? ` · closing prices to ${aiAdvice.dataAsOf}` : ""}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {aiAdvice.keyMetrics.map((m, i) => (
+                          <span key={i} className="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {aiAdvice.note && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-xs leading-relaxed p-3">
+                      {aiAdvice.note}
+                    </div>
+                  )}
                   {/* Recommendation Card */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">

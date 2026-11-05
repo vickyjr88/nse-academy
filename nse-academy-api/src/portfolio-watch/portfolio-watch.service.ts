@@ -6,8 +6,8 @@ import { BrevoService } from '../brevo/brevo.service';
 import { escapeHtml, renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { dataTable, sectionHeading, signedPct, statRows } from '../brevo/email-blocks';
 import { boundsForYmd, eatDayBounds } from '../reports/report-helpers';
+import { loadDailyCloses } from '../market-data/price-history';
 import {
-  DailyClose,
   WatchItem,
   WatchResult,
   applyCooldowns,
@@ -76,30 +76,11 @@ export class PortfolioWatchService {
     return { considered: users.length, sent, skipped, failed };
   }
 
-  private async loadSeries(tickers: string[]): Promise<Map<string, DailyClose[]>> {
-    const rows = await this.prisma.$queryRaw<{ ticker: string; d: string; price: number }[]>`
-      SELECT DISTINCT ON (ticker, d) ticker, d, price FROM (
-        SELECT ticker,
-               to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d,
-               price, timestamp
-        FROM "StockPrice"
-        WHERE ticker = ANY(${tickers}::text[]) AND price > 0 AND timestamp > now() - interval '120 days'
-      ) x
-      ORDER BY ticker, d, timestamp DESC`;
-    const map = new Map<string, DailyClose[]>();
-    for (const r of rows) {
-      const list = map.get(r.ticker) ?? [];
-      list.push({ date: r.d, price: Number(r.price) });
-      map.set(r.ticker, list);
-    }
-    return map;
-  }
-
   /** Evaluates the rules against the user's holdings and today's closes. Writes nothing. */
   async evaluate(userId: string): Promise<WatchResult | null> {
     const holdings = await this.prisma.holding.findMany({ where: { userId, quantity: { gt: 0 } } });
     if (holdings.length === 0) return null;
-    const series = await this.loadSeries([...new Set(holdings.map((h) => h.ticker))]);
+    const series = await loadDailyCloses(this.prisma, [...new Set(holdings.map((h) => h.ticker))]);
     return evaluateWatch(
       holdings.map((h) => ({ ticker: h.ticker, quantity: h.quantity, avgCost: h.avgCost, costSource: h.costSource })),
       series,

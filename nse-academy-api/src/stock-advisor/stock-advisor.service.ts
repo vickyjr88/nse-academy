@@ -1,8 +1,23 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { OpenRouterService } from '../openrouter/openrouter.service';
-import { TavilyService } from '../tavily/tavily.service';
+import { ChatMessage, OpenRouterService } from '../openrouter/openrouter.service';
+import { TavilyResult, TavilyService } from '../tavily/tavily.service';
+import { loadDailyCloses } from '../market-data/price-history';
+import { closeUnbalanced } from '../market-report/narrative';
+import {
+  AdviceBody,
+  PositionFacts,
+  PriceFacts,
+  allNumbers,
+  buildAdvicePrompt,
+  buildPriceFacts,
+  dataProblem,
+  fallbackAdvice,
+  figuresFromFacts,
+  metricsFromFacts,
+  verifyAdvice,
+} from './advice-grounding';
 
 export type InvestorType = 'conservative' | 'moderate' | 'aggressive' | 'dividend' | 'growth';
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -117,11 +132,86 @@ const TYPE_LABELS: Record<InvestorType, string> = {
   growth: 'Growth Investor',
 };
 
+const FIT_VERDICTS: Record<FitRating, string> = { excellent: 'Strong Match', good: 'Good Match', neutral: 'Neutral Fit', caution: 'Poor Fit' };
+
+const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
+const NEWS_TTL_MS = 12 * 60 * 60 * 1000;
+const NEWS_EMPTY_TTL_MS = 15 * 60 * 1000;
+const ADVICE_TTL_MS = 6 * 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 500;
+const MAX_AI_ATTEMPTS = 2;
+
+export interface AdviceResponse extends AdviceBody {
+  ticker: string;
+  company_name: string;
+  /** Computed from our recorded prices (and the user's holding) - never written by the model. */
+  keyMetrics: string[];
+  dataAsOf: string | null;
+  disclaimer: string;
+  generatedAt: string;
+  /** True only when a model wrote the narrative AND it passed verification. */
+  aiGenerated: boolean;
+  model?: string;
+  note?: string | null;
+  sources: string[];
+  cached?: boolean;
+}
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
+/** The model's JSON -> a checked AdviceBody, or what is wrong with it. */
+export function parseAdvice(raw: string): { advice: AdviceBody | null; errors: string[] } {
+  const start = raw.indexOf('{');
+  if (start < 0) return { advice: null, errors: ['no JSON object found in the output'] };
+  const end = raw.lastIndexOf('}');
+  // No closing brace at all is the "one brace short" case; otherwise cut off any text after the object.
+  const candidate = end > start ? raw.slice(start, end + 1) : raw.slice(start).replace(/`+\s*$/, '');
+  let j: any;
+  try {
+    j = JSON.parse(candidate);
+  } catch (e) {
+    const repaired = closeUnbalanced(candidate);
+    try {
+      if (!repaired) throw e;
+      j = JSON.parse(repaired);
+    } catch {
+      return { advice: null, errors: [`the JSON did not parse: ${(e as Error).message}`] };
+    }
+  }
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const arr = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
+  const rec = str(j?.recommendation).toUpperCase();
+  const advice: AdviceBody = {
+    situation: str(j?.situation),
+    recommendation: (['BUY', 'HOLD', 'AVOID'].includes(rec) ? rec : 'HOLD') as AdviceBody['recommendation'],
+    recommendationRationale: str(j?.recommendationRationale),
+    reasons: arr(j?.reasons),
+    risks: arr(j?.risks),
+    outlook: str(j?.outlook),
+  };
+  const errors: string[] = [];
+  if (!['BUY', 'HOLD', 'AVOID'].includes(rec)) errors.push('recommendation must be BUY, HOLD or AVOID');
+  if (!advice.situation) errors.push('situation is missing');
+  if (!advice.recommendationRationale) errors.push('recommendationRationale is missing');
+  if (advice.reasons.length === 0) errors.push('at least one reason is required');
+  if (advice.risks.length === 0) errors.push('at least one risk is required');
+  if (!advice.outlook) errors.push('outlook is missing');
+  return { advice: errors.length ? null : advice, errors };
+}
+
 @Injectable()
 export class StockAdvisorService {
   private readonly logger = new Logger(StockAdvisorService.name);
   private readonly cmsUrl: string;
   private readonly cmsToken: string;
+  private readonly newsCache = new Map<string, { at: number; value: TavilyResult[] }>();
+  private readonly adviceCache = new Map<string, { at: number; value: AdviceResponse }>();
 
   constructor(
     private prisma: PrismaService,
@@ -245,7 +335,15 @@ export class StockAdvisorService {
     }));
   }
 
-  async getAiAdvice(userId: string, ticker: string) {
+  /**
+   * AI commentary on one stock, grounded in our own data. The price, its moves, the 60-session range and the
+   * user's position are computed here from recorded closes and shown as the key metrics; the model only writes
+   * the narrative, and anything it writes that carries a KSh/% figure must come from our data or the search
+   * results (advice-grounding.verifyAdvice). If the data is missing or stale, or the model cannot produce
+   * something that checks out in MAX_AI_ATTEMPTS, the user gets a plain HOLD with the reason - never a
+   * confident BUY/AVOID resting on nothing.
+   */
+  async getAiAdvice(userId: string, ticker: string): Promise<AdviceResponse> {
     const [profile, stocks] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.fetchStocksFromStrapi(),
@@ -260,76 +358,149 @@ export class StockAdvisorService {
       throw new InternalServerErrorException('AI service not configured');
     }
 
-    const profileContext = profile
-      ? `The investor is a ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score: ${profile.riskScore}/100. Investment horizon: ${profile.horizonYears} years. Capital range: ${profile.capitalRange}.`
-      : 'The investor has not completed a profile yet - provide general analysis.';
+    const cacheKey = `${userId}:${stock.ticker.toUpperCase()}`;
+    const hit = this.fresh(this.adviceCache, cacheKey, ADVICE_TTL_MS);
+    if (hit) return { ...hit, cached: true };
 
-    // Ground the model in current information the same way the previous
-    // Gemini implementation did via its built-in googleSearch tool - since
-    // OpenRouter is a completions proxy with no equivalent, search results
-    // are fetched separately and folded into the prompt as context instead.
-    const searchResults = await this.tavily.search({
-      query: `${stock.company_name} ${stock.ticker} NSE Nairobi Securities Exchange latest news earnings price`,
+    const today = new Date(Date.now() + EAT_OFFSET_MS).toISOString().slice(0, 10);
+    const [closes, holdings] = await Promise.all([
+      loadDailyCloses(this.prisma, [stock.ticker.toUpperCase()]),
+      this.prisma.holding.findMany({ where: { userId, ticker: stock.ticker.toUpperCase(), quantity: { gt: 0 } } }),
+    ]);
+    const facts = buildPriceFacts(closes.get(stock.ticker.toUpperCase()), today);
+
+    let position: PositionFacts | null = null;
+    if (holdings.length > 0) {
+      const quantity = holdings.reduce((n, h) => n + h.quantity, 0);
+      const costed = holdings.every((h) => h.avgCost != null);
+      const avgCost = costed ? holdings.reduce((n, h) => n + (h.avgCost as number) * h.quantity, 0) / quantity : null;
+      position = {
+        quantity,
+        avgCost,
+        costEstimated: holdings.some((h) => h.costSource === 'IMPORT_PRICE'),
+        gainPct: facts && avgCost ? ((facts.priceKes - avgCost) / avgCost) * 100 : null,
+      };
+    }
+
+    let userFit: { verdict: string; reasons: string[] } | null = null;
+    if (profile) {
+      const { rating, reasons } = analyseForType(profile.type as InvestorType, stock);
+      userFit = { verdict: FIT_VERDICTS[rating], reasons };
+    }
+
+    const base = { ticker: stock.ticker, company_name: stock.company_name };
+    const finish = (advice: AdviceBody, extra: Pick<AdviceResponse, 'aiGenerated' | 'sources'> & Partial<AdviceResponse>): AdviceResponse => ({
+      ...base,
+      ...advice,
+      keyMetrics: facts ? metricsFromFacts(facts, stock, position) : [],
+      dataAsOf: facts?.asOf ?? null,
+      disclaimer: 'AI-generated analysis for educational purposes only. Not financial advice. Verify with a CMA-registered broker.',
+      generatedAt: new Date().toISOString(),
+      ...extra,
+    });
+
+    const problem = dataProblem(facts);
+    if (problem) {
+      return finish(fallbackAdvice(stock, facts, userFit, problem), { aiGenerated: false, note: problem, sources: [] });
+    }
+    const f = facts as PriceFacts;
+
+    const news = await this.newsFor(stock);
+    const newsText = news.map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content}`).join('\n\n');
+    const allowed = new Set<string>([
+      ...figuresFromFacts(f, position, [stock.dividend_yield]),
+      ...allNumbers(news.map((r) => `${r.title} ${r.content}`).join(' ')),
+    ]);
+
+    const profileContext = profile
+      ? `A ${TYPE_LABELS[profile.type as InvestorType]} investor. Risk score ${profile.riskScore}/100. Horizon ${profile.horizonYears} years. Capital range ${profile.capitalRange}.`
+      : 'No investor profile yet - keep it general.';
+    const positionContext = position
+      ? `POSITION: already holds ${position.quantity.toLocaleString('en-KE')} shares${position.gainPct != null ? `, ${position.gainPct >= 0 ? 'up' : 'down'} ${Math.abs(position.gainPct).toFixed(1)}% on cost${position.costEstimated ? ' (cost is an estimate)' : ''}` : ''}.`
+      : 'POSITION: does not hold it yet.';
+
+    let messages: ChatMessage[] = [
+      {
+        role: 'user',
+        content: buildAdvicePrompt({
+          company: stock.company_name,
+          ticker: stock.ticker,
+          sector: stock.sector,
+          profileContext,
+          positionContext,
+          metrics: metricsFromFacts(f, stock, position),
+          news: newsText,
+          hasNews: news.length > 0,
+        }),
+      },
+    ];
+
+    let lastProblems: string[] = [];
+    for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt++) {
+      let content: string;
+      let model: string;
+      try {
+        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.3, timeoutMs: 90_000 }));
+      } catch (err) {
+        this.logger.error(`AI advice request failed for ${stock.ticker} (attempt ${attempt}): ${(err as Error).message}`);
+        throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
+      }
+
+      const parsed = parseAdvice(content);
+      const problems = parsed.advice ? verifyAdvice(parsed.advice, allowed) : parsed.errors;
+      if (parsed.advice && problems.length === 0) {
+        const advice = parsed.advice;
+        const out = finish(advice, {
+          aiGenerated: true,
+          model,
+          note: news.length === 0 ? 'No recent news was found, so this view rests on price data and the company profile only.' : null,
+          sources: news.slice(0, 6).map((r) => `${r.title} (${hostOf(r.url)})`),
+        });
+        this.remember(this.adviceCache, cacheKey, out);
+        return out;
+      }
+      lastProblems = problems;
+      this.logger.warn(`AI advice for ${stock.ticker} rejected on attempt ${attempt}: ${problems.slice(0, 4).join('; ')}`);
+      messages = [
+        ...messages,
+        { role: 'assistant', content },
+        { role: 'user', content: `Your answer was rejected: ${problems.slice(0, 6).join('; ')}. Return the complete JSON object again. Do not state any KSh amount or percentage that is not in OUR DATA or the news above.` },
+      ];
+    }
+
+    const why = 'The AI analysis could not be verified against our price data and the news it was given.';
+    return finish(fallbackAdvice(stock, f, userFit, why), { aiGenerated: false, note: `${why} (${lastProblems[0] ?? 'unparseable output'})`, sources: [] });
+  }
+
+  private fresh<T>(cache: Map<string, { at: number; value: T }>, key: string, ttl: number): T | null {
+    const e = cache.get(key);
+    return e && Date.now() - e.at < ttl ? e.value : null;
+  }
+
+  private remember<T>(cache: Map<string, { at: number; value: T }>, key: string, value: T) {
+    if (cache.size >= MAX_CACHE_ENTRIES) {
+      const oldest = cache.keys().next().value;
+      if (oldest !== undefined) cache.delete(oldest);
+    }
+    cache.delete(key);
+    cache.set(key, { at: Date.now(), value });
+  }
+
+  /** News for a company, shared by everyone who asks within NEWS_TTL_MS so the search quota is spent per company, not per click. */
+  private async newsFor(stock: StockProfile): Promise<TavilyResult[]> {
+    const key = stock.ticker.toUpperCase();
+    const hit = this.fresh(this.newsCache, key, NEWS_TTL_MS);
+    if (hit) return hit;
+    const results = await this.tavily.search({
+      query: `${stock.company_name} ${stock.ticker} NSE Nairobi Securities Exchange latest news earnings dividend`,
       topic: 'finance',
       timeRange: 'month',
       maxResults: 5,
     });
-
-    const groundingContext = searchResults.length
-      ? searchResults
-          .map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content}`)
-          .join('\n\n')
-      : 'No current search results are available - base the analysis on general knowledge of the company and sector, and note that live data was unavailable.';
-
-    const prompt = `You are a senior NSE (Nairobi Securities Exchange) investment analyst providing personalised advice to a Kenyan retail investor.
-
-COMPANY: ${stock.company_name} (${stock.ticker}) - ${stock.sector} sector
-INVESTOR PROFILE: ${profileContext}
-
-RECENT SEARCH RESULTS (use these for anything time-sensitive - news, earnings, price action, corporate actions):
-${groundingContext}
-
-Based on the search results above and the investor's profile, provide a JSON response with exactly this structure:
-{
-  "situation": "2-3 sentence summary of what is happening with this company in the Kenyan market right now",
-  "keyMetrics": ["Latest Price: KSh XX.XX", "52-Week Range: ...", "P/E Ratio: ...", "any other relevant metrics found"],
-  "recommendation": "BUY" or "HOLD" or "AVOID",
-  "recommendationRationale": "A direct, personalized sentence explaining why this fits (or doesn't fit) a ${profile ? TYPE_LABELS[profile.type as InvestorType] : 'retail'} investor with a ${profile ? profile.riskScore : 'standard'}/100 risk score.",
-  "reasons": ["Specific reason based on latest news", "Specific reason based on fundamentals", "Specific reason based on technicals"],
-  "risks": ["Immediate risk 1", "Immediate risk 2", "Immediate risk 3"],
-  "outlook": "A forward-looking paragraph on the 6-12 month expectation for this stock.",
-  "sources": ["List the specific news outlets or reports the search results came from"]
-}
-
-If the search results don't cover something, say so plainly rather than inventing figures. Return ONLY the JSON object. Do not include markdown code blocks.`;
-
-    try {
-      const text = await this.openRouter.chatCompletion({
-        messages: [{ role: 'user', content: prompt }],
-      });
-      const jsonMatch = text.trim().match(/\{[\s\S]*\}/);
-      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-
-      return {
-        ticker: stock.ticker,
-        company_name: stock.company_name,
-        ...(parsed ?? {
-          situation: text.slice(0, 400),
-          keyMetrics: [],
-          recommendation: 'HOLD',
-          recommendationRationale: 'Insufficient data for a personalised recommendation.',
-          reasons: ['Limited current data available'],
-          risks: ['Market conditions may change rapidly'],
-          outlook: 'Consult a licensed CMA-registered investment advisor for specific advice.',
-          sources: [],
-        }),
-        disclaimer: 'AI-generated analysis for educational purposes only. Not financial advice. Verify with a CMA-registered broker.',
-        generatedAt: new Date().toISOString(),
-      };
-    } catch (err) {
-      this.logger.error(`AI advice error: ${(err as Error).message}`);
-      throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
-    }
+    // An empty answer (no key, an error, nothing found) is remembered only briefly so it is retried soon.
+    if (results.length > 0) this.remember(this.newsCache, key, results);
+    else this.newsCache.set(key, { at: Date.now() - NEWS_TTL_MS + NEWS_EMPTY_TTL_MS, value: [] });
+    return results;
   }
 
   private async fetchStocksFromStrapi() {

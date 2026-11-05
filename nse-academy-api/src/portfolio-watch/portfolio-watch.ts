@@ -18,6 +18,7 @@ export interface DailyClose {
   date: string;
   price: number;
 }
+// (same shape as market-data/price-history's DailyClose; kept local so this module stays dependency-free)
 
 export type WatchKind = 'TAKE_PROFIT' | 'DRAWDOWN' | 'NEAR_HIGH' | 'NEAR_LOW' | 'CONCENTRATION' | 'MOVER';
 

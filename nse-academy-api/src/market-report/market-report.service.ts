@@ -65,8 +65,8 @@ export class MarketReportService {
     private config: ConfigService,
   ) {}
 
-  /** 08:10 Nairobi, every day - before the 09:00 open, covering the last completed session. Idempotent. */
-  @Cron('10 8 * * *', { timeZone: 'Africa/Nairobi' })
+  /** 21:00 Nairobi on trading days: the NSE closed at 15:00, so this covers that same day's session. Idempotent. */
+  @Cron('0 21 * * 1-5', { timeZone: 'Africa/Nairobi' })
   async handleDaily(): Promise<void> {
     try {
       const ymd = await this.facts.latestSessionYmd(new Date());
@@ -213,7 +213,7 @@ export class MarketReportService {
     });
   }
 
-  /** The morning email: the page is live, and everything needed to post it. */
+  /** The email sent when a report is published: the page is live, and everything needed to post it. */
   private async emailSharePack(row: MarketReport): Promise<void> {
     const r = this.toPublic(row);
     const social = fillUrl(

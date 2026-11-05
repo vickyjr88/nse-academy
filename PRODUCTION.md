@@ -211,9 +211,9 @@ docker exec nse-academy-postgres-1 pg_dump -U postgres nse_academy_api > backup_
 
 ## Public daily market report
 
-Every day at **08:10 Africa/Nairobi** the API builds a public report for the last completed NSE session and publishes it at
+Every trading day (Mon-Fri) at **21:00 Africa/Nairobi** - six hours after the 15:00 close - the API builds a public report for that day's NSE session and publishes it at
 `/market-report/<YYYY-MM-DD>` (index at `/market-report`). It is idempotent: if the session already has a report, nothing happens, so
-weekends and holidays simply re-use Friday's.
+holidays (a weekday with no new snapshots) simply re-use the previous session's.
 
 **What is public:** NSE price data and an AI-written story only. Nothing about users, signups, payments or messages.
 

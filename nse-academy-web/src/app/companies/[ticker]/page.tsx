@@ -1,8 +1,11 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
-import { getStockProfileByTicker, getStockProfiles } from "@/lib/cms";
+import { getStockProfileByTicker, getStockProfiles, type StockProfile } from "@/lib/cms";
+import { getMarketQuote } from "@/lib/market-quote";
+import { SITE_NAME, abs, breadcrumbJsonLd, faqJsonLd, leadSentence, truncate } from "@/lib/seo";
 import CompanyPriceWidget from "@/components/CompanyPriceWidget";
+import JsonLd from "@/components/JsonLd";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
@@ -10,58 +13,111 @@ interface Props {
   params: Promise<{ ticker: string }>;
 }
 
+// One URL per company. The sitemap and every internal link use the upper-case ticker; the lower-case
+// spelling used to be linked from the company list, so both existed and neither had a canonical.
+const companyPath = (ticker: string) => `/companies/${ticker.toUpperCase()}`;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { ticker } = await params;
   const profile = await getStockProfileByTicker(ticker.toUpperCase());
-  
-  if (!profile) return { title: "Company Not Found" };
+
+  if (!profile) return { title: "Company Not Found", robots: { index: false } };
+
+  const url = abs(companyPath(profile.ticker));
+  const title = `${profile.company_name} (${profile.ticker}) Share Price & Profile | ${SITE_NAME}`;
+  // Keywords first: Google cuts around 155 characters, and the company's own summary is the part that can go.
+  const description = truncate(
+    `${profile.company_name} (NSE: ${profile.ticker}) share price, dividend yield and risk profile. ${profile.sector} stock on the Nairobi Securities Exchange. ${leadSentence(profile.description)}`,
+    158,
+  );
 
   return {
-    title: `${profile.company_name} (${profile.ticker}) | NSE Academy`,
-    description: profile.description.slice(0, 160),
+    title,
+    description,
+    alternates: { canonical: url },
     openGraph: {
-      title: `${profile.company_name} Analysis & Live Price`,
-      description: profile.description.slice(0, 160),
-    }
+      title: `${profile.company_name} (${profile.ticker}) - NSE share price & profile`,
+      description,
+      url,
+      type: "website",
+      siteName: SITE_NAME,
+    },
+    twitter: { card: "summary_large_image", title: `${profile.company_name} (${profile.ticker})`, description },
   };
 }
 
 export async function generateStaticParams() {
   const { profiles } = await getStockProfiles({ limit: 100 });
   return profiles.map((p) => ({
-    ticker: p.ticker.toLowerCase(),
+    ticker: p.ticker.toUpperCase(),
   }));
 }
 
-function CompanyJsonLd({ profile }: { profile: any }) {
-  if (!profile) return null;
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": profile.company_name,
-    "tickerSymbol": profile.ticker,
-    "description": profile.description,
-    "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/companies/${profile.ticker.toLowerCase()}`,
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
-  );
+function companyFaqs(profile: StockProfile): { q: string; a: string }[] {
+  const name = profile.company_name;
+  const faqs = [
+    { q: `What does ${name} do?`, a: profile.description },
+    {
+      q: `What is the NSE ticker for ${name}?`,
+      a: `${name} trades on the Nairobi Securities Exchange (NSE) under the ticker ${profile.ticker}. It is classified in the ${profile.sector} sector.`,
+    },
+    {
+      q: `Does ${name} pay dividends?`,
+      a: profile.dividend_yield
+        ? `NSE Academy lists a target dividend yield of ${profile.dividend_yield}% for ${name}. Actual yield moves with the share price and with each dividend the board declares, so check the company's latest announcement before you invest.`
+        : `NSE Academy does not currently list a dividend yield for ${name}. Check the company's latest results and dividend announcements for its current policy.`,
+    },
+    {
+      q: `How risky is ${name}?`,
+      a: `NSE Academy rates ${name} as ${profile.risk_level} risk within the ${profile.sector} sector. This is an educational classification, not investment advice - every share can lose value.`,
+    },
+    {
+      q: `How do I buy ${name} shares?`,
+      a: `Open a CDS account through a licensed Kenyan stockbroker, fund it, then place a buy order for ${profile.ticker}. You can compare broker fees on NSE Academy before you choose one.`,
+    },
+  ];
+  return faqs;
 }
 
 export default async function CompanyDetailPage({ params }: Props) {
   const { ticker } = await params;
-  const profile = await getStockProfileByTicker(ticker.toUpperCase());
+  const upper = ticker.toUpperCase();
+  if (ticker !== upper) permanentRedirect(companyPath(upper));
+
+  const [profile, quote, { profiles: all }] = await Promise.all([
+    getStockProfileByTicker(upper),
+    getMarketQuote(upper),
+    getStockProfiles({ limit: 100 }),
+  ]);
 
   if (!profile) notFound();
 
+  const faqs = companyFaqs(profile);
+  // The CMS sometimes stores an empty list as the string "[]", which rendered as a card titled "[] Profiles".
+  const investorTypes = (profile.investor_types ?? []).filter((t) => /[a-z]/i.test(t));
+  const related = all.filter((p) => p.sector === profile.sector && p.ticker !== profile.ticker).slice(0, 6);
+
   return (
     <>
-      <CompanyJsonLd profile={profile} />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Corporation",
+          name: profile.company_name,
+          tickerSymbol: `NSE:${profile.ticker}`,
+          description: profile.description,
+          url: abs(companyPath(profile.ticker)),
+          industry: profile.sector,
+        }}
+      />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Companies", path: "/companies" },
+          { name: profile.company_name, path: companyPath(profile.ticker) },
+        ])}
+      />
+      <JsonLd data={faqJsonLd(faqs)} />
       <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       <PublicHeader />
       
@@ -120,8 +176,8 @@ export default async function CompanyDetailPage({ params }: Props) {
               <section className="bg-gray-50 border border-gray-100 rounded-3xl p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Investment Suitability</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {profile.investor_types && profile.investor_types.length > 0 ? (
-                    profile.investor_types.map((type) => (
+                  {investorTypes.length > 0 ? (
+                    investorTypes.map((type) => (
                       <div key={type} className="flex items-start space-x-3 bg-white p-5 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-colors">
                         <div className="mt-1 flex-shrink-0 w-6 h-6 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 text-xs">
                           ✓
@@ -139,12 +195,50 @@ export default async function CompanyDetailPage({ params }: Props) {
                   )}
                 </div>
               </section>
+
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-emerald-600 pl-4">
+                  {profile.company_name} FAQs
+                </h2>
+                <div className="space-y-6">
+                  {faqs.slice(1).map((f) => (
+                    <div key={f.q}>
+                      <h3 className="font-bold text-gray-900 mb-1.5">{f.q}</h3>
+                      <p className="text-gray-600 leading-relaxed">{f.a}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-6">
+                  Educational content, not investment advice. Prices are delayed and for information only.{" "}
+                  <Link href="/brokers-compare" className="text-emerald-700 hover:underline">Compare NSE brokers</Link>
+                  {" · "}
+                  <Link href="/market-report" className="text-emerald-700 hover:underline">Read the daily market report</Link>
+                </p>
+              </section>
+
+              {related.length > 0 && (
+                <section>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Other {profile.sector} companies on the NSE</h2>
+                  <ul className="flex flex-wrap gap-2">
+                    {related.map((p) => (
+                      <li key={p.ticker}>
+                        <Link
+                          href={companyPath(p.ticker)}
+                          className="inline-block px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
+                        >
+                          {p.company_name} <span className="text-gray-400">({p.ticker})</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             </div>
 
             {/* Sticky Sidebar */}
             <div className="space-y-8">
               <div className="sticky top-28 space-y-8">
-                <CompanyPriceWidget ticker={profile.ticker} />
+                <CompanyPriceWidget ticker={profile.ticker} initial={quote} />
                 
                 <div className="bg-emerald-700 rounded-3xl p-8 text-white relative overflow-hidden group shadow-lg">
                   <h3 className="text-xl font-bold mb-4">Join the Academy</h3>

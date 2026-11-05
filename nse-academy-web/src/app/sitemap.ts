@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { getAllArticleSlugs, getStockProfiles } from "@/lib/cms";
+import { getAllArticleEntries, getStockProfiles } from "@/lib/cms";
 import { listPublicAdvisors } from "@/lib/advisor-public";
 import { listMarketReports } from "@/lib/market-report";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+import { SITE_URL } from "@/lib/seo";
 
 interface PublicSlug {
   slug: string;
@@ -25,8 +25,8 @@ async function getPublicProfileSlugs(): Promise<PublicSlug[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articleSlugs, profileSlugs, { profiles: companies }, { data: advisors }, reports] = await Promise.all([
-    getAllArticleSlugs(),
+  const [articles, profileSlugs, { profiles: companies }, { data: advisors }, reports] = await Promise.all([
+    getAllArticleEntries(),
     getPublicProfileSlugs(),
     getStockProfiles({ limit: 100 }),
     listPublicAdvisors({ limit: 100 }),
@@ -34,23 +34,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: SITE_URL, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
-    { url: `${SITE_URL}/blog`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
-    { url: `${SITE_URL}/store`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/calculators`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${SITE_URL}/faq`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${SITE_URL}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
-    { url: `${SITE_URL}/glossary`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE_URL}/investor-profiler`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
-    { url: `${SITE_URL}/companies`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/advisors`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE_URL}/market-report`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE_URL}/brokers-compare`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: SITE_URL, changeFrequency: "weekly", priority: 1.0 },
+    { url: `${SITE_URL}/blog`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE_URL}/store`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/calculators`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/faq`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/pricing`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/glossary`, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE_URL}/investor-profiler`, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/companies`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/advisors`, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE_URL}/market-report`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/brokers-compare`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${SITE_URL}/about`, changeFrequency: "yearly", priority: 0.6 },
   ];
 
-  const articlePages: MetadataRoute.Sitemap = articleSlugs.map((slug) => ({
+  const articlePages: MetadataRoute.Sitemap = articles.map(({ slug, updatedAt }) => ({
     url: `${SITE_URL}/blog/${slug}`,
-    lastModified: new Date(),
+    ...(updatedAt && { lastModified: new Date(updatedAt) }),
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
@@ -63,15 +64,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const companyPages: MetadataRoute.Sitemap = companies.map(({ ticker }) => ({
-    url: `${SITE_URL}/companies/${ticker}`,
-    lastModified: new Date(),
+    url: `${SITE_URL}/companies/${ticker.toUpperCase()}`,
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));
 
   const advisorPages: MetadataRoute.Sitemap = advisors.map((a) => ({
     url: `${SITE_URL}/advisors/${a.id}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.5,
   }));

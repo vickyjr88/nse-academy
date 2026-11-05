@@ -135,6 +135,27 @@ export async function getAllArticleSlugs(): Promise<string[]> {
   }
 }
 
+/** Slug plus last-edit time, for the sitemap's lastmod. */
+export async function getAllArticleEntries(): Promise<{ slug: string; updatedAt: string | null }[]> {
+  try {
+    const res = await fetch(`${CMS_URL}/api/articles?fields[0]=slug&fields[1]=updatedAt&fields[2]=publishedAt&pagination[limit]=200`, {
+      headers,
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? [])
+      .map((a: any) => {
+        const x = a.attributes ?? a;
+        return { slug: x.slug as string, updatedAt: (x.updatedAt ?? x.publishedAt ?? null) as string | null };
+      })
+      .filter((a: { slug: string }) => a.slug);
+  } catch (error) {
+    console.warn("CMS Fetch (getAllArticleEntries) failed:", error);
+    return [];
+  }
+}
+
 // =============================================================================
 // Lead magnets - Strapi-managed PDFs offered as email-capture incentives.
 // =============================================================================

@@ -6,8 +6,9 @@ import PublicFooter from "@/components/PublicFooter";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Financial Advisors - NSE Academy",
+  title: "Find an NSE Financial Advisor in Kenya | NSE Academy",
   description: "Connect with independent financial advisors offering personalised NSE investment guidance.",
+  alternates: { canonical: "/advisors" },
 };
 
 export default async function AdvisorsPage() {

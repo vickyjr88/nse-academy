@@ -7,7 +7,8 @@ import { getDigitalProducts } from "@/lib/dexter";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NSE Investment Store - NSE Academy",
+  title: "NSE Investing Ebooks & Guides for Kenyans | NSE Academy Store",
+  alternates: { canonical: "/store" },
   description:
     "Comprehensive guides and ebooks to help you master the Nairobi Securities Exchange. Start building your portfolio today.",
 };

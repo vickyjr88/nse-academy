@@ -37,7 +37,7 @@ export default function CompanySearch({ profiles }: { profiles: StockProfile[] }
         {filteredProfiles.map((profile) => (
           <Link
             key={profile.ticker}
-            href={`/companies/${profile.ticker.toLowerCase()}`}
+            href={`/companies/${profile.ticker.toUpperCase()}`}
             className="group block"
           >
             <div className="h-full bg-white border border-gray-100 rounded-2xl p-6 transition-all duration-300 hover:border-emerald-200 hover:shadow-sm">

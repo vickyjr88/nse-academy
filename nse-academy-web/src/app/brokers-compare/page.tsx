@@ -5,7 +5,8 @@ import PublicFooter from "@/components/PublicFooter";
 import { listPublicBrokers } from "@/lib/brokers";
 
 export const metadata: Metadata = {
-  title: "Compare NSE Broker Fees - NSE Academy",
+  title: "Compare NSE Broker Fees in Kenya - Stockbrokers & CDS Agents | NSE Academy",
+  alternates: { canonical: "/brokers-compare" },
   description:
     "Compare brokerage fees across licensed NSE stockbrokers and CDS agents in Kenya, including flat-rate trading platforms like Ziidi Trader.",
 };

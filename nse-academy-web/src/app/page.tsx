@@ -6,13 +6,15 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import { TrackedAnchor, TrackedLink } from "@/components/TrackedLink";
 import LeadMagnetForm from "@/components/LeadMagnetForm";
+import JsonLd from "@/components/JsonLd";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "NSE Academy - The Complete Investor's Guide to the Nairobi Securities Exchange",
+  title: "NSE Academy | Learn to Invest on the Nairobi Securities Exchange",
   description:
-    "Personalised NSE stock picks, deep-dive research, and a portfolio you can actually track - from KSh 300/mo. Built for Kenyan investors.",
+    "NSE Academy is a Kenyan investor-education platform: a free investor-profile quiz, NSE company profiles, a daily market report and courses - from KSh 300/mo.",
   openGraph: {
     title: "NSE Academy - Build Your NSE Portfolio With Confidence",
     description:
@@ -106,26 +108,10 @@ export default async function LandingPage() {
 
   const headlineEbook = pickHeadlineEbook(ebooks);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "NSE Academy",
-    "url":
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://nseacademy.vitaldigitalmedia.net",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": `${process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net"}/companies/{search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
-  };
-
   return (
     <div className="min-h-screen bg-white">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={websiteJsonLd()} />
       <PublicHeader />
 
       {/* Hero - subscription is the one ask */}
@@ -142,6 +128,15 @@ export default async function LandingPage() {
         <p className="max-w-2xl mx-auto text-lg text-gray-600 mb-8">
           Personalised stock picks, deep-dive research, and a portfolio you can actually
           track across every broker - the framework Kenyan investors use to stop guessing.
+        </p>
+
+        <p className="max-w-2xl mx-auto text-sm text-gray-500 mb-8">
+          <strong className="font-semibold text-gray-700">NSE Academy</strong> is an independent investor-education
+          platform for the Nairobi Securities Exchange (NSE). Take the free{" "}
+          <Link href="/investor-profiler" className="text-emerald-700 hover:underline">investor-profile quiz</Link>, browse{" "}
+          <Link href="/companies" className="text-emerald-700 hover:underline">NSE company profiles</Link> and read the{" "}
+          <Link href="/market-report" className="text-emerald-700 hover:underline">daily market report</Link>.{" "}
+          <Link href="/about" className="text-emerald-700 hover:underline">About us</Link>.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">

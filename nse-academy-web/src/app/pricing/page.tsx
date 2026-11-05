@@ -4,8 +4,9 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export const metadata: Metadata = {
-  title: "Pricing - NSE Academy",
-  description: "Simple, transparent pricing for every Kenyan investor.",
+  title: "NSE Academy Pricing - Free, KSh 300 and KSh 500 Plans",
+  description: "Simple pricing for Kenyan investors: a free plan, Intermediary at KSh 300/month and Premium at KSh 500/month. Pay with M-Pesa or card. Cancel anytime.",
+  alternates: { canonical: "/pricing" },
 };
 
 const pricingTiers = [

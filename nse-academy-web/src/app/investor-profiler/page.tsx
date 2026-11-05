@@ -7,6 +7,7 @@ import { getLeadMagnet } from "@/lib/cms";
 
 export const metadata: Metadata = {
   title: "Investor Profiler Quiz | NSE Academy",
+  alternates: { canonical: "/investor-profiler" },
   description: "Discover your true investor type with our free 10-question quiz. Get a personalized learning path and stock recommendations for the Nairobi Securities Exchange.",
   openGraph: {
     title: "Investor Profiler Quiz | NSE Academy",

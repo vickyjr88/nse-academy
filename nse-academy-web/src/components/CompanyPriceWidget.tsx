@@ -1,24 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatQuoteTime, type MarketQuote } from "@/lib/market-quote";
 
-interface PriceData {
-  ticker: string;
-  name: string;
-  price: number;
-  change: string;
-  volume: string;
-  updatedAt?: string;
-}
+type PriceData = MarketQuote;
 
-export default function CompanyPriceWidget({ ticker }: { ticker: string }) {
-  const [data, setData] = useState<PriceData | null>(null);
-  const [loading, setLoading] = useState(true);
+/** `initial` is the quote the server already rendered, so the price is in the HTML crawlers read. */
+export default function CompanyPriceWidget({ ticker, initial }: { ticker: string; initial?: MarketQuote | null }) {
+  const [data, setData] = useState<PriceData | null>(initial ?? null);
+  const [loading, setLoading] = useState(!initial);
   const [error, setError] = useState(false);
 
   const fetchPrice = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/market-data/${ticker.toUpperCase()}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/market-data/${ticker.toUpperCase()}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -35,7 +30,7 @@ export default function CompanyPriceWidget({ ticker }: { ticker: string }) {
   };
 
   useEffect(() => {
-    fetchPrice();
+    if (!initial) fetchPrice();
     const interval = setInterval(fetchPrice, 60000); // Poll every minute
     return () => clearInterval(interval);
   }, [ticker]);
@@ -66,10 +61,10 @@ export default function CompanyPriceWidget({ ticker }: { ticker: string }) {
       
       <div className="flex justify-between items-end mb-4">
         <div>
-          <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Live Market Price</h3>
+          <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Latest Share Price</h3>
           <div className="flex items-baseline space-x-2">
             <span className="text-4xl font-extrabold text-white">
-              {data.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {data.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <span className="text-slate-400 text-sm font-medium">KES</span>
           </div>
@@ -92,8 +87,8 @@ export default function CompanyPriceWidget({ ticker }: { ticker: string }) {
         </div>
         <div className="text-right">
           <span className="block text-[10px] text-slate-500 uppercase tracking-widest font-bold">Last Update</span>
-          <span className="text-xs text-slate-400">
-            {data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : 'Just now'}
+          <span className="text-xs text-slate-400" suppressHydrationWarning>
+            {data.updatedAt ? `${formatQuoteTime(data.updatedAt)} EAT` : 'Just now'}
           </span>
         </div>
       </div>

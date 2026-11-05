@@ -1,12 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getStockProfiles } from "@/lib/cms";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CompanySearch from "@/components/CompanySearch";
 
-export const metadata = {
-  title: "Listed Companies - NSE Academy",
-  description: "Explore profiles of publicly traded companies on the Nairobi Securities Exchange.",
+export const metadata: Metadata = {
+  title: "NSE Listed Companies: Profiles, Share Prices & Dividends | NSE Academy",
+  description:
+    "Browse every company listed on the Nairobi Securities Exchange - sector, share price, dividend yield and risk profile for each NSE stock, with plain-English company summaries.",
+  alternates: { canonical: "/companies" },
+  openGraph: { title: "NSE listed companies - NSE Academy", url: "/companies", type: "website", siteName: "NSE Academy" },
 };
 
 export default async function CompaniesPage() {

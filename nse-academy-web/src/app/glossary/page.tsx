@@ -7,7 +7,8 @@ import GlossaryClient, { type GlossaryTerm } from "../dashboard/glossary/Glossar
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NSE Glossary - NSE Academy",
+  title: "NSE Glossary: Stock Market Terms Explained for Kenyans | NSE Academy",
+  alternates: { canonical: "/glossary" },
   description:
     "Searchable A-Z glossary of Kenyan capital markets terms - from A/P ratio to yield curve. Free for all investors.",
 };

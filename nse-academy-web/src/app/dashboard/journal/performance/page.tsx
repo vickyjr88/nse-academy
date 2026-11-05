@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/ebook";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TierGate } from "@/components/TierGate";
+import OpenPositions from "./OpenPositions";
 import {
   type RealizedGainsSummary,
   getRealizedGainsSummary,
@@ -92,7 +93,7 @@ export default function PerformancePage() {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mt-2">Portfolio Performance</h1>
           <p className="text-gray-500 mt-2 max-w-2xl">
-            Realized gains and losses from your closed positions. NSE-listed share trades are currently
+            Your open positions, plus realized gains and losses from closed ones. NSE-listed share trades are currently
             exempt from capital gains tax for individual investors in Kenya, so this is a performance
             reference, not a tax filing — consult your accountant for your specific situation.
           </p>
@@ -127,8 +128,11 @@ export default function PerformancePage() {
         </div>
       )}
 
+      <OpenPositions />
+
       {summary && (
         <>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Realized gains</h2>
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
             <p className="text-xs text-gray-400 uppercase mb-1">Total realized gain/loss</p>
             <p

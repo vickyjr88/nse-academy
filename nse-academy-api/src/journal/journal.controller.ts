@@ -23,6 +23,7 @@ import { CreateTradeDto } from './dto/create-trade.dto';
 import { UpdateTradeDto } from './dto/update-trade.dto';
 import { CreateDividendDto } from './dto/create-dividend.dto';
 import { UpdateDividendDto } from './dto/update-dividend.dto';
+import { UpdateHoldingCostDto } from './dto/update-holding-cost.dto';
 import { RealizedGainsQueryDto } from './dto/realized-gains-query.dto';
 
 const MAX_STATEMENT_SIZE_BYTES = 10 * 1024 * 1024;
@@ -74,6 +75,16 @@ export class JournalController {
   @ApiOperation({ summary: 'Get current holdings, cost basis, and live valuation computed from trades' })
   getPortfolio(@Req() req: { user: { id: string } }) {
     return this.journal.getPortfolio(req.user.id);
+  }
+
+  @Put('holdings/:id/cost')
+  @ApiOperation({ summary: 'Set the average cost per share of a holding (replaces an estimated import-day cost)' })
+  setHoldingCost(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Body() body: UpdateHoldingCostDto,
+  ) {
+    return this.journal.setHoldingCost(req.user.id, id, body.avgCost);
   }
 
   @Get('realized-gains')

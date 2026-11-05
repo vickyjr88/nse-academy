@@ -27,11 +27,15 @@ export interface Trade {
 }
 
 export interface PortfolioPosition {
+  id: string;
   ticker: string;
   companyName: string | null;
   broker: { id: string; name: string };
   quantity: number;
   avgCost: number | null;
+  /** IMPORT_PRICE = estimated from the market price on import day; MANUAL = typed by the user; TRADES = from the journal. */
+  costSource: "IMPORT_PRICE" | "MANUAL" | "TRADES" | null;
+  costDate: string | null;
   costBasisKes: number | null;
   currentPrice: number | null;
   marketValueKes: number | null;
@@ -43,6 +47,7 @@ export interface ConsolidatedPosition {
   companyName: string | null;
   quantity: number;
   avgCost: number | null;
+  costEstimated: boolean;
   costBasisKes: number | null;
   currentPrice: number | null;
   marketValueKes: number | null;
@@ -146,6 +151,15 @@ export function getPortfolio(): Promise<Portfolio> {
   return fetch(apiUrl("/journal/portfolio"), { headers: authHeaders() }).then((r) =>
     handle<Portfolio>(r),
   );
+}
+
+/** Replaces a holding's (estimated) cost per share with the real one. */
+export function setHoldingCost(holdingId: string, avgCost: number): Promise<{ id: string; avgCost: number }> {
+  return fetch(apiUrl(`/journal/holdings/${encodeURIComponent(holdingId)}/cost`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ avgCost }),
+  }).then((r) => handle<{ id: string; avgCost: number }>(r));
 }
 
 export function importStatement(file: File): Promise<StatementImportRecord> {

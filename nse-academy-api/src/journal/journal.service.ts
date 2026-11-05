@@ -93,7 +93,7 @@ export class JournalService {
 
     await this.prisma.holding.upsert({
       where: { userId_brokerId_ticker: { userId, brokerId, ticker } },
-      update: { quantity, avgCost, companyName: companyName ?? undefined },
+      update: { quantity, avgCost, costSource: avgCost != null ? 'TRADES' : null, costDate: avgCost != null ? new Date() : null, companyName: companyName ?? undefined },
       create: {
         userId,
         brokerId,
@@ -101,6 +101,8 @@ export class JournalService {
         companyName: companyName ?? ticker,
         quantity,
         avgCost,
+        costSource: avgCost != null ? 'TRADES' : null,
+        costDate: avgCost != null ? new Date() : null,
       },
     });
 
@@ -241,6 +243,27 @@ export class JournalService {
     return map;
   }
 
+  /** Last recorded market price at or before `at` - the price a holding is assumed to have been bought at when it is imported. */
+  private async priceAtOrBefore(ticker: string, at: Date): Promise<{ price: number; at: Date } | null> {
+    const row = await this.prisma.stockPrice.findFirst({
+      where: { ticker, price: { gt: 0 }, timestamp: { lte: at } },
+      orderBy: { timestamp: 'desc' },
+      select: { price: true, timestamp: true },
+    });
+    return row ? { price: row.price, at: row.timestamp } : null;
+  }
+
+  /** Lets the user replace an estimated (or any) cost per share with the real one. */
+  async setHoldingCost(userId: string, holdingId: string, avgCost: number) {
+    const holding = await this.prisma.holding.findUnique({ where: { id: holdingId } });
+    if (!holding || holding.userId !== userId) throw new NotFoundException('Holding not found');
+    const updated = await this.prisma.holding.update({
+      where: { id: holdingId },
+      data: { avgCost, costSource: 'MANUAL', costDate: new Date() },
+    });
+    return { id: updated.id, ticker: updated.ticker, avgCost: updated.avgCost, costSource: updated.costSource, costDate: updated.costDate };
+  }
+
   async getPortfolio(userId: string) {
     const holdings = await this.prisma.holding.findMany({
       where: { userId, quantity: { gt: 0 } },
@@ -258,11 +281,14 @@ export class JournalService {
         marketValueKes != null && costBasisKes != null ? marketValueKes - costBasisKes : null;
 
       return {
+        id: h.id,
         ticker: h.ticker,
         companyName: h.companyName,
         broker: { id: h.broker.id, name: h.broker.name },
         quantity: h.quantity,
         avgCost: h.avgCost,
+        costSource: h.costSource,
+        costDate: h.costDate,
         costBasisKes,
         currentPrice,
         marketValueKes,
@@ -276,7 +302,7 @@ export class JournalService {
 
     const byTicker = new Map<
       string,
-      { ticker: string; companyName: string | null; quantity: number; costBasisKes: number; hasCostBasis: boolean; currentPrice: number | null }
+      { ticker: string; companyName: string | null; quantity: number; costBasisKes: number; hasCostBasis: boolean; costEstimated: boolean; currentPrice: number | null }
     >();
     for (const p of positions) {
       const existing = byTicker.get(p.ticker);
@@ -284,6 +310,7 @@ export class JournalService {
         existing.quantity += p.quantity;
         existing.costBasisKes += p.costBasisKes ?? 0;
         existing.hasCostBasis = existing.hasCostBasis && p.costBasisKes != null;
+        existing.costEstimated = existing.costEstimated || p.costSource === 'IMPORT_PRICE';
       } else {
         byTicker.set(p.ticker, {
           ticker: p.ticker,
@@ -291,6 +318,7 @@ export class JournalService {
           quantity: p.quantity,
           costBasisKes: p.costBasisKes ?? 0,
           hasCostBasis: p.costBasisKes != null,
+          costEstimated: p.costSource === 'IMPORT_PRICE',
           currentPrice: p.currentPrice,
         });
       }
@@ -309,6 +337,7 @@ export class JournalService {
         quantity: c.quantity,
         avgCost,
         costBasisKes,
+        costEstimated: c.costEstimated,
         currentPrice: c.currentPrice,
         marketValueKes,
         unrealizedGainKes,
@@ -416,11 +445,19 @@ export class JournalService {
       if (!broker) continue;
 
       const ticker = h.ticker.toUpperCase().trim();
+      const existing = await this.prisma.holding.findUnique({
+        where: { userId_brokerId_ticker: { userId, brokerId: broker.id, ticker } },
+      });
+      // A holding with no cost yet is assumed bought at today's price. One that
+      // already has a cost (typed by the user, or from trades) is left alone.
+      const estimate = existing?.avgCost == null ? await this.priceAtOrBefore(ticker, new Date()) : null;
+      const costFields = estimate ? { avgCost: estimate.price, costSource: 'IMPORT_PRICE', costDate: estimate.at } : {};
       await this.prisma.holding.upsert({
         where: { userId_brokerId_ticker: { userId, brokerId: broker.id, ticker } },
         update: {
           quantity: h.closingBalance,
           companyName: h.companyName,
+          ...costFields,
         },
         create: {
           userId,
@@ -429,6 +466,7 @@ export class JournalService {
           companyName: h.companyName,
           quantity: h.closingBalance,
           avgCost: null,
+          ...costFields,
         },
       });
       holdingsRead += 1;

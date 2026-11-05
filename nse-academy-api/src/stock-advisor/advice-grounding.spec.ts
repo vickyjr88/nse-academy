@@ -10,6 +10,8 @@ import {
   fallbackAdvice,
   figuresFromFacts,
   metricsFromFacts,
+  relevantNews,
+  trendClaimProblems,
   verifyAdvice,
 } from './advice-grounding';
 
@@ -153,5 +155,76 @@ describe('buildAdvicePrompt', () => {
     const none = buildAdvicePrompt({ ...base, news: '', hasNews: false });
     expect(none).toContain('none was found');
     expect(none).not.toContain('search results; may be older');
+  });
+});
+
+// SCOM on 5 Nov 2026: 35.20, 60-session range 33.00-38.65 -> 39% of the way up, down 1.8% over 20 sessions.
+const scomFacts = () => ({ ...buildPriceFacts(closes(70), '2026-11-05')!, priceKes: 35.2, lo60: 33, hi60: 38.65, dayChangePct: 3.7, change5Pct: 5.9, change20Pct: -1.8, change60Pct: -0.6 });
+
+describe('trendClaimProblems - the live SCOM misreading', () => {
+  it('rejects "near the upper end of its range" when the price is in the lower half of it', () => {
+    const p = trendClaimProblems('The stock sits near the upper end of its 60-session range.', scomFacts());
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('39%');
+  });
+  it('accepts the same words when they are true, and ignores unrelated uses of high/low/higher', () => {
+    const top = { ...scomFacts(), priceKes: 38.2 };
+    expect(trendClaimProblems('It is trading near the top of its range.', top)).toEqual([]);
+    expect(trendClaimProblems('The price is near its 60-day high.', top)).toEqual([]);
+    expect(trendClaimProblems('Dividends could move toward higher levels; margins are at a lower base.', scomFacts())).toEqual([]);
+  });
+  it('rejects "near the bottom" when the price is in the upper part of the range', () => {
+    expect(trendClaimProblems('It sits close to the low of its range.', { ...scomFacts(), priceKes: 37 })).toHaveLength(1);
+    expect(trendClaimProblems('It sits close to the low of its range.', { ...scomFacts(), priceKes: 33.1 })).toEqual([]);
+  });
+  it('rejects a momentum claim only when every window disagrees with it', () => {
+    const allDown = { ...scomFacts(), change5Pct: -1, change20Pct: -2, change60Pct: -3 };
+    expect(trendClaimProblems('There is strong upward momentum.', allDown)).toHaveLength(1);
+    expect(trendClaimProblems('There is strong upward momentum.', scomFacts())).toEqual([]); // up 5.9% over 5 sessions
+    const allUp = { ...scomFacts(), change5Pct: 1, change20Pct: 2, change60Pct: 3 };
+    expect(trendClaimProblems('A clear downtrend is in place.', allUp)).toHaveLength(1);
+  });
+  it('is applied by verifyAdvice, per field, when facts are supplied', () => {
+    const a = advice({ reasons: ['Current price near the upper bound of the 60-session range suggests near-term upside.'] });
+    expect(verifyAdvice(a, new Set(), scomFacts())[0]).toContain('reasons[0]');
+    expect(verifyAdvice(a, new Set())).toEqual([]); // facts not supplied -> only figure/wording checks
+  });
+});
+
+describe('metricsFromFacts - position in range', () => {
+  it('states where the price sits so the model has no need to guess', () => {
+    expect(metricsFromFacts(scomFacts(), {}, null)).toContain('Position in that range: 39% of the way from the low to the high');
+  });
+});
+
+describe('relevantNews - the live KCB mix-up', () => {
+  const r = (title: string, content = '') => ({ title, content });
+  const kcb = { company_name: 'KCB Group Plc', ticker: 'KCB' };
+
+  it('drops results about the exchange itself that do not mention the company', () => {
+    const results = [
+      r('Nairobi Securities Exchange stock in focus after H1 profit surge', 'NSE Plc profit rose on a block trade.'),
+      r('KCB Group posts record half-year profit', 'KCB Group said...'),
+      r('NSE Share Prices Today & Listed Companies', 'Gainers and losers list'),
+    ];
+    expect(relevantNews(results, kcb).map((x) => x.title)).toEqual(['KCB Group posts record half-year profit']);
+  });
+
+  it('matches the ticker as a whole word, not inside another word', () => {
+    expect(relevantNews([r('KCB shares rally')], kcb)).toHaveLength(1);
+    expect(relevantNews([r('Bank of Kenya', 'unrelated KCBX text')], kcb)).toHaveLength(0);
+  });
+
+  it('matches a multi-word name as a phrase, and a ticker mention in the text', () => {
+    const hafr = { company_name: 'Home Afrika Limited', ticker: 'HAFR' };
+    expect(relevantNews([r('Home Afrika Share Price: KSh1.06')], hafr)).toHaveLength(1);
+    expect(relevantNews([r('Market update', 'Gainers: Home Afrika, Uchumi')], hafr)).toHaveLength(1);
+    expect(relevantNews([r('Market update', 'Gainers: HAFR, UCHM')], hafr)).toHaveLength(1);
+    expect(relevantNews([r('Afrika news', 'a home for all')], hafr)).toHaveLength(0);
+  });
+
+  it('keeps single-name companies by their name, ignoring generic words like Plc and Group', () => {
+    const scom = { company_name: 'Safaricom PLC', ticker: 'SCOM' };
+    expect(relevantNews([r('Safaricom half-year results'), r('Telecom sector review', 'no names here')], scom)).toHaveLength(1);
   });
 });

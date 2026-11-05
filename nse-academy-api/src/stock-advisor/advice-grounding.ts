@@ -65,6 +65,11 @@ export function dataProblem(f: PriceFacts | null): string | null {
   return null;
 }
 
+/** Where the latest close sits between the 60-session low (0) and high (1); null when the range is flat. */
+export function rangePosition(f: PriceFacts): number | null {
+  return f.hi60 > f.lo60 ? (f.priceKes - f.lo60) / (f.hi60 - f.lo60) : null;
+}
+
 const money = (n: number) => `KSh ${n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const signed = (n: number) => `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(1)}%`;
 
@@ -79,6 +84,8 @@ export function metricsFromFacts(
   if (f.change20Pct != null) out.push(`20 sessions: ${signed(f.change20Pct)}`);
   if (f.change60Pct != null) out.push(`60 sessions: ${signed(f.change60Pct)}`);
   out.push(`${Math.min(f.sessions, 60)}-session range: ${money(f.lo60)} - ${money(f.hi60)}`);
+  const pos = rangePosition(f);
+  if (pos != null) out.push(`Position in that range: ${Math.round(pos * 100)}% of the way from the low to the high`);
   if (stock.dividend_yield) out.push(`Dividend yield (profile): ${stock.dividend_yield}%`);
   if (stock.risk_level) out.push(`Risk rating: ${stock.risk_level}`);
   if (position) {
@@ -138,10 +145,30 @@ export interface AdviceBody {
   outlook: string;
 }
 
+/** Words claiming the price is at the top / bottom of its range, or that momentum points a particular way. */
+const NEAR_TOP = /\b(?:near|close to|approaching|at)\s+(?:the\s+|its\s+)?(?:\d+[-\s]?(?:session|day)\s+)?(?:upper(?:\s+(?:end|bound|half|part|edge))?|top|high)\b/i;
+const NEAR_BOTTOM = /\b(?:near|close to|approaching|at)\s+(?:the\s+|its\s+)?(?:\d+[-\s]?(?:session|day)\s+)?(?:lower(?:\s+(?:end|bound|half|part|edge))?|bottom|low)\b/i;
+const UP_MOMENTUM = /\b(?:upward|positive|bullish|strong)\s+(?:momentum|trend)\b|\buptrend\b/i;
+const DOWN_MOMENTUM = /\b(?:downward|negative|bearish|weak)\s+(?:momentum|trend)\b|\bdowntrend\b/i;
+
+/** Claims about where the price sits in its range, or which way it has been moving, that our own numbers contradict. */
+export function trendClaimProblems(text: string, f: PriceFacts): string[] {
+  const out: string[] = [];
+  const pos = rangePosition(f);
+  if (pos != null) {
+    if (NEAR_TOP.test(text) && pos < 0.7) out.push(`says the price is near the top of its range, but it is ${Math.round(pos * 100)}% of the way from the low to the high`);
+    if (NEAR_BOTTOM.test(text) && pos > 0.3) out.push(`says the price is near the bottom of its range, but it is ${Math.round(pos * 100)}% of the way from the low to the high`);
+  }
+  const moves = [f.change5Pct, f.change20Pct, f.change60Pct].filter((x): x is number => x != null);
+  if (moves.length && UP_MOMENTUM.test(text) && moves.every((m) => m <= 0)) out.push('claims upward momentum, but the price is down or flat over 5, 20 and 60 sessions');
+  if (moves.length && DOWN_MOMENTUM.test(text) && moves.every((m) => m >= 0)) out.push('claims downward momentum, but the price is up or flat over 5, 20 and 60 sessions');
+  return out;
+}
+
 const OVERCONFIDENT = /\b(guarantee[ds]?|risk[- ]free|cannot lose|can'?t lose|certain(?:ly)? to (?:rise|gain|go up|double))\b/i;
 
 /** Returns what is wrong with the model's output (empty = fine). */
-export function verifyAdvice(advice: AdviceBody, allowedFigures: Set<string>): string[] {
+export function verifyAdvice(advice: AdviceBody, allowedFigures: Set<string>, facts?: PriceFacts): string[] {
   const problems: string[] = [];
   const fields: [string, string][] = [
     ['situation', advice.situation],
@@ -156,8 +183,29 @@ export function verifyAdvice(advice: AdviceBody, allowedFigures: Set<string>): s
     }
     const m = OVERCONFIDENT.exec(text);
     if (m) problems.push(`${name}: "${m[0]}" overstates certainty - nothing about a share price is guaranteed`);
+    if (facts) for (const p of trendClaimProblems(text, facts)) problems.push(`${name}: ${p}`);
   }
   return [...new Set(problems)];
+}
+
+const GENERIC_NAME_WORDS = new Set(['plc', 'ltd', 'limited', 'group', 'holdings', 'holding', 'company', 'co', 'corporation', 'corp', 'inc', 'ord', 'the', 'of', 'and', '&', 'kenya', 'east', 'africa']);
+const escapeRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Search engines return whatever matches the words - for KCB that was the Nairobi Securities Exchange's own
+ * results page, which then got written up as if it were KCB's news. Keep only results whose title or text
+ * actually names the company (its distinctive name, or its ticker as a whole word).
+ */
+export function relevantNews<T extends { title: string; content: string }>(results: T[], stock: { company_name: string; ticker: string }): T[] {
+  const words = stock.company_name
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .split(/[^a-z0-9&]+/)
+    .filter((w) => w && !GENERIC_NAME_WORDS.has(w));
+  const phrase = words.join('[\\s-]+');
+  const patterns = [new RegExp(`\\b${escapeRe(stock.ticker)}\\b`, 'i')];
+  if (phrase) patterns.push(new RegExp(`\\b${words.map(escapeRe).join('[\\s-]+')}\\b`, 'i'));
+  return results.filter((r) => patterns.some((re) => re.test(`${r.title} ${r.content}`)));
 }
 
 /** What a user sees when there is no data, or the model could not produce something that checks out. Never BUY/AVOID. */
@@ -215,6 +263,8 @@ Write a JSON object with exactly these keys:
 RULES
 - For the share price and how it has moved, use ONLY OUR DATA. If a news item quotes a different or older price, ignore that price.
 - Any other KSh amount or percentage you write (earnings, dividends, growth) must be stated in the news above. Never invent or estimate a figure.
+- Use a news item only if it is about THIS company. Ignore anything about the exchange itself, the wider market or other companies, even if it appears below.
+- "Position in that range" in OUR DATA says whether the price is near the top (close to 100%), the middle or the bottom (close to 0%) of its range. Do not describe it as near the top or bottom unless that figure agrees.
 - If the investor already holds the stock, speak to that position; never tell them to buy or sell a specific number of shares.
 - No guarantees, no "certain to rise". Choose HOLD whenever the evidence is thin or mixed.
 - Return ONLY the JSON object, no markdown.`;

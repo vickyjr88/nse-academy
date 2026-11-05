@@ -16,6 +16,7 @@ import {
   fallbackAdvice,
   figuresFromFacts,
   metricsFromFacts,
+  relevantNews,
   verifyAdvice,
 } from './advice-grounding';
 
@@ -440,14 +441,14 @@ export class StockAdvisorService {
       let content: string;
       let model: string;
       try {
-        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.3, timeoutMs: 90_000 }));
+        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.3, timeoutMs: 90_000, ...this.modelChain() }));
       } catch (err) {
         this.logger.error(`AI advice request failed for ${stock.ticker} (attempt ${attempt}): ${(err as Error).message}`);
         throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
       }
 
       const parsed = parseAdvice(content);
-      const problems = parsed.advice ? verifyAdvice(parsed.advice, allowed) : parsed.errors;
+      const problems = parsed.advice ? verifyAdvice(parsed.advice, allowed, f) : parsed.errors;
       if (parsed.advice && problems.length === 0) {
         const advice = parsed.advice;
         const out = finish(advice, {
@@ -472,6 +473,14 @@ export class StockAdvisorService {
     return finish(fallbackAdvice(stock, f, userFit, why), { aiGenerated: false, note: `${why} (${lastProblems[0] ?? 'unparseable output'})`, sources: [] });
   }
 
+  /** STOCK_ADVICE_MODEL / STOCK_ADVICE_FALLBACK_MODELS give the advisor its own model chain; unset = inherit OPENROUTER_MODEL. */
+  private modelChain(): { model?: string; fallbackModels?: string[] } {
+    const model = this.configService.get<string>('STOCK_ADVICE_MODEL')?.trim();
+    if (!model) return {};
+    const fallbackModels = (this.configService.get<string>('STOCK_ADVICE_FALLBACK_MODELS') ?? '').split(',').map((m) => m.trim()).filter(Boolean);
+    return { model, fallbackModels };
+  }
+
   private fresh<T>(cache: Map<string, { at: number; value: T }>, key: string, ttl: number): T | null {
     const e = cache.get(key);
     return e && Date.now() - e.at < ttl ? e.value : null;
@@ -491,12 +500,14 @@ export class StockAdvisorService {
     const key = stock.ticker.toUpperCase();
     const hit = this.fresh(this.newsCache, key, NEWS_TTL_MS);
     if (hit) return hit;
-    const results = await this.tavily.search({
-      query: `${stock.company_name} ${stock.ticker} NSE Nairobi Securities Exchange latest news earnings dividend`,
+    // No "Nairobi Securities Exchange" in the query: it pulls in the exchange's own pages instead of the company's.
+    const found = await this.tavily.search({
+      query: `${stock.company_name} Kenya shares results dividend news`,
       topic: 'finance',
       timeRange: 'month',
-      maxResults: 5,
+      maxResults: 8,
     });
+    const results = relevantNews(found, stock).slice(0, 5);
     // An empty answer (no key, an error, nothing found) is remembered only briefly so it is retried soon.
     if (results.length > 0) this.remember(this.newsCache, key, results);
     else this.newsCache.set(key, { at: Date.now() - NEWS_TTL_MS + NEWS_EMPTY_TTL_MS, value: [] });

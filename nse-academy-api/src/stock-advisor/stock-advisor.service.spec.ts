@@ -45,6 +45,7 @@ function makeService(
     holdings?: unknown[];
     hasKey?: boolean;
     profile?: unknown;
+    env?: Record<string, string>;
   } = {},
 ) {
   const prisma = {
@@ -55,7 +56,7 @@ function makeService(
     $queryRaw: jest.fn().mockResolvedValue(o.rows ?? rows()),
   };
   const config = {
-    get: jest.fn((key: string, fallback?: unknown) => (key === 'CMS_URL' ? 'http://cms.test' : key === 'CMS_API_TOKEN' ? 'test-token' : fallback)),
+    get: jest.fn((key: string, fallback?: unknown) => (key === 'CMS_URL' ? 'http://cms.test' : key === 'CMS_API_TOKEN' ? 'test-token' : o.env?.[key] ?? fallback)),
   };
   const queue = [...(o.completions ?? [goodAdvice()])];
   const openRouter = {
@@ -160,6 +161,50 @@ describe('StockAdvisorService.getAiAdvice', () => {
     const r = await service.getAiAdvice('u1', 'SCOM');
     expect(promptOf(openRouter)).toContain('already holds 100 shares, up 17.3% on cost (cost is an estimate)');
     expect(r.keyMetrics).toContain('You hold: 100 shares');
+  });
+
+  it('never feeds the model news that is not about the company - the KCB-described-as-the-exchange bug', async () => {
+    const { service, openRouter, tavily } = makeService({
+      news: [
+        { title: 'Nairobi Securities Exchange stock in focus after H1 profit surge', url: 'https://x.test/exchange', content: 'NSE Plc 2025-2029 strategy and a banking ETF listing.' },
+        { title: 'Safaricom FY results', url: 'https://www.businessdailyafrica.com/a', content: 'Net profit grew 12%.' },
+      ],
+    });
+    const r = await service.getAiAdvice('u1', 'SCOM');
+    const prompt = promptOf(openRouter);
+    expect(prompt).toContain('Safaricom FY results');
+    expect(prompt).not.toContain('banking ETF');
+    expect(r.sources).toEqual(['Safaricom FY results (businessdailyafrica.com)']);
+    expect((tavily.search.mock.calls as any[][])[0][0].query).not.toMatch(/Nairobi Securities Exchange/);
+  });
+
+  it('treats a search that returns only irrelevant pages as no news', async () => {
+    const { service } = makeService({ news: [{ title: 'NSE Share Prices Today', url: 'https://x.test', content: 'listed companies' }], completions: [goodAdvice({ situation: 'The price has drifted up.' })] });
+    const r = await service.getAiAdvice('u1', 'SCOM');
+    expect(r.note).toMatch(/No recent news/);
+    expect(r.sources).toEqual([]);
+  });
+
+  it('rejects "near the upper end of its range" when our data says otherwise, and asks the model to fix it', async () => {
+    // Peaks at 40 ten sessions ago and ends at 35.2: 40% of the way up a 31-40 range.
+    const midRange = rows().map((r, i) => ({ ...r, price: i <= 20 ? 31 + i * 0.45 : 40 - (i - 20) * 0.48 })).map((r, i, all) => (i === all.length - 1 ? { ...r, price: 35.2 } : r));
+    const { service, openRouter } = makeService({ rows: midRange, completions: [goodAdvice({ reasons: ['Price near the upper end of its 60-session range signals upside.'] }), goodAdvice()] });
+    const r = await service.getAiAdvice('u1', 'SCOM');
+    expect(openRouter.chatCompletionDetailed).toHaveBeenCalledTimes(2);
+    const retry = (openRouter.chatCompletionDetailed.mock.calls as any[][])[1][0].messages;
+    expect(retry[retry.length - 1].content).toMatch(/near the top of its range/);
+    expect(r.aiGenerated).toBe(true);
+  });
+
+  it('uses STOCK_ADVICE_MODEL and its fallbacks when configured, and inherits the shared chain when not', async () => {
+    const withKnob = makeService({ env: { STOCK_ADVICE_MODEL: 'anthropic/claude-haiku-5.5', STOCK_ADVICE_FALLBACK_MODELS: 'openai/gpt-6-luna' } });
+    await withKnob.service.getAiAdvice('u1', 'SCOM');
+    expect((withKnob.openRouter.chatCompletionDetailed.mock.calls as any[][])[0][0]).toMatchObject({ model: 'anthropic/claude-haiku-5.5', fallbackModels: ['openai/gpt-6-luna'] });
+    const plain = makeService();
+    await plain.service.getAiAdvice('u1', 'SCOM');
+    const call = (plain.openRouter.chatCompletionDetailed.mock.calls as any[][])[0][0];
+    expect(call.model).toBeUndefined();
+    expect(call.fallbackModels).toBeUndefined();
   });
 
   it('spends one search per company per 12 hours, however many people ask', async () => {

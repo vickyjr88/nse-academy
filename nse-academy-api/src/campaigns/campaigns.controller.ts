@@ -66,3 +66,15 @@ export class CampaignsController {
     return this.campaigns.sendCampaign(checkAudience(body?.audience), body?.confirm === true);
   }
 }
+
+/** Unauthenticated and read-only: the illustrative portfolio on the pricing page. Real closing prices, invented holdings. */
+@Controller('public/portfolio-watch')
+export class PublicPortfolioWatchExampleController {
+  constructor(private campaigns: CampaignsService) {}
+
+  @Get('example')
+  @Header('Cache-Control', 'public, max-age=300, s-maxage=900')
+  example() {
+    return this.campaigns.publicExample();
+  }
+}

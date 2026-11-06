@@ -50,3 +50,34 @@ export function buildExampleWatch(series: Map<string, DailyClose[]>, positions: 
   const items = result.items.slice().sort((a, b) => rank(a) - rank(b)).slice(0, EXAMPLE_ITEM_LIMIT);
   return { asOf: result.asOf, asOfLabel: boundsForYmd(result.asOf).label, result, items };
 }
+
+/** What the website shows. Plain numbers and the real flag text; nothing about any real member. */
+export interface PublicExample {
+  asOf: string;
+  asOfLabel: string;
+  valueKes: number;
+  dayChangeKes: number;
+  dayChangePct: number | null;
+  unrealizedKes: number | null;
+  unrealizedPct: number | null;
+  items: { kind: string; ticker: string; text: string }[];
+  holdings: { ticker: string; quantity: number; price: number; dayChangePct: number | null; valueKes: number; gainPct: number | null }[];
+  /** The shares and costs are invented; the prices and the way each flag is worked out are real. */
+  illustrative: true;
+}
+
+export function toPublicExample(ex: ExampleWatch): PublicExample {
+  const r = ex.result;
+  return {
+    asOf: ex.asOf,
+    asOfLabel: ex.asOfLabel,
+    valueKes: Math.round(r.valueKes),
+    dayChangeKes: Math.round(r.dayChangeKes),
+    dayChangePct: r.dayChangePct,
+    unrealizedKes: r.unrealizedKes != null ? Math.round(r.unrealizedKes) : null,
+    unrealizedPct: r.unrealizedPct,
+    items: ex.items.map((i) => ({ kind: i.kind, ticker: i.ticker, text: i.text })),
+    holdings: r.holdings.map((h) => ({ ticker: h.ticker, quantity: h.quantity, price: h.price, dayChangePct: h.dayChangePct, valueKes: Math.round(h.valueKes), gainPct: h.gainPct })),
+    illustrative: true,
+  };
+}

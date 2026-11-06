@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Metadata } from "next";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import PortfolioWatchExample from "@/components/PortfolioWatchExample";
+import { getPortfolioWatchExample } from "@/lib/portfolio-watch-example";
 
 export const metadata: Metadata = {
   title: "NSE Academy Pricing - Free, KSh 300 and KSh 500 Plans",
@@ -50,6 +52,7 @@ const pricingTiers = [
       "Everything in Intermediary",
       "Full 13-chapter Investor's Guide academy",
       "Personalized stock advisor",
+      "Daily Portfolio Watch email on your own holdings",
       "Portfolio building tools",
       "NSE Complete Investor's Guide PDF",
       "Priority support",
@@ -75,7 +78,11 @@ const corporateFeatures = [
   "Custom onboarding call",
 ];
 
-export default function PricingPage() {
+// The Portfolio Watch example moves with each close, so rebuild the page every 15 minutes.
+export const revalidate = 900;
+
+export default async function PricingPage() {
+  const example = await getPortfolioWatchExample();
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <PublicHeader />
@@ -137,6 +144,8 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+
+          {example ? <PortfolioWatchExample example={example} /> : null}
 
           <div className="mt-20">
             <div className="text-center mb-10">

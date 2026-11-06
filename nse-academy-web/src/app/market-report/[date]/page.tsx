@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ShareBar from "@/components/market-report/ShareBar";
+import PortfolioWatchTeaser from "@/components/market-report/PortfolioWatchTeaser";
 import {
   CARD_SLIDES,
   MoverFact,
@@ -256,6 +257,9 @@ export default async function MarketReportPage({ params }: { params: Promise<{ d
           </div>
           <p className="mt-4 text-sm text-gray-500">New to these terms? See the <Link href="/glossary" className="font-medium text-emerald-700 underline">NSE glossary</Link> or take the <Link href="/investor-profiler" className="font-medium text-emerald-700 underline">investor profiler</Link>.</p>
         </section>
+
+        {/* ---- pointer to the Portfolio Watch example */}
+        <PortfolioWatchTeaser sessionYmd={report.sessionYmd} />
 
         {/* ---- share */}
         <section aria-labelledby="share" className="mb-14 rounded-3xl border border-gray-100 bg-white p-6 md:p-8">

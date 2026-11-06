@@ -160,3 +160,21 @@ describe('CampaignsService.overview', () => {
     expect(o).toMatchObject({ queued: [], sent: [], error: 'HTTP 503' });
   });
 });
+
+describe('CampaignsService.publicExample', () => {
+  it('returns the illustrative portfolio on the real closes, with no member data', async () => {
+    const { service } = make();
+    const ex = await service.publicExample();
+    expect(ex.illustrative).toBe(true);
+    expect(ex.asOf).toBe('2026-11-05');
+    expect(ex.holdings).toHaveLength(5);
+    expect(ex.holdings.find((h) => h.ticker === 'NSE')).toMatchObject({ price: 33.65 });
+    expect(ex.items.length).toBeGreaterThan(0);
+    expect(JSON.stringify(ex)).not.toMatch(/email|userId|@/);
+  });
+
+  it('is a 404 rather than a wrong example when a stock has no price history', async () => {
+    const { service } = make({ series: false });
+    await expect(service.publicExample()).rejects.toThrow('not available');
+  });
+});

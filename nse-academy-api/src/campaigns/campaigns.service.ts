@@ -1,10 +1,10 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
 import { loadDailyCloses } from '../market-data/price-history';
-import { EXAMPLE_POSITIONS, buildExampleWatch } from './example-watch';
+import { EXAMPLE_POSITIONS, PublicExample, buildExampleWatch, toPublicExample } from './example-watch';
 import { Audience, buildSubscriptionEmail, subscriptionSubject } from './subscription-email';
 
 export const AUDIENCES: Audience[] = ['free', 'intermediary', 'premium'];
@@ -25,6 +25,14 @@ export class CampaignsService {
 
   private siteUrl(): string {
     return this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net';
+  }
+
+  /** The example portfolio for the public website, on the latest real closes. 404 when the price history is incomplete. */
+  async publicExample(): Promise<PublicExample> {
+    const series = await loadDailyCloses(this.prisma, EXAMPLE_POSITIONS.map((p) => p.ticker));
+    const example = buildExampleWatch(series);
+    if (!example) throw new NotFoundException('The example portfolio is not available right now');
+    return toPublicExample(example);
   }
 
   /** The email for one audience, with the example portfolio computed from today's real closes. */

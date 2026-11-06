@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +16,13 @@ export class MarketDataService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly alertsService: AlertsService,
+    @Optional() private readonly monitor?: JobMonitorService,
   ) {}
+
+  /** One row per poll attempt: the feed rate-limits (HTTP 429) about half of them, and that is invisible without this. */
+  private note(startedAt: Date, ok: boolean, detail: string) {
+    return this.monitor?.record('market-poll', ok ? { ok, startedAt, summary: detail } : { ok, startedAt, error: detail });
+  }
 
   /**
    * Polls NSE stock data from RapidAPI.
@@ -22,11 +31,13 @@ export class MarketDataService {
   @Cron('0 */7 9-14 * * 1-5')
   async handleMarketPolling() {
     const start = Date.now();
+    const startedAt = new Date(start);
     this.logger.log('Starting market data polling...');
     
     const apiKey = this.configService.get<string>('RAPID_API_KEY');
     if (!apiKey) {
       this.logger.error('RAPID_API_KEY not found in configuration. Polling skipped.');
+      await this.note(startedAt, false, 'RAPID_API_KEY is not configured');
       return;
     }
 
@@ -69,6 +80,7 @@ export class MarketDataService {
             data: dataToSave,
           });
           this.logger.log(`Successfully saved ${stocks.length} stock snapshots in ${Date.now() - start}ms.`);
+          await this.note(startedAt, true, `${stocks.length} snapshots`);
 
           await this.alertsService
             .checkAlertsForTickers(dataToSave.map((s) => ({ ticker: s.ticker, price: s.price })))
@@ -76,9 +88,11 @@ export class MarketDataService {
         }
       } else {
         this.logger.warn('Market API returned success:false or invalid data structure.');
+        await this.note(startedAt, false, 'The market API returned an unusable response');
       }
     } catch (error) {
       this.logger.error(`Failed to poll market data: ${error.message}`);
+      await this.note(startedAt, false, error.response?.status ? `HTTP ${error.response.status}` : String(error.message));
       if (error.response) {
         this.logger.error(`Status: ${error.response.status} - Data: ${JSON.stringify(error.response.data)}`);
       }

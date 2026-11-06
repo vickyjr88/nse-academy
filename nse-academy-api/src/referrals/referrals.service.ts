@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +22,7 @@ export class ReferralsService {
     private brevo: BrevoService,
     private config: ConfigService,
     private lifecycle: LifecycleService,
+    @Optional() private monitor?: JobMonitorService,
   ) {}
 
   private webUrl(): string {
@@ -87,6 +91,10 @@ export class ReferralsService {
    */
   @Cron('0 11 * * *')
   async handleStaleReferralNudge() {
+    return tracked(this.monitor, 'referral-nudge', () => this.handleStaleReferralNudgeImpl());
+  }
+
+  private async handleStaleReferralNudgeImpl() {
     const cutoff = new Date(Date.now() - REFERRAL_NUDGE_AFTER_DAYS * 24 * 60 * 60 * 1000);
     const stale = await this.prisma.referral.findMany({
       where: { status: 'pending', createdAt: { lte: cutoff }, nudgeSentAt: null },

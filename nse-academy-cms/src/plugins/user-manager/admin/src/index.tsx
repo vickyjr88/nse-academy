@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail, ChartBubble, ChartCircle } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail, ChartBubble, ChartCircle, Cog, PriceTag, Layout } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -145,6 +145,34 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/payments`,
+      icon: PriceTag,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.payments`, defaultMessage: 'Payments & Subscriptions' },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/market-reports`,
+      icon: Layout,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.market-reports`, defaultMessage: 'Market Reports' },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/brokers`,
+      icon: Briefcase,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.brokers`, defaultMessage: 'Brokers' },
+      permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/system-health`,
+      icon: Cog,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.system-health`, defaultMessage: 'System Health' },
+      permissions: [],
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}`,
       Component: React.lazy(() => import('./pages/UsersList').then((m) => ({ default: m.UsersList }))),
@@ -213,6 +241,31 @@ export default {
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/campaign-reports`,
       Component: React.lazy(() => import('./pages/CampaignReports').then((m) => ({ default: m.CampaignReports }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/payments`,
+      Component: React.lazy(() => import('./pages/PaymentsAndSubscriptions').then((m) => ({ default: m.PaymentsAndSubscriptions }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/market-reports`,
+      Component: React.lazy(() => import('./pages/MarketReportsAdmin').then((m) => ({ default: m.MarketReportsAdmin }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/brokers`,
+      Component: React.lazy(() => import('./pages/BrokersAdmin').then((m) => ({ default: m.BrokersAdmin }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/system-health`,
+      Component: React.lazy(() => import('./pages/SystemHealth').then((m) => ({ default: m.SystemHealth }))),
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/:id/portfolio`,
+      Component: React.lazy(() => import('./pages/UserPortfolio').then((m) => ({ default: m.UserPortfolio }))),
     });
 
     app.router.addRoute({

@@ -27,6 +27,8 @@ import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
 import { PortfolioWatchModule } from './portfolio-watch/portfolio-watch.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { AdminOpsModule } from './admin-ops/admin-ops.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
@@ -69,6 +71,8 @@ import { AppService } from './app.service';
     JournalModule,
     PortfolioWatchModule,
     CampaignsModule,
+    MonitoringModule,
+    AdminOpsModule,
     BrokersModule,
     AlertsModule,
     BroadcastModule,

@@ -9,8 +9,16 @@ export interface ChatMessage {
 /** OpenRouter rejects a `models` array longer than this ("'models' array must have 3 items or fewer"). */
 export const MAX_MODEL_CHAIN = 3;
 
+/** What a request cost, as OpenRouter reports it. `costUsd` is present when OpenRouter was asked to include usage accounting. */
+export interface AiUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  costUsd: number | null;
+}
+
 export interface ChatCompletionResponse {
   choices?: { message?: { content?: string } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
   /** The model that actually answered - differs from the requested one when a fallback was used. */
   model?: string;
   error?: { message?: string };
@@ -92,7 +100,7 @@ export class OpenRouterService {
     timeoutMs?: number;
     /** Replaces OPENROUTER_FALLBACK_MODELS for this call ([] = none) - lets one feature run on its own model chain. */
     fallbackModels?: string[];
-  }): Promise<{ content: string; model: string }> {
+  }): Promise<{ content: string; model: string; usage: AiUsage }> {
     if (!this.apiKey) {
       throw new InternalServerErrorException('AI service not configured');
     }
@@ -114,6 +122,8 @@ export class OpenRouterService {
           ...(fallbacks.length ? { models: this.modelChain(primary, fallbacks) } : { model: primary }),
           messages: input.messages,
           temperature: input.temperature,
+          // Ask OpenRouter to include the cost of the request in the response, for the admin's AI-spend figures.
+          usage: { include: true },
         }),
         signal: AbortSignal.timeout(input.timeoutMs ?? 60_000),
       });
@@ -125,7 +135,12 @@ export class OpenRouterService {
       if (!content) {
         throw new Error('OpenRouter response had no completion content');
       }
-      return { content, model: json.model ?? primary };
+      const usage: AiUsage = {
+        promptTokens: json.usage?.prompt_tokens ?? null,
+        completionTokens: json.usage?.completion_tokens ?? null,
+        costUsd: typeof json.usage?.cost === 'number' ? json.usage.cost : null,
+      };
+      return { content, model: json.model ?? primary, usage };
     } catch (err) {
       this.logger.error(`OpenRouter chat completion failed: ${(err as Error).message}`);
       throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');

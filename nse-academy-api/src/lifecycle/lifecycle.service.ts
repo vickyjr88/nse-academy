@@ -1,4 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
@@ -62,6 +65,7 @@ export class LifecycleService {
     private prisma: PrismaService,
     private brevo: BrevoService,
     private config: ConfigService,
+    @Optional() private monitor?: JobMonitorService,
   ) {}
 
   private webUrl(): string {
@@ -95,6 +99,10 @@ export class LifecycleService {
    */
   @Cron('0 8 * * *')
   async handleDay1Nurture() {
+    return tracked(this.monitor, 'lifecycle-day1-nurture', () => this.handleDay1NurtureImpl());
+  }
+
+  private async handleDay1NurtureImpl() {
     const { start, end } = this.dayRange(1);
     await this.runDay1Nurture({ createdAt: { gte: start, lt: end } });
   }
@@ -106,6 +114,10 @@ export class LifecycleService {
    */
   @Cron('0 8 * * *')
   async handleDay7Nurture() {
+    return tracked(this.monitor, 'lifecycle-day7-nurture', () => this.handleDay7NurtureImpl());
+  }
+
+  private async handleDay7NurtureImpl() {
     const { start, end } = this.dayRange(7);
     await this.runDay7Nurture({ createdAt: { gte: start, lt: end } });
   }
@@ -118,6 +130,10 @@ export class LifecycleService {
    */
   @Cron('0 8 * * *')
   async handleDay14Nurture() {
+    return tracked(this.monitor, 'lifecycle-day14-nurture', () => this.handleDay14NurtureImpl());
+  }
+
+  private async handleDay14NurtureImpl() {
     const { start, end } = this.dayRange(14);
     await this.runDay14Nurture({ createdAt: { gte: start, lt: end } });
   }
@@ -205,6 +221,10 @@ export class LifecycleService {
    */
   @Cron('30 8 * * *')
   async handleEngagedFreeTagging() {
+    return tracked(this.monitor, 'lifecycle-engaged-free-tagging', () => this.handleEngagedFreeTaggingImpl());
+  }
+
+  private async handleEngagedFreeTaggingImpl() {
     const tag = await this.prisma.tag.upsert({
       where: { name: 'engaged-free' },
       create: { name: 'engaged-free' },
@@ -256,6 +276,10 @@ export class LifecycleService {
    */
   @Cron('35 8 * * *')
   async handleActiveTraderTagging() {
+    return tracked(this.monitor, 'lifecycle-active-trader-tagging', () => this.handleActiveTraderTaggingImpl());
+  }
+
+  private async handleActiveTraderTaggingImpl() {
     const tag = await this.prisma.tag.upsert({
       where: { name: 'active-trader-free' },
       create: { name: 'active-trader-free' },
@@ -300,6 +324,10 @@ export class LifecycleService {
    */
   @Cron('0 9 * * *')
   async handleCorporateExpiringSoon() {
+    return tracked(this.monitor, 'lifecycle-corporate-expiring', () => this.handleCorporateExpiringSoonImpl());
+  }
+
+  private async handleCorporateExpiringSoonImpl() {
     const in3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
     const expiringSoon = await this.prisma.corporateLicense.findMany({
       where: {
@@ -342,6 +370,10 @@ export class LifecycleService {
    */
   @Cron('0 10 * * *')
   async handleRenewalNudge() {
+    return tracked(this.monitor, 'lifecycle-renewal-nudge', () => this.handleRenewalNudgeImpl());
+  }
+
+  private async handleRenewalNudgeImpl() {
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
     const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
     const candidates = await this.prisma.subscription.findMany({
@@ -382,6 +414,10 @@ export class LifecycleService {
    */
   @Cron('0 10 * * *')
   async handleWinback() {
+    return tracked(this.monitor, 'lifecycle-winback', () => this.handleWinbackImpl());
+  }
+
+  private async handleWinbackImpl() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     // updatedAt isn't tracked on Subscription, so we approximate "expired

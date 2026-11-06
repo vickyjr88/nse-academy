@@ -246,6 +246,9 @@ export function UserDetail() {
         <Button variant="tertiary" onClick={() => navigate('/plugins/user-manager')}>
           ← Back
         </Button>
+        <Button variant="secondary" onClick={() => navigate(`/plugins/user-manager/${id}/portfolio`)}>
+          Portfolio &amp; activity
+        </Button>
       </Box>
 
       {/* Header */}

@@ -124,3 +124,43 @@ describe('NarrativeService.validate (editor-supplied narrative)', () => {
     expect(service.validate(undefined, facts).narrative).toBeNull();
   });
 });
+
+describe('NarrativeService - AI usage log', () => {
+  function withLog(responses: (string | Error)[]) {
+    const ctx = make(responses);
+    const record = jest.fn().mockResolvedValue(undefined);
+    (ctx.service as any).aiUsage = { record };
+    const original = ctx.openRouter.chatCompletionDetailed.getMockImplementation()!;
+    ctx.openRouter.chatCompletionDetailed.mockImplementation(async (i: any) => ({ ...(await original(i)), usage: { promptTokens: 3000, completionTokens: 900, costUsd: 0.0012 } }));
+    return { ...ctx, record };
+  }
+
+  it('records a verified report with its model, tokens, cost and the session it was for', async () => {
+    const { service, record } = withLog([goodJson()]);
+    await service.write(facts);
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(record.mock.calls[0][0]).toMatchObject({ feature: 'market-report', model: 'free/test-model:free', ok: true, verified: true, attempts: 1, promptTokens: 3000, completionTokens: 900, costUsd: 0.0012 });
+    expect(record.mock.calls[0][0].detail).toContain('2026-11-04');
+  });
+
+  it('adds up every attempt, and records the template fallback as unverified', async () => {
+    const { service, record } = withLog([badJson(), badJson(), badJson()]);
+    const r = await service.write(facts);
+    expect(r.aiGenerated).toBe(false);
+    expect(record.mock.calls[0][0]).toMatchObject({ ok: true, verified: false, attempts: 3, promptTokens: 9000, costUsd: 0.0036 });
+  });
+
+  it('records a failed request as not ok', async () => {
+    const { service, record } = withLog([new Error('timeout')]);
+    await service.write(facts);
+    expect(record.mock.calls[0][0]).toMatchObject({ ok: false, verified: null });
+  });
+
+  it('records nothing when no key is configured, because no model was called', async () => {
+    const ctx = make([], false);
+    const record = jest.fn();
+    (ctx.service as any).aiUsage = { record };
+    await ctx.service.write(facts);
+    expect(record).not.toHaveBeenCalled();
+  });
+});

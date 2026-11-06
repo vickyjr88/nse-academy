@@ -1,4 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,6 +41,7 @@ export class PortfolioWatchService {
     private prisma: PrismaService,
     private brevo: BrevoService,
     private config: ConfigService,
+    @Optional() private monitor?: JobMonitorService,
   ) {}
 
   private webUrl(): string {
@@ -47,7 +51,7 @@ export class PortfolioWatchService {
   /** 16:30 Nairobi, Monday-Friday: the NSE has closed at 15:00 and the closing snapshot is in. */
   @Cron('30 16 * * 1-5', { timeZone: 'Africa/Nairobi' })
   async handleDaily() {
-    const out = await this.runAll();
+    const out = await tracked(this.monitor, 'portfolio-watch', () => this.runAll(), (o) => `${o.sent} sent, ${o.skipped} skipped, ${o.failed} failed of ${o.considered}`);
     this.logger.log(`Portfolio watch: ${out.sent} sent, ${out.skipped} skipped, ${out.failed} failed of ${out.considered}`);
   }
 

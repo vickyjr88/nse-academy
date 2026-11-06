@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OpenRouterService, ChatMessage } from '../openrouter/openrouter.service';
+import { OpenRouterService, ChatMessage, AiUsage } from '../openrouter/openrouter.service';
+import { AiUsageService } from '../monitoring/ai-usage.service';
 import { MarketFacts } from './market-facts';
 import { Narrative, buildPrompt, parseNarrative, templateNarrative, verifyNarrative } from './narrative';
 
@@ -24,6 +25,7 @@ export class NarrativeService {
   constructor(
     private openRouter: OpenRouterService,
     private config: ConfigService,
+    @Optional() private aiUsage?: AiUsageService,
   ) {}
 
   /**
@@ -59,14 +61,37 @@ export class NarrativeService {
       { role: 'user', content: user },
     ];
     let lastProblems: string[] = [];
+    const startedAtMs = Date.now();
+    const spent = { prompt: 0, completion: 0, cost: 0, hasCost: false };
+    const log = (attempts: number, model: string | null, ok: boolean, verified: boolean | null, detail: string) =>
+      this.aiUsage?.record({
+        feature: 'market-report',
+        model,
+        ok,
+        verified,
+        attempts,
+        durationMs: Date.now() - startedAtMs,
+        promptTokens: spent.prompt || null,
+        completionTokens: spent.completion || null,
+        costUsd: spent.hasCost ? spent.cost : null,
+        detail: `${facts.sessionYmd}: ${detail}`,
+      });
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       let content: string;
       let model: string;
+      let usage: AiUsage;
       try {
-        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.4, timeoutMs: 90_000, ...this.modelChain() }));
+        ({ content, model, usage } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.4, timeoutMs: 90_000, ...this.modelChain() }));
+        spent.prompt += usage?.promptTokens ?? 0;
+        spent.completion += usage?.completionTokens ?? 0;
+        if (typeof usage?.costUsd === 'number') {
+          spent.cost += usage.costUsd;
+          spent.hasCost = true;
+        }
       } catch (err) {
         this.logger.error(`AI request failed on attempt ${attempt}: ${(err as Error).message}`);
+        await log(attempt, null, false, null, `request failed: ${(err as Error).message}`);
         return { narrative: templateNarrative(facts), aiGenerated: false, model: null, note: 'The AI request failed - used the template story' };
       }
 
@@ -74,6 +99,7 @@ export class NarrativeService {
       const problems = parsed.narrative ? verifyNarrative(parsed.narrative, facts) : parsed.errors;
       if (parsed.narrative && problems.length === 0) {
         this.logger.log(`AI narrative accepted on attempt ${attempt} (${model})`);
+        await log(attempt, model, true, true, 'verified');
         return { narrative: parsed.narrative, aiGenerated: true, model };
       }
 
@@ -86,6 +112,7 @@ export class NarrativeService {
       ];
     }
 
+    await log(MAX_ATTEMPTS, null, true, false, `not verified: ${lastProblems[0] ?? 'unparseable output'}`);
     return {
       narrative: templateNarrative(facts),
       aiGenerated: false,

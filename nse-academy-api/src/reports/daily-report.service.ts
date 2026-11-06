@@ -1,10 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 import { escapeHtml } from '../brevo/email-template';
 import { attentionBox, dataTable, sectionHeading, signedPct, statRows } from '../brevo/email-blocks';
+import { BusinessMetrics, BusinessMetricsService } from './business-metrics.service';
+import { SystemHealthService, SystemReport } from './system-health.service';
+import { businessAttention, systemAttention } from './bi-rules';
+import { biText, businessHtml, kpiStrip, systemHtml } from './bi-render';
 import {
   DayBounds,
   MarketSummary,
@@ -45,6 +52,9 @@ export interface DailyReport {
     expiredInDay: number;
     expiringSoon: { name: string; email: string; tier: string; endsOn: string }[];
   };
+  /** Present when the business-intelligence services are available and did not fail. */
+  business?: BusinessMetrics | null;
+  system?: SystemReport | null;
   attention: string[];
 }
 
@@ -57,13 +67,18 @@ export class DailyReportService {
   constructor(
     private prisma: PrismaService,
     private adminNotifier: AdminNotifierService,
+    @Optional() private monitor?: JobMonitorService,
+    @Optional() private businessMetrics?: BusinessMetricsService,
+    @Optional() private systemHealth?: SystemHealthService,
   ) {}
 
   /** 08:00 Nairobi - covers the whole of the previous Nairobi calendar day. */
   @Cron('0 8 * * *', { timeZone: 'Africa/Nairobi' })
   async handleDailyReport(): Promise<void> {
     try {
-      await this.sendDailyReport();
+      await tracked(this.monitor, 'daily-admin-report', () => this.sendDailyReport(), (r) => `sent to ${r.sentTo.length}`);
+      // The price poller writes a row per attempt, so keep the table to a quarter's worth.
+      await this.monitor?.prune().catch((e) => this.logger.warn(`Could not prune job runs: ${(e as Error).message}`));
     } catch (err) {
       this.logger.error(`Daily report failed: ${(err as Error).message}`);
     }
@@ -140,6 +155,13 @@ export class DailyReportService {
       }),
     ]);
 
+    // The business-intelligence parts must never stop the report going out: a failure just leaves that section out.
+    const [business, system] = await Promise.all([
+      this.businessMetrics ? this.businessMetrics.build(day, now).catch((e) => { this.logger.error(`Business metrics failed: ${(e as Error).message}`); return null; }) : null,
+      this.systemHealth ? this.systemHealth.build(day, now, market.sessionYmd).catch((e) => { this.logger.error(`System health failed: ${(e as Error).message}`); return null; }) : null,
+    ]);
+    const isTradingDay = day.weekday >= 1 && day.weekday <= 5;
+
     const tierCount = (t: string) => tierGroups.find((g) => g.tier === t)?._count ?? 0;
     const pendingNames = pendingAdvisors.map((a) => a.user.name);
 
@@ -154,11 +176,16 @@ export class DailyReportService {
       attention.push(`<strong>${pendingNames.length} advisor application${pendingNames.length === 1 ? '' : 's'} awaiting approval:</strong> ${escapeHtml(pendingNames.join(', '))}.`);
     }
     if (expiringSoon.length > 0) {
-      attention.push(`<strong>${expiringSoon.length} paid subscription${expiringSoon.length === 1 ? '' : 's'} expire within ${SOON_DAYS} days</strong> (listed below).`);
+      attention.push(`<strong>${expiringSoon.length} paid subscription${expiringSoon.length === 1 ? ' expires' : 's expire'} within ${SOON_DAYS} days</strong> (listed below).`);
     }
+
+    if (system) attention.unshift(...systemAttention(system, isTradingDay));
+    if (business) attention.push(...businessAttention(business));
 
     return {
       day,
+      business,
+      system,
       market,
       activity: {
         signups: { count: signupCount, recent: signupRecent },
@@ -325,12 +352,21 @@ export class DailyReportService {
             s.expiringSoon.map((x) => [`${escapeHtml(x.name)}<br><span style="font-size:12px;color:#71717a;">${escapeHtml(x.email)}</span>`, escapeHtml(x.tier), x.endsOn]))
         : '');
 
-    const rawHtml = attentionBox('Needs your attention', r.attention) + marketHtml + activityHtml + recentLists.join('') + subsHtml;
+    const rawHtml =
+      attentionBox('Needs your attention', r.attention) +
+      (r.business || r.system ? kpiStrip(r.business ?? null, r.system ?? null, a.signups.count) : '') +
+      (r.business ? businessHtml(r.business) : '') +
+      (r.system ? systemHtml(r.system) : '') +
+      marketHtml +
+      activityHtml +
+      recentLists.join('') +
+      subsHtml;
 
     // ---- plain-text part
     const strip = (h: string) => h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
     const text: string[] = [strip(intro)];
     if (r.attention.length) text.push('NEEDS ATTENTION:\n' + r.attention.map((x) => `- ${strip(x)}`).join('\n'));
+    text.push(...biText(r.business ?? null, r.system ?? null));
     if (sum) {
       const line = (x: Mover) => `  ${x.ticker.padEnd(6)} ${x.price.toFixed(2).padStart(9)}  ${(x.changePct > 0 ? '+' : '') + x.changePct.toFixed(2)}%  vol ${formatCompact(x.volume)}`;
       text.push(`MARKET (${m.isReportDay ? 'closing prices' : `last session ${m.sessionLabel}`}): ${sum.advancers} up, ${sum.decliners} down, ${formatKes(sum.totalValue)} traded`);

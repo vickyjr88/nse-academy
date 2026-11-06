@@ -19,6 +19,33 @@ export interface BrevoContactInput {
   listIds?: number[];
 }
 
+export interface BrevoEmailStats {
+  requests: number;
+  delivered: number;
+  hardBounces: number;
+  softBounces: number;
+  blocked: number;
+  invalid: number;
+  spamReports: number;
+  unsubscribed: number;
+  opens: number;
+  clicks: number;
+}
+
+export interface BrevoCampaignStats {
+  id: number;
+  name: string;
+  subject: string;
+  sentDate: string | null;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  unsubscribed: number;
+  bounced: number;
+  complaints: number;
+}
+
 export interface BrevoTransactionalEmailInput {
   to: { email: string; name?: string };
   subject?: string;
@@ -241,6 +268,64 @@ export class BrevoService {
   async deleteCampaign(campaignId: number): Promise<void> {
     if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
     await this.request('DELETE', `/emailCampaigns/${campaignId}`);
+  }
+
+  /**
+   * Transactional email totals for a date range (YYYY-MM-DD, inclusive): sent, delivered, bounces, blocks, spam
+   * complaints, unsubscribes, opens and clicks. Null when Brevo is not configured or the call fails - a report must
+   * still go out without it.
+   */
+  async getEmailStats(startDate: string, endDate: string): Promise<BrevoEmailStats | null> {
+    if (!this.apiKey) return null;
+    try {
+      const r = await this.request<Record<string, number>>('GET', `/smtp/statistics/aggregatedReport?startDate=${startDate}&endDate=${endDate}`);
+      if (!r) return null;
+      return {
+        requests: r.requests ?? 0,
+        delivered: r.delivered ?? 0,
+        hardBounces: r.hardBounces ?? 0,
+        softBounces: r.softBounces ?? 0,
+        blocked: r.blocked ?? 0,
+        invalid: r.invalid ?? 0,
+        spamReports: r.spamReports ?? 0,
+        unsubscribed: r.unsubscribed ?? 0,
+        opens: r.uniqueOpens ?? r.opens ?? 0,
+        clicks: r.uniqueClicks ?? r.clicks ?? 0,
+      };
+    } catch (err) {
+      this.log.warn(`Brevo email stats unavailable: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Campaigns sent between two instants, with their delivery and engagement totals. Empty when unavailable. */
+  async getCampaignStats(startIso: string, endIso: string): Promise<BrevoCampaignStats[]> {
+    if (!this.apiKey) return [];
+    try {
+      const r = await this.request<{ campaigns?: any[] }>(
+        'GET',
+        `/emailCampaigns?status=sent&statistics=globalStats&startDate=${encodeURIComponent(startIso)}&endDate=${encodeURIComponent(endIso)}&limit=20&sort=desc`,
+      );
+      return (r?.campaigns ?? []).map((c) => {
+        const g = c.statistics?.globalStats ?? {};
+        return {
+          id: c.id,
+          name: c.name,
+          subject: c.subject,
+          sentDate: c.sentDate ?? null,
+          sent: g.sent ?? 0,
+          delivered: g.delivered ?? 0,
+          opens: g.uniqueViews ?? 0,
+          clicks: g.uniqueClicks ?? 0,
+          unsubscribed: g.unsubscriptions ?? 0,
+          bounced: (g.hardBounces ?? 0) + (g.softBounces ?? 0),
+          complaints: g.complaints ?? 0,
+        };
+      });
+    } catch (err) {
+      this.log.warn(`Brevo campaign stats unavailable: ${(err as Error).message}`);
+      return [];
+    }
   }
 
   /** Triggers immediate sending of a previously created campaign. */

@@ -109,7 +109,7 @@ describe('OpenRouterService', () => {
       get: jest.fn((k: string, d?: unknown) => ({ OPENROUTER_API_KEY: 'k', OPENROUTER_MODEL: 'primary/model-a:free', OPENROUTER_FALLBACK_MODELS: ' fallback/model-b:free , fallback/model-c:free ' } as Record<string, unknown>)[k] ?? d),
     };
     const result = await new OpenRouterService(config as never).chatCompletionDetailed({ messages: [{ role: 'user', content: 'hi' }] });
-    expect(result).toEqual({ content: 'ok', model: 'fallback/model-b:free' });
+    expect(result).toEqual({ content: 'ok', model: 'fallback/model-b:free', usage: { promptTokens: null, completionTokens: null, costUsd: null } });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.models).toEqual(['primary/model-a:free', 'fallback/model-b:free', 'fallback/model-c:free']);
     expect(body.model).toBeUndefined();
@@ -142,5 +142,17 @@ describe('OpenRouterService', () => {
     const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
     expect(body.model).toBe('paid/x');
     expect(body.models).toBeUndefined();
+  });
+
+  it('asks OpenRouter to account for usage, and returns the tokens and cost it reports', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ model: 'm/x', choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 1200, completion_tokens: 340, cost: 0.00063 } }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const out = await makeService().chatCompletionDetailed({ messages: [{ role: 'user', content: 'hi' }] });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string).usage).toEqual({ include: true });
+    expect(out.usage).toEqual({ promptTokens: 1200, completionTokens: 340, costUsd: 0.00063 });
   });
 });

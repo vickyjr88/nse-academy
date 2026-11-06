@@ -76,6 +76,15 @@ function makeService(
   return { service, prisma, openRouter, tavily };
 }
 
+function withUsage(over: { completions?: (string | Error)[]; usage?: { promptTokens: number; completionTokens: number; costUsd: number | null } } = {}) {
+  const ctx = makeService({ completions: over.completions });
+  const record = jest.fn().mockResolvedValue(undefined);
+  (ctx.service as any).aiUsage = { record };
+  const original = ctx.openRouter.chatCompletionDetailed.getMockImplementation()!;
+  ctx.openRouter.chatCompletionDetailed.mockImplementation(async (...a: any[]) => ({ ...(await (original as any)(...a)), usage: over.usage ?? { promptTokens: 1000, completionTokens: 200, costUsd: 0.0004 } }));
+  return { ...ctx, record };
+}
+
 const promptOf = (openRouter: ReturnType<typeof makeService>['openRouter'], call = 0): string =>
   (openRouter.chatCompletionDetailed.mock.calls as any[][])[call][0].messages[0].content;
 
@@ -275,5 +284,54 @@ describe('StockAdvisorService.getAiAdvice', () => {
     const r = await service.getAiAdvice('u1', 'SCOM');
     expect(r.aiGenerated).toBe(true);
     expect(promptOf(openRouter)).toContain('No investor profile yet');
+  });
+});
+
+
+describe('StockAdvisorService - AI usage log', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(NOW);
+    stubStrapiFetch();
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('records a verified answer with the model, tokens and cost, against the user and ticker', async () => {
+    const { service, record } = withUsage();
+    await service.getAiAdvice('u1', 'SCOM');
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(record.mock.calls[0][0]).toMatchObject({ feature: 'advisor', model: 'test/model', ok: true, verified: true, attempts: 1, promptTokens: 1000, completionTokens: 200, costUsd: 0.0004, userId: 'u1' });
+    expect(record.mock.calls[0][0].detail).toContain('SCOM');
+  });
+
+  it('adds up the cost of the retry when the first answer was rejected', async () => {
+    const { service, record } = withUsage({ completions: [goodAdvice({ situation: 'It trades at KSh 34.00 after a 7.4% slide.' }), goodAdvice()] });
+    await service.getAiAdvice('u1', 'SCOM');
+    expect(record.mock.calls[0][0]).toMatchObject({ attempts: 2, verified: true, promptTokens: 2000, completionTokens: 400, costUsd: 0.0008 });
+  });
+
+  it('records an answer that never passed the checks as unverified, and a failed request as not ok', async () => {
+    const bad = goodAdvice({ situation: 'It trades at KSh 34.00.' });
+    const unverified = withUsage({ completions: [bad, bad] });
+    await unverified.service.getAiAdvice('u1', 'SCOM');
+    expect(unverified.record.mock.calls[0][0]).toMatchObject({ ok: true, verified: false, attempts: 2 });
+    const failed = withUsage({ completions: [new Error('upstream 500')] });
+    await expect(failed.service.getAiAdvice('u1', 'SCOM')).rejects.toThrow();
+    expect(failed.record.mock.calls[0][0]).toMatchObject({ ok: false, verified: null });
+  });
+
+  it('records nothing for a cached answer (no model was called) or when there is no price data (the AI is skipped)', async () => {
+    const { service, record } = withUsage();
+    await service.getAiAdvice('u1', 'SCOM');
+    await service.getAiAdvice('u1', 'SCOM');
+    expect(record).toHaveBeenCalledTimes(1);
+    const none = withUsage();
+    (none.prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+    await none.service.getAiAdvice('u1', 'SCOM');
+    expect(none.record).not.toHaveBeenCalled();
+  });
+
+  it('works unchanged without a usage logger', async () => {
+    const { service } = makeService();
+    await expect(service.getAiAdvice('u1', 'SCOM')).resolves.toMatchObject({ aiGenerated: true });
   });
 });

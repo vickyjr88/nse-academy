@@ -1,7 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { ChatMessage, OpenRouterService } from '../openrouter/openrouter.service';
+import { AiUsage, ChatMessage, OpenRouterService } from '../openrouter/openrouter.service';
+import { AiUsageService } from '../monitoring/ai-usage.service';
 import { TavilyResult, TavilyService } from '../tavily/tavily.service';
 import { loadDailyCloses } from '../market-data/price-history';
 import { closeUnbalanced } from '../market-report/narrative';
@@ -219,6 +220,7 @@ export class StockAdvisorService {
     private configService: ConfigService,
     private openRouter: OpenRouterService,
     private tavily: TavilyService,
+    @Optional() private aiUsage?: AiUsageService,
   ) {
     this.cmsUrl = this.configService.get<string>('CMS_URL', 'http://localhost:1337');
     this.cmsToken = this.configService.get<string>('CMS_API_TOKEN')!;
@@ -437,13 +439,37 @@ export class StockAdvisorService {
     ];
 
     let lastProblems: string[] = [];
+    const startedAtMs = Date.now();
+    const spent = { prompt: 0, completion: 0, cost: 0, hasCost: false };
+    const log = (attempts: number, model: string | null, ok: boolean, verified: boolean | null, detail: string) =>
+      this.aiUsage?.record({
+        feature: 'advisor',
+        model,
+        ok,
+        verified,
+        attempts,
+        durationMs: Date.now() - startedAtMs,
+        promptTokens: spent.prompt || null,
+        completionTokens: spent.completion || null,
+        costUsd: spent.hasCost ? spent.cost : null,
+        userId,
+        detail: `${stock.ticker}: ${detail}`,
+      });
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt++) {
       let content: string;
       let model: string;
+      let usage: AiUsage;
       try {
-        ({ content, model } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.3, timeoutMs: 90_000, ...this.modelChain() }));
+        ({ content, model, usage } = await this.openRouter.chatCompletionDetailed({ messages, temperature: 0.3, timeoutMs: 90_000, ...this.modelChain() }));
+        spent.prompt += usage?.promptTokens ?? 0;
+        spent.completion += usage?.completionTokens ?? 0;
+        if (typeof usage?.costUsd === 'number') {
+          spent.cost += usage.costUsd;
+          spent.hasCost = true;
+        }
       } catch (err) {
         this.logger.error(`AI advice request failed for ${stock.ticker} (attempt ${attempt}): ${(err as Error).message}`);
+        await log(attempt, null, false, null, `request failed: ${(err as Error).message}`);
         throw new InternalServerErrorException('AI analysis temporarily unavailable. Please try again.');
       }
 
@@ -458,6 +484,7 @@ export class StockAdvisorService {
           sources: news.slice(0, 6).map((r) => `${r.title} (${hostOf(r.url)})`),
         });
         this.remember(this.adviceCache, cacheKey, out);
+        await log(attempt, model, true, true, 'verified');
         return out;
       }
       lastProblems = problems;
@@ -470,6 +497,7 @@ export class StockAdvisorService {
     }
 
     const why = 'The AI analysis could not be verified against our price data and the news it was given.';
+    await log(MAX_AI_ATTEMPTS, null, true, false, `not verified: ${lastProblems[0] ?? 'unparseable output'}`);
     return finish(fallbackAdvice(stock, f, userFit, why), { aiGenerated: false, note: `${why} (${lastProblems[0] ?? 'unparseable output'})`, sources: [] });
   }
 

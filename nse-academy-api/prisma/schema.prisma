@@ -611,3 +611,39 @@ model ProcessedPayment {
 
   @@index([userId])
 }
+
+// One row per scheduled-job execution (and per market-price poll), so the admin and the daily report can say
+// whether the system's background work is actually running, not just whether it was scheduled.
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  durationMs Int?
+  summary    String?
+  error      String?
+
+  @@index([job, startedAt])
+}
+
+// One row per AI request made on the system's behalf (the stock advisor, the market report): what it cost,
+// whether it passed our checks, and how long it took.
+model AiCall {
+  id               String   @id @default(cuid())
+  feature          String // advisor | market-report
+  model            String?
+  ok               Boolean
+  verified         Boolean? // passed our own checks; null where that does not apply
+  attempts         Int      @default(1)
+  durationMs       Int?
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  userId           String?
+  detail           String?
+  createdAt        DateTime @default(now())
+
+  @@index([feature, createdAt])
+  @@index([createdAt])
+}

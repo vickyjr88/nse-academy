@@ -1,4 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger, BadRequestException } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -101,6 +104,7 @@ export class PaymentsService {
     private brevo: BrevoService,
     private paystack: PaystackService,
     private adminNotifier: AdminNotifierService,
+    @Optional() private monitor?: JobMonitorService,
   ) {
     this.paystackSecret = this.configService.get<string>('PAYSTACK_SECRET_KEY')!;
   }
@@ -360,6 +364,10 @@ export class PaymentsService {
    */
   @Cron('0 6 * * *')
   async handleExpiredSubscriptions() {
+    return tracked(this.monitor, 'subscription-expiry', () => this.handleExpiredSubscriptionsImpl());
+  }
+
+  private async handleExpiredSubscriptionsImpl() {
     const expired = await this.prisma.subscription.findMany({
       where: {
         status: 'active',
@@ -395,6 +403,10 @@ export class PaymentsService {
    */
   @Cron('0 7 * * *')
   async handleExpiringSoonSubscriptions() {
+    return tracked(this.monitor, 'subscription-expiring-soon', () => this.handleExpiringSoonSubscriptionsImpl());
+  }
+
+  private async handleExpiringSoonSubscriptionsImpl() {
     const in3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
     const expiringSoon = await this.prisma.subscription.findMany({
       where: {

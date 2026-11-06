@@ -1,4 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Optional } from '@nestjs/common';
+import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { MarketReport, Prisma } from '@prisma/client';
@@ -63,19 +66,25 @@ export class MarketReportService {
     private narratives: NarrativeService,
     private adminNotifier: AdminNotifierService,
     private config: ConfigService,
+    @Optional() private monitor?: JobMonitorService,
   ) {}
 
   /** 21:00 Nairobi on trading days: the NSE closed at 15:00, so this covers that same day's session. Idempotent. */
   @Cron('0 21 * * 1-5', { timeZone: 'Africa/Nairobi' })
   async handleDaily(): Promise<void> {
     try {
-      const ymd = await this.facts.latestSessionYmd(new Date());
-      if (!ymd) {
-        this.logger.warn('Daily market report skipped: no price data found');
-        return;
-      }
-      const { created } = await this.generate({ date: ymd, notify: true });
-      this.logger.log(created ? `Public market report for ${ymd} published` : `Public market report for ${ymd} already exists`);
+      const outcome = await tracked(
+        this.monitor,
+        'market-report',
+        async () => {
+          const ymd = await this.facts.latestSessionYmd(new Date());
+          if (!ymd) throw new Error('no price data found');
+          const { created, report } = await this.generate({ date: ymd, notify: true });
+          return { ymd, created, ai: report.aiGenerated };
+        },
+        (r) => `${r.ymd}: ${r.created ? (r.ai ? 'published, AI-written' : 'published, template story') : 'already existed'}`,
+      );
+      this.logger.log(outcome.created ? `Public market report for ${outcome.ymd} published` : `Public market report for ${outcome.ymd} already exists`);
     } catch (err) {
       this.logger.error(`Daily market report failed: ${(err as Error).message}`);
     }

@@ -9,5 +9,6 @@ import { AdminMarketReportsController, PublicMarketReportsController } from './m
   imports: [PrismaModule],
   controllers: [PublicMarketReportsController, AdminMarketReportsController],
   providers: [MarketFactsService, NarrativeService, MarketReportService],
+  exports: [MarketFactsService],
 })
 export class MarketReportModule {}

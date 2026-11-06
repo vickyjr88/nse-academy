@@ -6,7 +6,7 @@ import { ReferralsService } from '../referrals/referrals.service';
 import { EbookService } from '../ebook/ebook.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
-import { computeEffectiveTier } from '../auth/effective-tier.util';
+import { TIER_LEVEL, computeEffectiveTier } from '../auth/effective-tier.util';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 
@@ -33,8 +33,59 @@ export function computeAmountKobo(plan: SubscriptionPlan, months: BillingMonths)
   return Math.round(base * (1 - DISCOUNT_BY_MONTHS[months]));
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export function computePeriodEnd(months: BillingMonths): Date {
-  return new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() + months * 30 * DAY_MS);
+}
+
+export type PeriodKind = 'new' | 'renewal' | 'upgrade' | 'kept-higher';
+
+export interface ExistingPlan {
+  tier: string;
+  status: string;
+  currentPeriodEnd: Date | null;
+}
+
+/**
+ * What a payment does to an account. The old behaviour - end = now + months, always - threw away whatever the
+ * member had already paid for, which is why early renewal was never offered. Now:
+ *  - no live plan (new, lapsed or expired): starts today;
+ *  - same plan, still running: the new months are added after the current end, so nothing is lost;
+ *  - upgrade (e.g. Intermediary -> Premium): the unused days of the old plan carry over, valued at the old price
+ *    over the new price (a day of KSh 300 plan is worth 0.6 of a day of KSh 500 plan), so nothing is lost and a
+ *    long cheap plan cannot be turned into a long expensive one for one cheap month;
+ *  - a lower plan bought while a higher one is running: the member keeps the higher tier and the payment buys
+ *    proportionally fewer days of it (the API refuses to start such a purchase; this only covers a race).
+ */
+export function computeNewPeriod(
+  existing: ExistingPlan | null | undefined,
+  plan: SubscriptionPlan,
+  months: BillingMonths,
+  now: Date = new Date(),
+): { tier: SubscriptionPlan; currentPeriodEnd: Date; kind: PeriodKind } {
+  const purchasedMs = months * 30 * DAY_MS;
+  const live =
+    existing &&
+    existing.status === 'active' &&
+    existing.currentPeriodEnd &&
+    existing.currentPeriodEnd.getTime() > now.getTime() &&
+    PLAN_PRICES[existing.tier as SubscriptionPlan]
+      ? existing
+      : null;
+  if (!live) return { tier: plan, currentPeriodEnd: new Date(now.getTime() + purchasedMs), kind: 'new' };
+
+  const end = (live.currentPeriodEnd as Date).getTime();
+  const current = live.tier as SubscriptionPlan;
+  if (current === plan) return { tier: plan, currentPeriodEnd: new Date(end + purchasedMs), kind: 'renewal' };
+
+  const level = (t: string) => TIER_LEVEL[t] ?? 0;
+  if (level(plan) > level(current)) {
+    const carried = Math.floor(((end - now.getTime()) * PLAN_PRICES[current]) / PLAN_PRICES[plan]);
+    return { tier: plan, currentPeriodEnd: new Date(now.getTime() + carried + purchasedMs), kind: 'upgrade' };
+  }
+  const bought = Math.floor((purchasedMs * PLAN_PRICES[plan]) / PLAN_PRICES[current]);
+  return { tier: current, currentPeriodEnd: new Date(end + bought), kind: 'kept-higher' };
 }
 
 @Injectable()
@@ -78,6 +129,21 @@ export class PaymentsService {
     if (!this.paystackSecret) {
       this.logger.error('PAYSTACK_SECRET_KEY is not configured');
       throw new InternalServerErrorException('Payment system configuration missing');
+    }
+
+    // Extending the current plan or upgrading is fine at any time; stepping down to a lower plan while a higher one is
+    // still running would only confuse the account, so refuse it up front.
+    const current = await this.prisma.subscription.findUnique({ where: { userId } });
+    if (
+      current &&
+      current.status === 'active' &&
+      current.currentPeriodEnd &&
+      current.currentPeriodEnd.getTime() > Date.now() &&
+      (TIER_LEVEL[current.tier] ?? 0) > (TIER_LEVEL[plan] ?? 0)
+    ) {
+      const label = PLAN_LABELS[current.tier as SubscriptionPlan] ?? current.tier;
+      const until = current.currentPeriodEnd.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+      throw new BadRequestException(`You are on ${label} until ${until}. Extend ${label} instead of switching to a lower plan.`);
     }
 
     const json = await this.paystack.initializeTransaction({
@@ -149,42 +215,11 @@ export class PaymentsService {
       // --- Subscription payment (default) ---
       const plan: SubscriptionPlan = data.metadata.plan || 'premium';
       const months: BillingMonths = VALID_MONTHS.includes(data.metadata.months) ? data.metadata.months : 1;
-
-      const existing = await this.prisma.subscription.findUnique({ where: { userId } });
-      const currentPeriodEnd = computePeriodEnd(months);
-      await this.prisma.subscription.upsert({
-        where: { userId },
-        create: {
-          userId,
-          tier: plan,
-          status: 'active',
-          paystackSubId: reference,
-          currentPeriodEnd,
-        },
-        update: {
-          tier: plan,
-          status: 'active',
-          currentPeriodEnd,
-          expiryWarningSentAt: null,
-          winbackSentAt: null,
-          renewalNudgeSentAt: null,
-        },
-      });
-
-      this.logger.log(`Subscription updated to ${plan} for user ${userId}`);
-      // Complete referral if this is the user's first paid subscription
-      await this.referrals.completeReferral(userId);
-
-      // Only email once per distinct payment - a retried webhook or a
-      // verify() call that arrives after the webhook already processed this
-      // exact reference would otherwise double-send the confirmation.
-      if (existing?.paystackSubId !== reference) {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
-        if (user) {
-          void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
-          void this.alertAdminOfSubscription(user, plan, months, reference);
-        }
+      if (!PLAN_PRICES[plan]) {
+        this.logger.error(`Subscription webhook ${reference} names an unknown plan "${plan}" - ignoring`);
+        return { received: true };
       }
+      await this.applySubscriptionPayment(userId, reference, plan, months);
     }
 
     return { received: true };
@@ -250,41 +285,61 @@ export class PaymentsService {
   private async activateSubscription(userId: string, reference: string, metadata: any) {
     const plan: SubscriptionPlan = metadata?.plan || 'premium';
     const months: BillingMonths = VALID_MONTHS.includes(metadata?.months) ? metadata.months : 1;
+    if (!PLAN_PRICES[plan]) throw new BadRequestException(`Invalid plan: ${plan}`);
 
-    const existing = await this.prisma.subscription.findUnique({ where: { userId } });
-    const currentPeriodEnd = computePeriodEnd(months);
-    await this.prisma.subscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        tier: plan,
-        status: 'active',
-        paystackSubId: reference,
-        currentPeriodEnd,
-      },
-      update: {
-        tier: plan,
-        status: 'active',
-        paystackSubId: reference,
-        currentPeriodEnd,
-        expiryWarningSentAt: null,
-        winbackSentAt: null,
-        renewalNudgeSentAt: null,
-      },
+    const out = await this.applySubscriptionPayment(userId, reference, plan, months);
+    return { success: true, tier: out.tier, currentPeriodEnd: out.currentPeriodEnd, type: 'subscription' };
+  }
+
+  /**
+   * Applies one successful subscription payment to the account, exactly once. The webhook and the return-page verify
+   * both call this, usually within seconds of each other: the ProcessedPayment row (unique on the Paystack reference,
+   * written in the same transaction as the subscription change) lets exactly one of them win, and a failure rolls the
+   * record back so Paystack's retry still gets to apply it.
+   */
+  private async applySubscriptionPayment(userId: string, reference: string, plan: SubscriptionPlan, months: BillingMonths) {
+    const now = new Date();
+    const out = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.subscription.findUnique({ where: { userId } });
+      // Payments applied before ProcessedPayment existed are recognised by the reference stored on the subscription.
+      if (existing?.paystackSubId === reference) {
+        return { applied: false as const, tier: existing.tier, currentPeriodEnd: existing.currentPeriodEnd };
+      }
+      const { count } = await tx.processedPayment.createMany({ data: [{ reference, userId, plan, months }], skipDuplicates: true });
+      if (count === 0) return { applied: false as const, tier: existing?.tier ?? plan, currentPeriodEnd: existing?.currentPeriodEnd ?? null };
+
+      const next = computeNewPeriod(existing, plan, months, now);
+      await tx.subscription.upsert({
+        where: { userId },
+        create: { userId, tier: next.tier, status: 'active', paystackSubId: reference, currentPeriodEnd: next.currentPeriodEnd },
+        update: {
+          tier: next.tier,
+          status: 'active',
+          paystackSubId: reference,
+          currentPeriodEnd: next.currentPeriodEnd,
+          expiryWarningSentAt: null,
+          winbackSentAt: null,
+          renewalNudgeSentAt: null,
+        },
+      });
+      return { applied: true as const, tier: next.tier, currentPeriodEnd: next.currentPeriodEnd, kind: next.kind };
     });
 
-    this.logger.log(`Subscription activated (${plan}) for user ${userId} via verify - ref ${reference}`);
-    await this.referrals.completeReferral(userId);
-
-    if (existing?.paystackSubId !== reference) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (user) {
-        void this.sendSubscriptionConfirmedEmail(user.email, user.name, plan, months, currentPeriodEnd);
-        void this.alertAdminOfSubscription(user, plan, months, reference);
-      }
+    if (!out.applied) {
+      this.logger.log(`Subscription payment ${reference} for user ${userId} was already applied - nothing to do`);
+      return out;
     }
 
-    return { success: true, tier: plan, type: 'subscription' };
+    this.logger.log(`Subscription payment ${reference} applied for user ${userId}: ${plan} x${months} (${out.kind}), now ${out.tier} until ${out.currentPeriodEnd.toISOString()}`);
+    // Completes the referral if this is the user's first paid subscription (idempotent inside).
+    await this.referrals.completeReferral(userId);
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      void this.sendSubscriptionConfirmedEmail(user.email, user.name, out.tier as SubscriptionPlan, months, out.currentPeriodEnd, out.kind);
+      void this.alertAdminOfSubscription(user, plan, months, reference);
+    }
+    return out;
   }
 
   async getSubscriptionStatus(userId: string) {
@@ -390,31 +445,38 @@ export class PaymentsService {
     plan: SubscriptionPlan,
     months: BillingMonths,
     currentPeriodEnd: Date,
+    kind: PeriodKind = 'new',
   ): Promise<void> {
     const firstName = name.split(' ')[0];
     const planLabel = PLAN_LABELS[plan];
     const dashboardUrl = `${this.webUrl()}/dashboard`;
     const renewsOn = currentPeriodEnd.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
-    const infoBox = `Plan: <strong>${planLabel}</strong> &middot; Billed for ${months} month${months === 1 ? '' : 's'} &middot; Renews ${renewsOn}`;
+    const renewed = kind === 'renewal' || kind === 'kept-higher';
+    const monthsLabel = `${months} month${months === 1 ? '' : 's'}`;
+    const infoBox = renewed
+      ? `Plan: <strong>${planLabel}</strong> &middot; Added ${monthsLabel} &middot; Now runs until ${renewsOn}`
+      : `Plan: <strong>${planLabel}</strong> &middot; Billed for ${monthsLabel} &middot; Renews ${renewsOn}`;
+    const lead = renewed
+      ? `We've added ${monthsLabel} to your <strong>${planLabel}</strong> plan on top of the time you already had. It now runs until <strong>${renewsOn}</strong>.`
+      : `Thanks for upgrading! Your <strong>${planLabel}</strong> subscription is active now - personalised stock picks, deep-dive research, and everything else that tier unlocks is ready in your dashboard.`;
+    const leadText = renewed
+      ? `We've added ${monthsLabel} to your ${planLabel} plan on top of the time you already had. It now runs until ${renewsOn}.`
+      : `Thanks for upgrading! Your ${planLabel} subscription is active now (billed for ${monthsLabel}, renews ${renewsOn}) - everything that tier unlocks is ready in your dashboard.`;
     try {
       await this.brevo.sendTransactional({
         to: { email, name },
-        subject: `You're on ${planLabel} - welcome aboard`,
+        subject: renewed ? `Your ${planLabel} plan has been extended` : `You're on ${planLabel} - welcome aboard`,
         htmlContent: renderEmailHtml({
-          eyebrow: 'Subscription Confirmed',
-          heading: `You're on ${planLabel}, ${firstName}`,
-          bodyHtml: [
-            `Thanks for upgrading! Your <strong>${planLabel}</strong> subscription is active now - personalised stock picks, deep-dive research, and everything else that tier unlocks is ready in your dashboard.`,
-          ],
+          eyebrow: renewed ? 'Plan Extended' : 'Subscription Confirmed',
+          heading: renewed ? `Thanks for renewing, ${firstName}` : `You're on ${planLabel}, ${firstName}`,
+          bodyHtml: [lead],
           infoBox,
           button: { label: 'Go to Dashboard', url: dashboardUrl },
           siteUrl: this.webUrl(),
         }),
         textContent: renderEmailText({
-          heading: `You're on ${planLabel}, ${firstName}`,
-          bodyText: [
-            `Thanks for upgrading! Your ${planLabel} subscription is active now (billed for ${months} month${months === 1 ? '' : 's'}, renews ${renewsOn}) - everything that tier unlocks is ready in your dashboard.`,
-          ],
+          heading: renewed ? `Thanks for renewing, ${firstName}` : `You're on ${planLabel}, ${firstName}`,
+          bodyText: [leadText],
           button: { label: 'Dashboard', url: dashboardUrl },
           siteUrl: this.webUrl(),
         }),

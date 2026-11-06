@@ -61,7 +61,7 @@ const COPY: Record<Audience, { subject: string; eyebrow: string; heading: string
     heading: 'Get more from your NSE Academy plan',
     intro: [
       'You already have the trade journal, portfolio tracking and price alerts. Premium adds the part that does the watching for you: a daily Portfolio Watch on your own holdings and a personalised stock advisor backed by current news.',
-      'And when your plan is next due, paying for 3, 6 or 12 months at once saves 5%, 10% or 15%.',
+      'You can extend any time: the new months are added after your current end date, so you lose no days, and paying for 3, 6 or 12 months at once saves 5%, 10% or 15%.',
     ],
     cta: { label: 'See Premium and renewal options', path: '/dashboard/billing' },
   },
@@ -71,8 +71,9 @@ const COPY: Record<Audience, { subject: string; eyebrow: string; heading: string
     heading: 'Make the most of your Premium plan',
     intro: [
       'Premium is the full toolkit, and a few minutes of setup make the daily Portfolio Watch much sharper. Here is what it looks like, and how to get the best from it.',
+      'You can extend your plan any time too: the new months are added after your current end date, so you lose no days, and paying for 3, 6 or 12 months at once saves 5%, 10% or 15%.',
     ],
-    cta: { label: 'Open your portfolio', path: '/dashboard/journal/performance' },
+    cta: { label: 'Extend your Premium plan', path: '/dashboard/billing' },
   },
 };
 
@@ -178,7 +179,7 @@ function exampleBlock(ex: ExampleWatch, planUrl: string): string {
   ].join('\n');
 }
 
-function premiumSteps(): string {
+function premiumSteps(portfolioUrl: string): string {
   const step = (n: number, t: string) =>
     `<tr><td width="30" valign="top" style="padding:6px 0;font-size:14px;font-weight:700;color:${BRAND};">${n}.</td><td style="padding:6px 0;font-size:14px;line-height:1.55;color:${TEXT};">${t}</td></tr>`;
   return [
@@ -188,6 +189,7 @@ function premiumSteps(): string {
       ${step(2, 'Enter the price you actually paid for each stock on the Performance page. Until you do, gains are measured from the day you imported.')}
       ${step(3, 'Keep the daily email on, and open the Research page for a news-backed view on any NSE stock.')}
     </table>`,
+    paragraph(`<a href="${portfolioUrl}" style="color:${BRAND};font-weight:700;">Open your portfolio &rarr;</a>`, 'font-size:14px;'),
   ].join('\n');
 }
 
@@ -203,15 +205,13 @@ export function buildSubscriptionEmail(input: BuildInput): { subject: string; ht
     );
   }
   if (input.example) parts.push(exampleBlock(input.example, ctaUrl));
-  if (input.audience === 'premium') parts.push(premiumSteps());
+  if (input.audience === 'premium') parts.push(premiumSteps(`${site}/dashboard/journal/performance`));
 
   parts.push(sectionHeading('What each plan includes'));
   parts.push(planMatrix(input.audience === 'free' ? 'intermediary' : input.audience === 'intermediary' ? 'premium' : 'premium'));
 
-  if (input.audience !== 'premium') {
-    parts.push(sectionHeading('Pay for longer, pay less', 'prepaid terms'));
-    parts.push(discountTable());
-  }
+  parts.push(sectionHeading('Pay for longer, pay less', 'prepaid terms'));
+  parts.push(discountTable());
 
   parts.push(sectionHeading('Bring a friend, get a free month'));
   parts.push(paragraph('Share your referral link from the Referrals page. When a friend subscribes, you each get one month free.', 'font-size:14px;'));
@@ -249,9 +249,7 @@ export function buildSubscriptionEmail(input: BuildInput): { subject: string; ht
     `Intermediary (${kes(PLAN_PRICES.intermediary / 100)}/month): full courses and PDF, 62 companies deep dive, broker comparison, trade journal and portfolio tracking, dividend tracking, price alerts.`,
     `Premium (${kes(PLAN_PRICES.premium / 100)}/month): everything above plus the 13-chapter Investor's Guide academy and PDF, personalised AI stock advisor, daily Portfolio Watch, priority support.`,
   );
-  if (input.audience !== 'premium') {
-    textLines.push('Pay for 3, 6 or 12 months at once and save 5%, 10% or 15%.');
-  }
+  textLines.push('Pay for 3, 6 or 12 months at once and save 5%, 10% or 15%.');
   textLines.push('Refer a friend who subscribes and you each get a free month.', 'Pay by M-Pesa or card. Cancel anytime. Information only, not investment advice.');
   if (!input.sample) textLines.push(`Unsubscribe: ${input.unsubscribeUrl}`);
 

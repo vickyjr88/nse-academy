@@ -597,3 +597,16 @@ model PortfolioAlertLog {
 
   @@index([userId, key, sentAt])
 }
+
+// One row per subscription payment already applied to an account, keyed by the Paystack reference. The unique key
+// makes applying a payment idempotent even when the webhook and the return-page verify arrive at the same moment,
+// which matters now that a renewal adds time to the existing end date instead of overwriting it.
+model ProcessedPayment {
+  reference String   @id
+  userId    String
+  plan      String
+  months    Int
+  appliedAt DateTime @default(now())
+
+  @@index([userId])
+}

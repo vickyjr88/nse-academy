@@ -16,7 +16,7 @@ describe('buildSubscriptionEmail', () => {
     expect(mid.html).toContain('Get more from your NSE Academy plan');
     expect(prem.html).toContain('Make the most of your Premium plan');
     expect(free.html).toContain('href="https://nseacademy.example/dashboard/billing"');
-    expect(prem.html).toContain('href="https://nseacademy.example/dashboard/journal/performance"');
+    expect(prem.html).toContain('Extend your Premium plan');
   });
 
   it('shows the five example stocks, the real flags, and says plainly the holdings are illustrative', () => {
@@ -58,11 +58,18 @@ describe('buildSubscriptionEmail', () => {
     expect(row('First 3 course modules')).toEqual([1, 1, 1]);
   });
 
-  it('does not push a renewal discount at Premium members, who cannot renew early; it shows them how to get more from the plan', () => {
+  it('tells every paid member they can extend early without losing days, and shows the prepaid savings to all three audiences', () => {
+    for (const a of ['free', 'intermediary', 'premium'] as Audience[]) expect(build(a).html).toContain('Pay for longer, pay less');
+    for (const a of ['intermediary', 'premium'] as Audience[]) {
+      const { html, text } = build(a);
+      expect(html).toContain('the new months are added after your current end date');
+      expect(text).toContain('save 5%, 10% or 15%');
+    }
     const prem = build('premium');
-    expect(prem.html).not.toContain('Pay for longer');
     expect(prem.html).toContain('Three minutes to a sharper Portfolio Watch');
-    for (const a of ['free', 'intermediary'] as Audience[]) expect(build(a).html).toContain('Pay for longer, pay less');
+    expect(prem.html).toContain('Extend your Premium plan');
+    expect(prem.html).toContain('href="https://nseacademy.example/dashboard/billing"');
+    expect(prem.html).toContain('href="https://nseacademy.example/dashboard/journal/performance"'); // the setup link
   });
 
   it('mentions the referral month, payment methods and cancellation', () => {

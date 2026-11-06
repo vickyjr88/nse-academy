@@ -26,6 +26,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MarketDataModule } from './market-data/market-data.module';
 import { JournalModule } from './journal/journal.module';
 import { PortfolioWatchModule } from './portfolio-watch/portfolio-watch.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
@@ -67,6 +68,7 @@ import { AppService } from './app.service';
     MarketDataModule,
     JournalModule,
     PortfolioWatchModule,
+    CampaignsModule,
     BrokersModule,
     AlertsModule,
     BroadcastModule,

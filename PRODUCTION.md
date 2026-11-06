@@ -246,3 +246,13 @@ Public read endpoints: `GET /public/market-reports`, `/public/market-reports/lat
 - Any KSh/% figure the model writes must appear in our data or in the search results it was given, and overconfident wording ("guaranteed") is rejected. One retry with feedback; after that the user gets a plain HOLD that says why, never an unverified BUY/AVOID. No recorded price, a price older than 7 days, or under 20 sessions of history skips the AI entirely.
 - News comes from Tavily (`TAVILY_API_KEY`, optional). Results are cached 12 h per company (an empty answer 15 min) and a verified answer is cached 6 h per user and stock, so the free tier (1,000 searches/month) is spent per company, not per click. Caches are in memory: they reset when the API container restarts.
 - The advisor still uses the shared `OPENROUTER_MODEL` chain (free by default), not `MARKET_REPORT_MODEL`. Expect 30-60 s per fresh answer on a free model.
+
+## Subscription marketing email (`/admin/campaigns/subscription`)
+
+A "why subscribe / renew" email in three versions, one per plan tier (`free` covers never-subscribed and lapsed users, `intermediary`, `premium`). It contains a five-stock example Portfolio Watch built from the real portfolio-watch rules on the latest closing prices (tickers and share counts in `src/campaigns/example-watch.ts`; the shares and costs are invented, the prices are real), a plan matrix that mirrors the API's tier gates, and discounts computed from `payments.service.ts`. All endpoints need `x-admin-key`.
+
+- `GET  /admin/campaigns/subscription/preview?audience=free|intermediary|premium` - the email as HTML.
+- `POST /admin/campaigns/subscription/sample` `{ "to": "you@example.com", "audience"?: "free" }` - review copies by ordinary mail to one address; touches no user.
+- `POST /admin/campaigns/subscription/send` `{ "audience": "free", "confirm": true }` - **real send** to every user on that tier, as a Brevo campaign through the broadcast tool (`BREVO_BROADCAST_LIST_ID`), so Brevo handles the unsubscribe link and bounces. Refuses without `confirm: true`.
+
+Changing the pitch means editing `COPY` / `MATRIX` in `src/campaigns/subscription-email.ts` (the tests check prices, tier ticks and the unsubscribe link). Active Premium members cannot renew early (the billing page hides purchase options), so their version carries no renewal ask.

@@ -7,5 +7,6 @@ import { BroadcastService } from './broadcast.service';
   imports: [PrismaModule],
   controllers: [BroadcastController],
   providers: [BroadcastService],
+  exports: [BroadcastService],
 })
 export class BroadcastModule {}

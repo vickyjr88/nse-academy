@@ -1,6 +1,8 @@
 import { Controller, Get, Query, UseGuards, Req, HttpCode } from '@nestjs/common';
 import { StockAdvisorService } from './stock-advisor.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TierGuard } from '../auth/tier.guard';
+import { RequireTier } from '../auth/tier.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('advisor')
@@ -31,7 +33,10 @@ export class StockAdvisorController {
     return this.advisorService.getAllTickers();
   }
 
-  @UseGuards(JwtAuthGuard)
+  // Premium only. The Research page already hides this behind the plan, but the check has to be here too:
+  // every call spends news-search and AI credits, so a free account must not be able to call the API directly.
+  @UseGuards(JwtAuthGuard, TierGuard)
+  @RequireTier('premium')
   @Get('ai-advice')
   @ApiOperation({ summary: 'AI-powered real-time analysis and personalised trade recommendation' })
   @ApiQuery({ name: 'ticker', required: true })

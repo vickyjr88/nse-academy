@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class ComposeBroadcastDto {
   @ApiProperty({ example: 'New: Trade Journal, Price Alerts & Dividend Tracking' })
@@ -28,4 +28,12 @@ export class ComposeBroadcastDto {
   @IsOptional()
   @IsString()
   tagId?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Send even though a broadcast with this subject already went to this audience in the last 24 hours.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }

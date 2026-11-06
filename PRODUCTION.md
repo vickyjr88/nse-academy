@@ -271,4 +271,13 @@ Changing the pitch means editing `COPY` / `MATRIX` in `src/campaigns/subscriptio
 - The same subject for the same tier is refused a second time within 24 h unless `force: true`.
 - `POST .../test` `{ "campaignId": 5, "to": ["you@example.com"] }` has Brevo send you the real campaign; `POST .../cancel` `{ "campaignId": 5 }` deletes a scheduled campaign (also possible in the Brevo dashboard under Campaigns > Scheduled).
 
-Known issue in the older broadcast tool (`POST /admin/broadcast/send`): it adds the chosen audience to the single shared list but never empties it first, so a later send to a smaller tier also reaches everyone synced earlier. Use the campaign tool above, or empty the list first.
+### The admin broadcast tool (`POST /admin/broadcast/send`, the CMS "Compose email" screen)
+
+Fixed alongside the campaign tool, which now shares its code (`BroadcastService.prepareAudienceList`):
+- **One Brevo list per audience** ("NSE Academy broadcast - all | tier:free | tag:<id> | tier:free+tag:<id>"), emptied before it is refilled. It used to sync every audience into one shared list that was never emptied, so a later send to a smaller group also reached everyone synced before it. `BREVO_BROADCAST_LIST_ID` is now only the Brevo folder the lists are created in.
+- **Contact uploads are batched (5) and retried**; before, ten parallel writes tripped Brevo's rate limit and dropped contacts silently. Contacts that still fail are returned in `failedEmails`.
+- **Undeliverable addresses are skipped** (no mail server, throwaway domains, bad syntax) and returned in `excluded`; the audience preview (`GET /admin/broadcast/audience`) now returns `count` (who will be mailed), `skipped` and `total`.
+- **Double-send guard:** the same subject to the same audience (tier + tag) is refused for 24 h unless `force: true`.
+- **Unsubscribe link guaranteed:** if the HTML has no `{{ unsubscribe }}` / `[UNSUBSCRIBE]`, a footer with Brevo's link is added.
+- Brevo's "remove all contacts from a list" call (`{ all: true }`) returns HTTP 400, so lists are emptied by reading the members and removing them in chunks of 150 (`BrevoService.clearList`, checked against the live API on a throwaway list).
+- Migration `22_broadcast_campaign_tag` records the tag filter on each campaign.

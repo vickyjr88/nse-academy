@@ -209,10 +209,21 @@ export class BrevoService {
     return created.id;
   }
 
-  /** Removes every contact from a list (the contacts themselves are kept). */
+  /**
+   * Removes every contact from a list (the contacts themselves are kept). Brevo rejects the `{ all: true }` form of its
+   * remove call with HTTP 400, so this reads the members and removes them explicitly, 150 at a time (Brevo's limit).
+   */
   async clearList(listId: number): Promise<void> {
     if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
-    await this.request('POST', `/contacts/lists/${listId}/contacts/remove`, { all: true });
+    for (let round = 0; round < 50; round++) {
+      const page = await this.request<{ contacts?: { email: string }[] }>('GET', `/contacts/lists/${listId}/contacts?limit=500&offset=0`);
+      const emails = (page?.contacts ?? []).map((c) => c.email);
+      if (emails.length === 0) return;
+      for (let i = 0; i < emails.length; i += 150) {
+        await this.request('POST', `/contacts/lists/${listId}/contacts/remove`, { emails: emails.slice(i, i + 150) });
+      }
+    }
+    throw new Error(`Brevo list ${listId} still has contacts after 50 rounds of removal`);
   }
 
   async getCampaign(campaignId: number): Promise<{ id: number; name: string; status: string; scheduledAt?: string; htmlContent?: string; recipients?: unknown } | null> {

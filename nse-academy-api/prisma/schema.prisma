@@ -492,6 +492,7 @@ model BroadcastCampaign {
   subject        String
   htmlContent    String
   tier           String? // free | intermediary | premium | null (all users)
+  tagId          String? // the tag filter, when one was used (combined with tier as AND)
   audienceCount  Int
   failedCount    Int       @default(0)
   createdAt      DateTime  @default(now())

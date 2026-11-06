@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { signupAttribution } from "@/lib/visitor";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { decodeJwtPayload, identifyUser, trackEvent } from "@/lib/analytics";
@@ -44,7 +45,7 @@ function RegisterForm() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, ...(phone ? { phone } : {}), ...(referralCode ? { referralCode } : {}) }),
+        body: JSON.stringify({ name, email, password, ...(phone ? { phone } : {}), ...(referralCode ? { referralCode } : {}), ...(signupAttribution() ? { attribution: signupAttribution() } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");

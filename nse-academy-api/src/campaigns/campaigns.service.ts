@@ -5,7 +5,7 @@ import { BrevoService } from '../brevo/brevo.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
 import { loadDailyCloses } from '../market-data/price-history';
 import { EXAMPLE_POSITIONS, buildExampleWatch } from './example-watch';
-import { Audience, buildSubscriptionEmail } from './subscription-email';
+import { Audience, buildSubscriptionEmail, subscriptionSubject } from './subscription-email';
 
 export const AUDIENCES: Audience[] = ['free', 'intermediary', 'premium'];
 
@@ -124,5 +124,25 @@ export class CampaignsService {
   async cancelCampaign(campaignId: number) {
     await this.brevo.deleteCampaign(campaignId);
     return { campaignId, cancelled: true };
+  }
+
+  /**
+   * Everything the admin screen needs in one call: for each audience its subject and how many people would really be
+   * mailed, the campaigns waiting in Brevo, and how the recently sent ones performed. Brevo being down leaves the
+   * audience figures intact and says so.
+   */
+  async overview() {
+    const audiences = await Promise.all(
+      AUDIENCES.map(async (audience) => ({ audience, subject: subscriptionSubject(audience), ...(await this.broadcast.getAudiencePreview(audience)) })),
+    );
+    let brevo: { queued: unknown[]; sent: unknown[]; error: string | null };
+    try {
+      const [queued, sent] = await Promise.all([this.brevo.listCampaigns('queued', 20), this.brevo.listCampaigns('sent', 10)]);
+      const tag = (c: { name: string }) => ({ ...c, subscriptionCampaign: c.name.startsWith('Subscription campaign') });
+      brevo = { queued: queued.map(tag), sent: sent.map(tag), error: null };
+    } catch (err) {
+      brevo = { queued: [], sent: [], error: (err as Error).message };
+    }
+    return { audiences, ...brevo };
   }
 }

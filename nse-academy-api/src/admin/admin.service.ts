@@ -98,6 +98,8 @@ export class AdminService {
           email: true,
           phone: true,
           createdAt: true,
+          lastActiveAt: true,
+          lastLoginAt: true,
           subscription: {
             select: {
               tier: true,

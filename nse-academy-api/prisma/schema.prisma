@@ -28,6 +28,11 @@ model User {
   priceAlerts         PriceAlert[]
   notifications       Notification[]
   portfolioAlertLogs  PortfolioAlertLog[]
+  activityDays        ActivityDay[]
+  attribution         SignupAttribution?
+  // When the member last signed in with their password, and when they last used the app at all (any authenticated request).
+  lastLoginAt         DateTime?
+  lastActiveAt        DateTime?
   // Daily portfolio-watch email (Premium). The in-app notification is always created.
   portfolioWatchEnabled Boolean          @default(true)
   dividends           Dividend[]
@@ -646,4 +651,69 @@ model AiCall {
 
   @@index([feature, createdAt])
   @@index([createdAt])
+}
+
+// Everything an admin changed, for accountability. `actor` is the Strapi admin user the admin panel reports; the
+// admin API itself is authenticated by one shared key, so this names who was at the keyboard, not who held the key.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actor      String?
+  method     String
+  path       String
+  action     String
+  entityType String?
+  entityId   String?
+  statusCode Int
+  ok         Boolean
+  detail     Json?
+  ip         String?
+
+  @@index([at])
+  @@index([actor, at])
+  @@index([entityType, entityId])
+}
+
+// One row per member per Nairobi day they used the app. Accurate daily/weekly/monthly active counts need the history,
+// which a single lastActiveAt column overwrites.
+model ActivityDay {
+  userId      String
+  day         String // YYYY-MM-DD, Nairobi
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime
+  hits        Int      @default(1)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([day])
+}
+
+// First-party, cookie-free page views: an anonymous visitor id kept in the browser, the path, where they came from.
+// No IP address and no user-agent string is stored.
+model PageView {
+  id           String   @id @default(cuid())
+  at           DateTime @default(now())
+  visitorId    String
+  path         String
+  referrerHost String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  device       String
+
+  @@index([at])
+  @@index([visitorId, at])
+}
+
+// Where a member came from when they signed up, to tell which channels and campaigns actually produce members.
+model SignupAttribution {
+  userId       String   @id
+  visitorId    String?
+  referrerHost String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  landingPath  String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

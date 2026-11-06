@@ -29,6 +29,9 @@ import { PortfolioWatchModule } from './portfolio-watch/portfolio-watch.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { AdminOpsModule } from './admin-ops/admin-ops.module';
+import { AdminAuditModule } from './admin-audit/admin-audit.module';
+import { ActivityModule } from './activity/activity.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
@@ -73,6 +76,9 @@ import { AppService } from './app.service';
     CampaignsModule,
     MonitoringModule,
     AdminOpsModule,
+    AdminAuditModule,
+    ActivityModule,
+    AnalyticsModule,
     BrokersModule,
     AlertsModule,
     BroadcastModule,

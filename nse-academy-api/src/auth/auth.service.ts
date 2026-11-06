@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -8,6 +8,9 @@ import { ReferralsService } from '../referrals/referrals.service';
 import { LeadsService } from '../leads/leads.service';
 import { EbookService } from '../ebook/ebook.service';
 import { BrevoService } from '../brevo/brevo.service';
+import { ActivityService } from '../activity/activity.service';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { cleanPath, cleanUtm, validVisitorId } from '../analytics/track-rules';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -29,6 +32,8 @@ export class AuthService {
     private ebooks: EbookService,
     private brevo: BrevoService,
     private config: ConfigService,
+    @Optional() private activity?: ActivityService,
+    @Optional() private analytics?: AnalyticsService,
   ) {
     const listIdRaw = this.config.get<string>('BREVO_LIST_ID');
     this.brevoListId = listIdRaw ? Number(listIdRaw) : undefined;
@@ -54,6 +59,19 @@ export class AuthService {
 
     if (dto.referralCode) {
       await this.referrals.recordPendingReferral(dto.referralCode, user.id);
+    }
+
+    // Where they came from, so the admin can see which channels produce members. Cleaned the same way page views are.
+    if (dto.attribution && this.analytics) {
+      const a = dto.attribution;
+      void this.analytics.recordSignupAttribution(user.id, {
+        visitorId: validVisitorId(a.visitorId) ? a.visitorId : undefined,
+        referrerHost: a.referrerHost ? a.referrerHost.toLowerCase().replace(/^www\./, '').slice(0, 100) : undefined,
+        utmSource: cleanUtm(a.utmSource) ?? undefined,
+        utmMedium: cleanUtm(a.utmMedium) ?? undefined,
+        utmCampaign: cleanUtm(a.utmCampaign) ?? undefined,
+        landingPath: cleanPath(a.landingPath) ?? undefined,
+      });
     }
 
     // Mark any matching lead as converted + flag in Brevo so the welcome
@@ -88,6 +106,7 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     void this.ebooks.claimPurchasesForEmail(user.id, user.email);
+    void this.activity?.recordLogin(user.id).catch(() => undefined);
 
     return this.signToken(user.id, user.email);
   }

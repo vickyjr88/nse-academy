@@ -495,12 +495,69 @@ export class LifecycleService {
   // Tag admin API (backs the segment picker in the broadcast compose UI)
   // ---------------------------------------------------------------------
 
+  /**
+   * Tags the automation creates and looks up by name every night. Renaming one would orphan its members and make the
+   * cron create a fresh empty tag under the old name, so they cannot be renamed.
+   */
+  static readonly SYSTEM_TAGS: ReadonlySet<string> = new Set(['engaged-free', 'active-trader-free']);
+
   async listTags() {
     const tags = await this.prisma.tag.findMany({
       orderBy: { name: 'asc' },
       include: { _count: { select: { users: true } } },
     });
-    return tags.map((t) => ({ id: t.id, name: t.name, createdAt: t.createdAt, memberCount: t._count.users }));
+    return tags.map((t) => ({ id: t.id, name: t.name, createdAt: t.createdAt, memberCount: t._count.users, system: LifecycleService.SYSTEM_TAGS.has(t.name) }));
+  }
+
+  async renameTag(tagId: string, name: string) {
+    const tag = await this.prisma.tag.findUnique({ where: { id: tagId } });
+    if (!tag) throw new NotFoundException(`Tag ${tagId} not found`);
+    if (LifecycleService.SYSTEM_TAGS.has(tag.name)) {
+      throw new BadRequestException(`"${tag.name}" is applied by the engagement automation and cannot be renamed.`);
+    }
+    if (name === tag.name) return tag;
+    const clash = await this.prisma.tag.findUnique({ where: { name } });
+    if (clash) throw new ConflictException(`Tag "${name}" already exists`);
+    return this.prisma.tag.update({ where: { id: tagId }, data: { name } });
+  }
+
+  /** Who has a tag, newest first, with whether a person or the automation applied it. */
+  async listTagMembers(tagId: string, page = 1, limit = 25) {
+    const tag = await this.prisma.tag.findUnique({ where: { id: tagId } });
+    if (!tag) throw new NotFoundException(`Tag ${tagId} not found`);
+    const take = Math.min(Math.max(limit, 1), 100);
+    const p = Math.max(page, 1);
+    const [rows, total] = await Promise.all([
+      this.prisma.userTag.findMany({
+        where: { tagId },
+        orderBy: { addedAt: 'desc' },
+        skip: (p - 1) * take,
+        take,
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
+      this.prisma.userTag.count({ where: { tagId } }),
+    ]);
+    return {
+      tag: { id: tag.id, name: tag.name, system: LifecycleService.SYSTEM_TAGS.has(tag.name) },
+      data: rows.map((r) => ({ userId: r.user.id, name: r.user.name, email: r.user.email, addedAt: r.addedAt, addedBy: r.addedBy, automated: r.addedBy.startsWith('system:') })),
+      total,
+      page: p,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    };
+  }
+
+  /** Tags members given as email addresses (what an admin has to hand); reports the addresses that match nobody. */
+  async applyTagByEmail(tagId: string, emails: string[]) {
+    const tag = await this.prisma.tag.findUnique({ where: { id: tagId } });
+    if (!tag) throw new NotFoundException(`Tag ${tagId} not found`);
+    const wanted = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+    const users = await this.prisma.user.findMany({ where: { email: { in: wanted } }, select: { id: true, email: true } });
+    const found = new Set(users.map((u) => u.email.toLowerCase()));
+    const notFound = wanted.filter((e) => !found.has(e));
+    if (users.length === 0) throw new BadRequestException(`None of the ${wanted.length} address${wanted.length === 1 ? '' : 'es'} belongs to a member`);
+    const result = await this.prisma.userTag.createMany({ data: users.map((u) => ({ userId: u.id, tagId, addedBy: 'admin:manual' })), skipDuplicates: true });
+    return { tagged: result.count, alreadyHadTag: users.length - result.count, notFound };
   }
 
   async createTag(name: string) {

@@ -44,3 +44,19 @@ describe('DailyReportService.render - business intelligence', () => {
     expect(service().render(base()).subject).not.toContain('need attention');
   });
 });
+
+describe('DailyReportService.render - engagement', () => {
+  it('adds the members, website and admin sections after system health and before the market', () => {
+    const { engagement } = require('./fixtures');
+    const out = service().render({ ...base(), business: business(), system: system(), engagement: engagement() });
+    const iSystem = out.rawHtml.indexOf('is everything running?');
+    const iEng = out.rawHtml.indexOf('who is using the product');
+    const iAdmin = out.rawHtml.indexOf('the audit trail');
+    const iMarket = out.rawHtml.indexOf('No market data is available');
+    expect(iSystem).toBeGreaterThan(-1);
+    expect(iSystem).toBeLessThan(iEng);
+    expect(iEng).toBeLessThan(iAdmin);
+    expect(iAdmin).toBeLessThan(iMarket);
+    expect(out.text.join('\n')).toContain('WEBSITE:');
+  });
+});

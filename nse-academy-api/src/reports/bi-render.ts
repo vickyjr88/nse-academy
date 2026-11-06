@@ -4,6 +4,7 @@ import { escapeHtml } from '../brevo/email-template';
 import { dataTable, sectionHeading, statRows } from '../brevo/email-blocks';
 import { BusinessMetrics } from './business-metrics.service';
 import { SystemReport } from './system-health.service';
+import { EngagementMetrics } from './engagement-metrics.service';
 import { EXPECTED_POLLS_PER_DAY, conversionPct, emailBounceRate, feedSuccessRate, trendNote } from './bi-rules';
 import { formatKes } from './report-helpers';
 
@@ -163,8 +164,67 @@ export function systemHtml(s: SystemReport): string {
   ].join('');
 }
 
+export function engagementHtml(e: EngagementMetrics): string {
+  const m = e.members;
+  const t = e.traffic;
+  const track = m.trackingSince ? `Member activity has been recorded since ${escapeHtml(m.trackingSince)} (${m.trackingDays} day${m.trackingDays === 1 ? '' : 's'}).` : 'Member activity tracking has just started; figures appear as members use the app.';
+
+  const members =
+    sectionHeading('Members and visitors', 'who is using the product') +
+    statRows([
+      { label: 'Members active yesterday', value: m.dau },
+      { label: 'Active in the last 7 days', value: m.wau },
+      { label: 'Active in the last 30 days', value: m.mau, note: m.stickinessPct != null ? `${m.stickinessPct}% of monthly members came back yesterday` : undefined },
+    ]) +
+    `<p style="margin:4px 0 0;font-size:12px;color:${MUTED};">${track}</p>`;
+
+  const dormant = m.dormantPaying;
+  const dormantHtml =
+    dormant === null
+      ? `<p style="margin:12px 0 0;font-size:12px;color:${MUTED};">"Paying but quiet" members will be listed once ${m.dormantDays} days of activity have been recorded.</p>`
+      : dormant.length === 0
+        ? `<p style="margin:12px 0 0;font-size:14px;color:#52525b;">Every paying member has used the app in the last ${m.dormantDays} days.</p>`
+        : `<p style="margin:14px 0 4px;font-size:14px;font-weight:700;">Paying members gone quiet <span style="font-weight:400;color:${MUTED};">no activity in ${m.dormantDays} days</span></p>` +
+          dataTable(
+            [{ header: 'Member' }, { header: 'Plan' }, { header: 'Last seen', align: 'right' }, { header: 'Ends', align: 'right' }],
+            dormant.slice(0, 8).map((d) => [`${escapeHtml(d.name)}<br>${note(escapeHtml(d.email))}`, escapeHtml(d.tier), d.lastActiveAt ? d.lastActiveAt.slice(0, 10) : 'never', d.endsOn ?? '-']),
+          );
+
+  const web =
+    `<p style="margin:16px 0 4px;font-size:14px;font-weight:700;">Website</p>` +
+    statRows([
+      { label: 'Visitors yesterday', value: t.day.visitors, note: `${t.day.pageViews} page view${t.day.pageViews === 1 ? '' : 's'}` },
+      { label: 'Visitors, last 7 days', value: t.week.visitors, note: trendNote(t.week.visitors, t.previousWeek.visitors) },
+      { label: 'Page views, last 7 days', value: t.week.pageViews, note: trendNote(t.week.pageViews, t.previousWeek.pageViews) },
+    ]) +
+    (t.week.sources.length
+      ? `<p style="margin:14px 0 4px;font-size:14px;font-weight:700;">Where visitors came from <span style="font-weight:400;color:${MUTED};">last 7 days</span></p>` +
+        dataTable([{ header: 'Source' }, { header: 'Visitors', align: 'right' }, { header: 'Views', align: 'right' }], t.week.sources.slice(0, 6).map((s) => [escapeHtml(s.source), String(s.visitors), String(s.views)]))
+      : '') +
+    (t.week.signups.length
+      ? `<p style="margin:14px 0 4px;font-size:14px;font-weight:700;">Signups by source <span style="font-weight:400;color:${MUTED};">last 7 days</span></p>` +
+        dataTable([{ header: 'Source' }, { header: 'Signups', align: 'right' }, { header: 'Paying now', align: 'right' }], t.week.signups.slice(0, 6).map((s) => [escapeHtml(s.source), String(s.signups), String(s.paying)]))
+      : '') +
+    (t.week.topPages.length
+      ? `<p style="margin:14px 0 4px;font-size:14px;font-weight:700;">Top pages <span style="font-weight:400;color:${MUTED};">last 7 days</span></p>` +
+        dataTable([{ header: 'Page' }, { header: 'Visitors', align: 'right' }, { header: 'Views', align: 'right' }], t.week.topPages.slice(0, 6).map((p) => [escapeHtml(p.path), String(p.visitors), String(p.views)]))
+      : t.week.pageViews === 0
+        ? `<p style="margin:8px 0 0;font-size:12px;color:${MUTED};">No page views recorded yet. Visitor tracking starts counting once the website update is live.</p>`
+        : '');
+
+  const a = e.adminChanges;
+  const admin =
+    sectionHeading('Admin changes', 'the audit trail') +
+    (a.total === 0
+      ? `<p style="margin:0 0 8px;font-size:14px;color:#52525b;">No changes were made in the admin yesterday.</p>`
+      : `<p style="margin:0 0 8px;font-size:14px;color:#52525b;">${a.total} change${a.total === 1 ? '' : 's'} by ${a.byActor.map((x) => `${escapeHtml(x.actor)} (${x.count})`).join(', ')}${a.failed ? `, <span style="color:${BAD};">${a.failed} failed</span>` : ''}.</p>` +
+        dataTable([{ header: 'Who' }, { header: 'What' }], a.recent.map((r) => [escapeHtml(r.actor), `${escapeHtml(r.action)}${r.ok ? '' : ` <span style="color:${BAD};">(failed)</span>`}`])));
+
+  return members + dormantHtml + web + admin;
+}
+
 /** The same story in plain text, for the text part of the email. */
-export function biText(b: BusinessMetrics | null, s: SystemReport | null): string[] {
+export function biText(b: BusinessMetrics | null, s: SystemReport | null, e: EngagementMetrics | null = null): string[] {
   const out: string[] = [];
   if (b) {
     out.push(
@@ -181,6 +241,11 @@ export function biText(b: BusinessMetrics | null, s: SystemReport | null): strin
     out.push(`FEED: ${rate === null ? 'no polls recorded' : `${Math.round(rate * 100)}% of polls succeeded (${s.feed.succeeded}/${s.feed.attempts})`}, ${s.feed.snapshotsStored} snapshots stored`);
     out.push(`AI: ${s.ai.calls} calls, ${s.ai.failed} failed, cost ${usd(s.ai.costUsd)}`);
     if (s.email) out.push(`EMAIL: ${s.email.requests} sent, ${s.email.delivered} delivered, ${s.email.hardBounces + s.email.softBounces + s.email.blocked + s.email.invalid} bounced/blocked, ${s.email.spamReports} spam complaints`);
+  }
+  if (e) {
+    out.push(`MEMBERS: ${e.members.dau} active yesterday, ${e.members.wau} in 7 days, ${e.members.mau} in 30 days${e.members.dormantPaying ? `; ${e.members.dormantPaying.length} paying members quiet for ${e.members.dormantDays} days` : ''}`);
+    out.push(`WEBSITE: ${e.traffic.day.visitors} visitors yesterday (${e.traffic.day.pageViews} views); ${e.traffic.week.visitors} in 7 days (${trendNote(e.traffic.week.visitors, e.traffic.previousWeek.visitors)})${e.traffic.week.sources[0] ? `; top source ${e.traffic.week.sources[0].source}` : ''}`);
+    out.push(`ADMIN CHANGES: ${e.adminChanges.total}${e.adminChanges.failed ? `, ${e.adminChanges.failed} failed` : ''}`);
   }
   return out;
 }

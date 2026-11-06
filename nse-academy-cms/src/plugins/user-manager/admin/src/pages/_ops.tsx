@@ -1,4 +1,5 @@
 import React from 'react';
+import { SingleSelect, Textarea, TextInput } from '@strapi/design-system';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
 
 /** Calls the NSE API as the admin and returns parsed JSON, throwing the API's own message on failure. */
@@ -47,4 +48,18 @@ export function Stat({ label, value, note }: { label: string; value: React.React
       {note ? <div style={{ fontSize: 12, color: '#666687' }}>{note}</div> : null}
     </div>
   );
+}
+
+// This design-system version has no `label` prop on inputs (labels come from Field.Root), so these add a visible label
+// above the plain control and keep it as the accessible name.
+const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#32324d', paddingBottom: 4 };
+
+export function LTextInput({ label, ...rest }: { label: string; [k: string]: any }) {
+  return <div><div style={labelStyle}>{label}</div><TextInput aria-label={label} {...rest} /></div>;
+}
+export function LTextarea({ label, ...rest }: { label: string; [k: string]: any }) {
+  return <div><div style={labelStyle}>{label}</div><Textarea aria-label={label} {...rest} /></div>;
+}
+export function LSingleSelect({ label, ...rest }: { label: string; [k: string]: any }) {
+  return <div><div style={labelStyle}>{label}</div><SingleSelect aria-label={label} {...rest} /></div>;
 }

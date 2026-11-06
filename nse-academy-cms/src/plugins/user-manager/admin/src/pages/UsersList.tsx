@@ -30,6 +30,7 @@ interface User {
   email: string;
   phone: string | null;
   createdAt: string;
+  lastActiveAt?: string | null;
   subscription: Subscription | null;
 }
 
@@ -167,6 +168,7 @@ export function UsersList() {
             <Th><Typography variant="sigma">Tier</Typography></Th>
             <Th><Typography variant="sigma">Status</Typography></Th>
             <Th><Typography variant="sigma">Period End</Typography></Th>
+            <Th><Typography variant="sigma">Last active</Typography></Th>
             <Th><Typography variant="sigma">Actions</Typography></Th>
           </Tr>
         </Thead>
@@ -185,6 +187,7 @@ export function UsersList() {
                     : '-'}
                 </Typography>
               </Td>
+              <Td><Typography>{user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString() : '-'}</Typography></Td>
               <Td>
                 <Button
                   size="S"

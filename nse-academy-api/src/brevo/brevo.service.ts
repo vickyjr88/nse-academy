@@ -46,6 +46,22 @@ export interface BrevoCampaignStats {
   complaints: number;
 }
 
+export interface BrevoCampaignSummary {
+  id: number;
+  name: string;
+  subject: string;
+  status: string;
+  scheduledAt: string | null;
+  sentDate: string | null;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  unsubscribed: number;
+  bounced: number;
+  complaints: number;
+}
+
 export interface BrevoTransactionalEmailInput {
   to: { email: string; name?: string };
   subject?: string;
@@ -326,6 +342,30 @@ export class BrevoService {
       this.log.warn(`Brevo campaign stats unavailable: ${(err as Error).message}`);
       return [];
     }
+  }
+
+  /** Campaigns in one state (queued = scheduled, sent, draft), newest first, with delivery totals for sent ones. Throws if Brevo is unreachable. */
+  async listCampaigns(status: 'queued' | 'sent' | 'draft', limit = 20): Promise<BrevoCampaignSummary[]> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    const r = await this.request<{ campaigns?: any[] }>('GET', `/emailCampaigns?status=${status}&statistics=globalStats&limit=${Math.min(Math.max(limit, 1), 50)}&sort=desc`);
+    return (r?.campaigns ?? []).map((c) => {
+      const g = c.statistics?.globalStats ?? {};
+      return {
+        id: c.id,
+        name: c.name,
+        subject: c.subject,
+        status: c.status,
+        scheduledAt: c.scheduledAt ?? null,
+        sentDate: c.sentDate ?? null,
+        sent: g.sent ?? 0,
+        delivered: g.delivered ?? 0,
+        opens: g.uniqueViews ?? 0,
+        clicks: g.uniqueClicks ?? 0,
+        unsubscribed: g.unsubscriptions ?? 0,
+        bounced: (g.hardBounces ?? 0) + (g.softBounces ?? 0),
+        complaints: g.complaints ?? 0,
+      };
+    });
   }
 
   /** Triggers immediate sending of a previously created campaign. */

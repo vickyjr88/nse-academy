@@ -81,6 +81,8 @@ interface UserDetail {
   email: string;
   phone: string | null;
   createdAt: string;
+  lastLoginAt?: string | null;
+  lastActiveAt?: string | null;
   investorProfile: InvestorProfile | null;
   subscription: Subscription | null;
   ebookPurchases: EbookPurchase[];
@@ -267,7 +269,7 @@ export function UserDetail() {
           </Box>
           <Box paddingTop={1}>
             <Typography variant="pi" textColor="neutral500">
-              Joined {new Date(user.createdAt).toLocaleDateString()}
+              Joined {new Date(user.createdAt).toLocaleDateString()} · Last signed in {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'not recorded yet'} · Last active {user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleString() : 'not recorded yet'}
             </Typography>
           </Box>
         </Box>

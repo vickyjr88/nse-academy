@@ -1,7 +1,10 @@
-import { BadRequestException, Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { AdminOpsService } from './admin-ops.service';
+import { AdminHoldingsService } from './admin-holdings.service';
+import { CreateHoldingDto, UpdateHoldingDto } from './admin-holdings.dto';
+import { UpdateTradeDto } from '../journal/dto/update-trade.dto';
 
 const int = (v: string | undefined, fallback: number) => {
   const n = parseInt(v ?? '', 10);
@@ -13,7 +16,17 @@ const int = (v: string | undefined, fallback: number) => {
 @UseGuards(AdminAuthGuard)
 @Controller('admin')
 export class AdminOpsController {
-  constructor(private ops: AdminOpsService) {}
+  constructor(
+    private ops: AdminOpsService,
+    private holdings: AdminHoldingsService,
+  ) {}
+
+  /** Runs an edit and hands its before/after to the audit trail, which the interceptor writes when the request ends. */
+  private async audited(req: { audit?: unknown }, run: () => Promise<{ result: unknown; audit: unknown }>) {
+    const { result, audit } = await run();
+    req.audit = audit;
+    return result;
+  }
 
   @Get('payments')
   payments(@Query('page') page?: string, @Query('limit') limit?: string) {
@@ -57,5 +70,30 @@ export class AdminOpsController {
   @Get('system/ai-calls')
   aiCalls(@Query('feature') feature?: string, @Query('limit') limit?: string) {
     return this.ops.aiCalls(feature, int(limit, 50));
+  }
+
+  @Post('users/:userId/holdings')
+  addHolding(@Req() req: any, @Param('userId') userId: string, @Body() body: CreateHoldingDto) {
+    return this.audited(req, () => this.holdings.create(userId, body));
+  }
+
+  @Put('users/:userId/holdings/:holdingId')
+  editHolding(@Req() req: any, @Param('userId') userId: string, @Param('holdingId') holdingId: string, @Body() body: UpdateHoldingDto) {
+    return this.audited(req, () => this.holdings.update(userId, holdingId, body));
+  }
+
+  @Delete('users/:userId/holdings/:holdingId')
+  deleteHolding(@Req() req: any, @Param('userId') userId: string, @Param('holdingId') holdingId: string) {
+    return this.audited(req, () => this.holdings.remove(userId, holdingId));
+  }
+
+  @Put('users/:userId/trades/:tradeId')
+  editTrade(@Req() req: any, @Param('userId') userId: string, @Param('tradeId') tradeId: string, @Body() body: UpdateTradeDto) {
+    return this.audited(req, () => this.holdings.updateTrade(userId, tradeId, body));
+  }
+
+  @Delete('users/:userId/trades/:tradeId')
+  deleteTrade(@Req() req: any, @Param('userId') userId: string, @Param('tradeId') tradeId: string) {
+    return this.audited(req, () => this.holdings.deleteTrade(userId, tradeId));
   }
 }

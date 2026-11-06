@@ -13,6 +13,12 @@ function checkAudience(a?: string): Audience {
 export class CampaignsController {
   constructor(private campaigns: CampaignsService) {}
 
+  /** Audiences with their real reachable counts, scheduled campaigns, and how sent ones performed. */
+  @Get('overview')
+  overview() {
+    return this.campaigns.overview();
+  }
+
   /** The email as HTML, for viewing in a browser. ?audience=free|intermediary|premium */
   @Get('preview')
   @Header('Content-Type', 'text/html; charset=utf-8')

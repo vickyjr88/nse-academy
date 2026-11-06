@@ -9,9 +9,10 @@ import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
 import { escapeHtml } from '../brevo/email-template';
 import { attentionBox, dataTable, sectionHeading, signedPct, statRows } from '../brevo/email-blocks';
 import { BusinessMetrics, BusinessMetricsService } from './business-metrics.service';
+import { EngagementMetrics, EngagementMetricsService } from './engagement-metrics.service';
 import { SystemHealthService, SystemReport } from './system-health.service';
-import { businessAttention, systemAttention } from './bi-rules';
-import { biText, businessHtml, kpiStrip, systemHtml } from './bi-render';
+import { businessAttention, engagementAttention, systemAttention } from './bi-rules';
+import { biText, businessHtml, engagementHtml, kpiStrip, systemHtml } from './bi-render';
 import {
   DayBounds,
   MarketSummary,
@@ -55,6 +56,7 @@ export interface DailyReport {
   /** Present when the business-intelligence services are available and did not fail. */
   business?: BusinessMetrics | null;
   system?: SystemReport | null;
+  engagement?: EngagementMetrics | null;
   attention: string[];
 }
 
@@ -70,6 +72,7 @@ export class DailyReportService {
     @Optional() private monitor?: JobMonitorService,
     @Optional() private businessMetrics?: BusinessMetricsService,
     @Optional() private systemHealth?: SystemHealthService,
+    @Optional() private engagementMetrics?: EngagementMetricsService,
   ) {}
 
   /** 08:00 Nairobi - covers the whole of the previous Nairobi calendar day. */
@@ -79,6 +82,7 @@ export class DailyReportService {
       await tracked(this.monitor, 'daily-admin-report', () => this.sendDailyReport(), (r) => `sent to ${r.sentTo.length}`);
       // The price poller writes a row per attempt, so keep the table to a quarter's worth.
       await this.monitor?.prune().catch((e) => this.logger.warn(`Could not prune job runs: ${(e as Error).message}`));
+      await this.engagementMetrics?.prune();
     } catch (err) {
       this.logger.error(`Daily report failed: ${(err as Error).message}`);
     }
@@ -156,9 +160,10 @@ export class DailyReportService {
     ]);
 
     // The business-intelligence parts must never stop the report going out: a failure just leaves that section out.
-    const [business, system] = await Promise.all([
+    const [business, system, engagement] = await Promise.all([
       this.businessMetrics ? this.businessMetrics.build(day, now).catch((e) => { this.logger.error(`Business metrics failed: ${(e as Error).message}`); return null; }) : null,
       this.systemHealth ? this.systemHealth.build(day, now, market.sessionYmd).catch((e) => { this.logger.error(`System health failed: ${(e as Error).message}`); return null; }) : null,
+      this.engagementMetrics ? this.engagementMetrics.build(day).catch((e) => { this.logger.error(`Engagement metrics failed: ${(e as Error).message}`); return null; }) : null,
     ]);
     const isTradingDay = day.weekday >= 1 && day.weekday <= 5;
 
@@ -181,11 +186,13 @@ export class DailyReportService {
 
     if (system) attention.unshift(...systemAttention(system, isTradingDay));
     if (business) attention.push(...businessAttention(business));
+    if (engagement) attention.push(...engagementAttention(engagement));
 
     return {
       day,
       business,
       system,
+      engagement,
       market,
       activity: {
         signups: { count: signupCount, recent: signupRecent },
@@ -357,6 +364,7 @@ export class DailyReportService {
       (r.business || r.system ? kpiStrip(r.business ?? null, r.system ?? null, a.signups.count) : '') +
       (r.business ? businessHtml(r.business) : '') +
       (r.system ? systemHtml(r.system) : '') +
+      (r.engagement ? engagementHtml(r.engagement) : '') +
       marketHtml +
       activityHtml +
       recentLists.join('') +
@@ -366,7 +374,7 @@ export class DailyReportService {
     const strip = (h: string) => h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
     const text: string[] = [strip(intro)];
     if (r.attention.length) text.push('NEEDS ATTENTION:\n' + r.attention.map((x) => `- ${strip(x)}`).join('\n'));
-    text.push(...biText(r.business ?? null, r.system ?? null));
+    text.push(...biText(r.business ?? null, r.system ?? null, r.engagement ?? null));
     if (sum) {
       const line = (x: Mover) => `  ${x.ticker.padEnd(6)} ${x.price.toFixed(2).padStart(9)}  ${(x.changePct > 0 ? '+' : '') + x.changePct.toFixed(2)}%  vol ${formatCompact(x.volume)}`;
       text.push(`MARKET (${m.isReportDay ? 'closing prices' : `last session ${m.sessionLabel}`}): ${sum.advancers} up, ${sum.decliners} down, ${formatKes(sum.totalValue)} traded`);

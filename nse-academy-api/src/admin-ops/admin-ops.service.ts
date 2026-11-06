@@ -104,17 +104,20 @@ export class AdminOpsService {
   async userPortfolio(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true, portfolioWatchEnabled: true } });
     if (!user) throw new NotFoundException('User not found');
-    const [holdings, trades, dividends, imports, alerts, notifications] = await Promise.all([
+    const [holdings, trades, dividends, imports, alerts, notifications, tradeCounts] = await Promise.all([
       this.prisma.holding.findMany({ where: { userId }, include: { broker: { select: { name: true } } }, orderBy: { ticker: 'asc' } }),
       this.prisma.trade.findMany({ where: { userId }, orderBy: { tradeDate: 'desc' }, take: 25, include: { broker: { select: { name: true } } } }),
       this.prisma.dividend.findMany({ where: { userId }, orderBy: { paymentDate: 'desc' }, take: 15 }),
       this.prisma.statementImport.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 10 }),
       this.prisma.priceAlert.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
       this.prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
+      this.prisma.trade.groupBy({ by: ['brokerId', 'ticker'], where: { userId }, _count: true }),
     ]);
+    // A holding with trades behind it is recalculated from them, so the admin must edit the trades instead.
+    const tradesFor = (brokerId: string, ticker: string) => tradeCounts.find((t) => t.brokerId === brokerId && t.ticker === ticker)?._count ?? 0;
     return {
       user,
-      holdings: holdings.map((h) => ({ id: h.id, ticker: h.ticker, broker: h.broker.name, quantity: h.quantity, avgCost: h.avgCost, costSource: h.costSource, updatedAt: h.updatedAt })),
+      holdings: holdings.map((h) => ({ id: h.id, ticker: h.ticker, brokerId: h.brokerId, broker: h.broker.name, quantity: h.quantity, avgCost: h.avgCost, costSource: h.costSource, tradeCount: tradesFor(h.brokerId, h.ticker), updatedAt: h.updatedAt })),
       trades: trades.map((t) => ({ id: t.id, ticker: t.ticker, side: t.side, quantity: t.quantity, pricePerShare: t.pricePerShare, broker: t.broker.name, tradeDate: t.tradeDate, source: t.source })),
       dividends: dividends.map((d) => ({ id: d.id, ticker: d.ticker, amountKes: d.amountKes, paymentDate: d.paymentDate, source: d.source })),
       statementImports: imports.map((i) => ({ id: i.id, filename: i.filename, status: i.status, error: i.error, createdAt: i.createdAt })),

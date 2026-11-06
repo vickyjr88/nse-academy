@@ -2,6 +2,7 @@
 
 import { escapeHtml } from '../brevo/email-template';
 import { BusinessMetrics } from './business-metrics.service';
+import { EngagementMetrics } from './engagement-metrics.service';
 import { EXPECTED_POLLS_PER_DAY, SystemReport } from './system-health.service';
 
 export const FEED_MIN_SUCCESS_RATE = 0.7;
@@ -83,6 +84,19 @@ export function businessAttention(b: BusinessMetrics): string[] {
   }
   if (b.churn.expiringNext7 > 0 && b.recurring.activePaid > 0 && b.churn.expiringNext7 / b.recurring.activePaid >= 0.5) {
     out.push(`<strong>${b.churn.expiringNext7} of ${b.recurring.activePaid} paying members renew within 7 days</strong> - a renewal push now protects most of your recurring revenue.`);
+  }
+  return out;
+}
+
+/** Paying members who have gone quiet are the earliest churn signal there is; failed admin actions are worth a look. */
+export function engagementAttention(e: EngagementMetrics): string[] {
+  const out: string[] = [];
+  const dormant = e.members.dormantPaying;
+  if (dormant && dormant.length > 0) {
+    out.push(`<strong>${dormant.length} paying member${dormant.length === 1 ? ' has' : 's have'} not opened the app in ${e.members.dormantDays} days:</strong> ${nameList(dormant.map((d) => `${d.name}${d.endsOn ? ` (renews ${d.endsOn})` : ''}`))}. Worth a personal nudge before they lapse.`);
+  }
+  if (e.adminChanges.failed > 0) {
+    out.push(`<strong>${e.adminChanges.failed} admin action${e.adminChanges.failed === 1 ? '' : 's'} failed</strong> yesterday (see the Audit Log).`);
   }
   return out;
 }

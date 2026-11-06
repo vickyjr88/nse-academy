@@ -14,11 +14,15 @@ function make(opts: { series?: boolean; users?: { email: string; name: string }[
     createCampaign: jest.fn().mockResolvedValue({ id: 555 }),
     sendCampaignTest: jest.fn().mockResolvedValue(undefined),
     deleteCampaign: jest.fn().mockResolvedValue(undefined),
+    listCampaigns: jest.fn(async (status: string) => (status === 'queued'
+      ? [{ id: 5, name: 'Subscription campaign - free - 2026-11-06T04:00:00.000Z', subject: 'Know what deserves a look', status: 'queued', scheduledAt: '2026-11-06T07:00:00+03:00' }, { id: 9, name: 'Other', subject: 'x', status: 'queued', scheduledAt: null }]
+      : [{ id: 3, name: 'Subscription campaign - premium', subject: 'Everything', status: 'sent', sent: 2, delivered: 2, opens: 1 }])),
   };
   const users = opts.users ?? [{ email: 'a@gmail.com', name: 'A' }, { email: 'b@gmail.com', name: 'B' }];
   const broadcast = {
     composeAndSend: jest.fn().mockResolvedValue({ campaignId: 7, audienceCount: 3, failedCount: 0, failedEmails: [] }),
     listAudience: jest.fn().mockResolvedValue(users),
+    getAudiencePreview: jest.fn(async (a: string) => ({ count: a === 'free' ? 109 : 1, skipped: a === 'free' ? 4 : 0, total: a === 'free' ? 113 : 1 })),
     prepareAudienceList: jest.fn().mockResolvedValue({ listId: 201, audienceCount: users.length, failed: [], excluded: [], ...opts.prepared }),
   };
   const config = { get: jest.fn().mockReturnValue(undefined) };
@@ -128,5 +132,31 @@ describe('CampaignsService.scheduleCampaign', () => {
     expect(brevo.sendCampaignTest).toHaveBeenCalledWith(555, ['me@example.com']);
     await service.cancelCampaign(555);
     expect(brevo.deleteCampaign).toHaveBeenCalledWith(555);
+  });
+});
+
+
+describe('CampaignsService.overview', () => {
+  it('gives each audience its subject and the number of people who would really be mailed', async () => {
+    const { service } = make();
+    const o = await service.overview();
+    expect(o.audiences.map((a) => [a.audience, a.count, a.skipped])).toEqual([['free', 109, 4], ['intermediary', 1, 0], ['premium', 1, 0]]);
+    expect(o.audiences[0].subject).toMatch(/KSh 300\/month/);
+    expect(o.error).toBeNull();
+  });
+
+  it('lists scheduled and sent campaigns, marking the ones this tool created', async () => {
+    const { service } = make();
+    const o: any = await service.overview();
+    expect(o.queued.map((c: any) => [c.id, c.subscriptionCampaign])).toEqual([[5, true], [9, false]]);
+    expect(o.sent[0]).toMatchObject({ id: 3, delivered: 2, subscriptionCampaign: true });
+  });
+
+  it('still returns the audiences when Brevo is unreachable, and says why', async () => {
+    const { service, brevo } = make();
+    brevo.listCampaigns.mockRejectedValue(new Error('HTTP 503'));
+    const o = await service.overview();
+    expect(o.audiences).toHaveLength(3);
+    expect(o).toMatchObject({ queued: [], sent: [], error: 'HTTP 503' });
   });
 });

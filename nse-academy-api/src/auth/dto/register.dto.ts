@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+
+/** Where the visitor came from, captured by the site's page-view tracker. All optional and best-effort. */
+export class AttributionDto {
+  @IsOptional() @IsString() @MaxLength(64) visitorId?: string;
+  @IsOptional() @IsString() @MaxLength(100) referrerHost?: string;
+  @IsOptional() @IsString() @MaxLength(100) utmSource?: string;
+  @IsOptional() @IsString() @MaxLength(100) utmMedium?: string;
+  @IsOptional() @IsString() @MaxLength(100) utmCampaign?: string;
+  @IsOptional() @IsString() @MaxLength(200) landingPath?: string;
+}
 
 export class RegisterDto {
   @ApiProperty({ example: 'Jane Wanjiku' })
@@ -24,4 +35,10 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   referralCode?: string;
+
+  @ApiPropertyOptional({ description: 'Where the visitor came from (set by the website)' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AttributionDto)
+  attribution?: AttributionDto;
 }

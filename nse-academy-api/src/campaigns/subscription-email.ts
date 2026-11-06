@@ -77,6 +77,9 @@ const COPY: Record<Audience, { subject: string; eyebrow: string; heading: string
   },
 };
 
+/** The subject line for an audience, without building the whole email. */
+export const subscriptionSubject = (audience: Audience): string => COPY[audience].subject;
+
 const MATRIX: { feature: string; free: boolean; intermediary: boolean; premium: boolean }[] = [
   { feature: 'Investor profiler quiz, NSE glossary, daily market report, calculators', free: true, intermediary: true, premium: true },
   { feature: 'First 3 course modules', free: true, intermediary: true, premium: true },

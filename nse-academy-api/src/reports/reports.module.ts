@@ -3,12 +3,13 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { DailyReportService } from './daily-report.service';
 import { BusinessMetricsService } from './business-metrics.service';
 import { SystemHealthService } from './system-health.service';
+import { EngagementMetricsService } from './engagement-metrics.service';
 import { ReportsController } from './reports.controller';
 
 @Module({
   imports: [PrismaModule],
   controllers: [ReportsController],
-  providers: [DailyReportService, BusinessMetricsService, SystemHealthService],
+  providers: [DailyReportService, BusinessMetricsService, SystemHealthService, EngagementMetricsService],
   exports: [BusinessMetricsService, SystemHealthService],
 })
 export class ReportsModule {}

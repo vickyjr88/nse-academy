@@ -23,8 +23,8 @@ function make() {
       groupBy: jest.fn().mockResolvedValue([{ tier: 'premium', status: 'active', _count: 2 }]),
     },
     marketReport: { findMany: jest.fn().mockResolvedValue([{ sessionDate: '2026-11-05', status: 'published', aiGenerated: true, aiModel: 'haiku', story: { headline: 'NSE Thu 5 Nov' }, publishedAt: d('2026-11-05T18:00:00Z'), createdAt: d('2026-11-05T18:00:00Z') }, { sessionDate: '2026-11-04', status: 'unpublished', aiGenerated: false, aiModel: null, story: null, publishedAt: null, createdAt: d('2026-11-04T18:00:00Z') }]) },
-    holding: { findMany: jest.fn().mockResolvedValue([{ id: 'h1', ticker: 'NSE', broker: { name: 'Equity' }, quantity: 5000, avgCost: 26.05, costSource: 'IMPORT_PRICE', updatedAt: d('2026-08-24T00:00:00Z') }]) },
-    trade: { findMany: jest.fn().mockResolvedValue([]) },
+    holding: { findMany: jest.fn().mockResolvedValue([{ id: 'h1', ticker: 'NSE', brokerId: 'b1', broker: { name: 'Equity' }, quantity: 5000, avgCost: 26.05, costSource: 'IMPORT_PRICE', updatedAt: d('2026-08-24T00:00:00Z') }]) },
+    trade: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([{ brokerId: 'b1', ticker: 'NSE', _count: 2 }]) },
     dividend: { findMany: jest.fn().mockResolvedValue([]) },
     statementImport: { findMany: jest.fn().mockResolvedValue([{ id: 'i1', filename: 's.pdf', status: 'failed', error: 'Could not read PDF', createdAt: d('2026-11-01T00:00:00Z') }]) },
     priceAlert: { findMany: jest.fn().mockResolvedValue([]) },
@@ -83,7 +83,7 @@ describe('AdminOpsService.userPortfolio', () => {
   it('gives support a member\'s holdings, cost source, failed imports and recent activity', async () => {
     const out = await make().svc.userPortfolio('u1');
     expect(out.user.email).toBe('ann@x.com');
-    expect(out.holdings[0]).toMatchObject({ ticker: 'NSE', broker: 'Equity', costSource: 'IMPORT_PRICE' });
+    expect(out.holdings[0]).toMatchObject({ ticker: 'NSE', broker: 'Equity', costSource: 'IMPORT_PRICE', tradeCount: 2 });
     expect(out.statementImports[0]).toMatchObject({ status: 'failed', error: 'Could not read PDF' });
   });
   it('404s for an unknown member', async () => {

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { requestFeatureTour } from "@/lib/feature-tour";
 
 interface User {
   id: string;
@@ -154,6 +155,24 @@ function AccountPageContent() {
           >
             Open library →
           </Link>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+          <h2 className="text-sm font-semibold text-gray-700">Feature tour</h2>
+        </div>
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-sm text-gray-600">
+            A one-minute walkthrough of the menu: courses, stock picks, the trade journal, research, and the rest.
+          </p>
+          <button
+            type="button"
+            onClick={() => requestFeatureTour("account")}
+            className="shrink-0 bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-800"
+          >
+            Take the tour
+          </button>
         </div>
       </div>
 

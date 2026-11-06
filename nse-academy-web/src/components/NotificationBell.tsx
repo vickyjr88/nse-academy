@@ -76,7 +76,7 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative" ref={containerRef} data-tour="notifications">
       <button
         onClick={toggleOpen}
         aria-label="Notifications"

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import FeatureTour from "@/components/FeatureTour";
 import MarketTicker from "@/components/MarketTicker";
 import { NotificationBell } from "@/components/NotificationBell";
 import { identifyUser, resetIdentity, trackEvent } from "@/lib/analytics";
+import { requestFeatureTour } from "@/lib/feature-tour";
 
 function HamburgerIcon({ open }: { open: boolean }) {
   return (
@@ -18,22 +20,22 @@ function HamburgerIcon({ open }: { open: boolean }) {
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: "🏠" },
-  { label: "My Profile", href: "/dashboard/profile", icon: "🎯" },
-  { label: "Learn", href: "/dashboard/learn", icon: "📚" },
-  { label: "Open Broker Account", href: "/dashboard/brokers", icon: "🏦" },
-  { label: "Stock Advisor", href: "/dashboard/stocks", icon: "📈" },
-  { label: "Trade Journal", href: "/dashboard/journal", icon: "📓" },
-  { label: "Research", href: "/dashboard/research", icon: "🔬" },
-  { label: "Glossary", href: "/dashboard/glossary", icon: "💡" },
-  { label: "Refer Friends", href: "/dashboard/referrals", icon: "🎁" },
-  { label: "My Downloads", href: "/dashboard/downloads", icon: "⬇️" },
-  { label: "Account", href: "/dashboard/account", icon: "⚙️" },
-  { label: "Subscription", href: "/dashboard/billing", icon: "💳" },
-  { label: "Corporate", href: "/dashboard/corporate", icon: "🏢" },
-  { label: "Financial Advisors", href: "/dashboard/advisors", icon: "🧑‍💼" },
-  { label: "Insights", href: "/dashboard/insights", icon: "💡" },
-  { label: "Advisor Workspace", href: "/dashboard/advisor", icon: "🗂️" },
+  { label: "Dashboard", href: "/dashboard", icon: "🏠", tour: "nav-dashboard" },
+  { label: "My Profile", href: "/dashboard/profile", icon: "🎯", tour: "nav-profile" },
+  { label: "Learn", href: "/dashboard/learn", icon: "📚", tour: "nav-learn" },
+  { label: "Open Broker Account", href: "/dashboard/brokers", icon: "🏦", tour: "nav-brokers" },
+  { label: "Stock Advisor", href: "/dashboard/stocks", icon: "📈", tour: "nav-stocks" },
+  { label: "Trade Journal", href: "/dashboard/journal", icon: "📓", tour: "nav-journal" },
+  { label: "Research", href: "/dashboard/research", icon: "🔬", tour: "nav-research" },
+  { label: "Glossary", href: "/dashboard/glossary", icon: "💡", tour: "nav-glossary" },
+  { label: "Refer Friends", href: "/dashboard/referrals", icon: "🎁", tour: "nav-referrals" },
+  { label: "My Downloads", href: "/dashboard/downloads", icon: "⬇️", tour: "nav-downloads" },
+  { label: "Account", href: "/dashboard/account", icon: "⚙️", tour: "nav-account" },
+  { label: "Subscription", href: "/dashboard/billing", icon: "💳", tour: "nav-billing" },
+  { label: "Corporate", href: "/dashboard/corporate", icon: "🏢", tour: "nav-corporate" },
+  { label: "Financial Advisors", href: "/dashboard/advisors", icon: "🧑‍💼", tour: "nav-advisors" },
+  { label: "Insights", href: "/dashboard/insights", icon: "💡", tour: "nav-insights" },
+  { label: "Advisor Workspace", href: "/dashboard/advisor", icon: "🗂️", tour: "nav-advisor" },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -72,15 +74,23 @@ export default function DashboardLayout({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
+  const [mobilePath, setMobilePath] = useState(pathname);
+  const handleTourActive = useCallback((next: boolean) => {
+    setTourActive(next);
+  }, []);
 
-  // Close drawer on route change
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  // Close the phone drawer when the route changes, before paint.
+  if (pathname !== mobilePath) {
+    setMobilePath(pathname);
+    setMobileOpen(false);
+  }
 
-  // Prevent body scroll when drawer is open
+  // The tour and the phone drawer both cover the page, so lock scroll for either.
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    document.body.style.overflow = mobileOpen || tourActive ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [mobileOpen]);
+  }, [mobileOpen, tourActive]);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -128,13 +138,14 @@ export default function DashboardLayout({
 
   const navContent = (
     <>
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav data-tour="sidebar" className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
+              data-tour={item.tour}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 isActive
                   ? "bg-emerald-50 text-emerald-800 font-semibold"
@@ -159,7 +170,8 @@ export default function DashboardLayout({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+    <div className="min-h-screen bg-gray-50" inert={tourActive ? true : undefined}>
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col bg-white border-r border-gray-100 fixed inset-y-0">
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
@@ -202,29 +214,39 @@ export default function DashboardLayout({
       {/* Main content */}
       <main className="md:ml-64 flex flex-col min-h-screen">
         {/* Ticker at the absolute top of the main area */}
-        <div className="sticky top-0 z-20">
+        <div className="sticky top-0 z-20" data-tour="ticker">
           <MarketTicker />
         </div>
 
         {/* Top bar */}
-        <div className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-10 z-10">
-          <div className="flex items-center gap-3">
+        <div className="h-16 bg-white border-b border-gray-100 flex items-center justify-between gap-3 px-4 md:px-6 sticky top-10 z-10">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
-              className="md:hidden p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              className="md:hidden shrink-0 p-1 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <HamburgerIcon open={mobileOpen} />
             </button>
-            <h1 className="font-semibold text-gray-900">
+            <h1 className="font-semibold text-gray-900 truncate">
               {PAGE_TITLES[pathname] || "Dashboard"}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            {user && (
+              <button
+                type="button"
+                data-tour="tour-replay"
+                onClick={() => requestFeatureTour("header")}
+                className="rounded-lg px-2.5 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                Tour
+              </button>
+            )}
             {user && <NotificationBell />}
             {user ? (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 max-w-[34vw] sm:max-w-[12rem] truncate">
                 Hello, {user.name.split(" ")[0]} 👋
               </span>
             ) : loading ? (
@@ -238,5 +260,12 @@ export default function DashboardLayout({
         </div>
       </main>
     </div>
+    <FeatureTour
+      userId={user?.id ?? null}
+      mobileNavOpen={mobileOpen}
+      setMobileNavOpen={setMobileOpen}
+      onActiveChange={handleTourActive}
+    />
+    </>
   );
 }

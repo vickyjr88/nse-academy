@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Linkify from "@/components/Linkify";
 import {
   type AdvisorProfile,
   type AdvisorClientRow,
@@ -333,7 +334,7 @@ function InsightsTab() {
             {insights.map((i) => (
               <div key={i.id} className="border-b border-gray-50 pb-4 last:border-0">
                 <p className="font-medium text-gray-900">{i.title}</p>
-                <p className="text-sm text-gray-500 mt-1">{i.body}</p>
+                <p className="text-sm text-gray-500 mt-1 whitespace-pre-line break-words"><Linkify text={i.body} /></p>
                 <p className="text-xs text-gray-400 mt-2">{new Date(i.createdAt).toLocaleString()}</p>
               </div>
             ))}

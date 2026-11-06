@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { type AdvisorInsight, listInsightsFeed } from "@/lib/advisor";
+import Linkify from "@/components/Linkify";
 
 export default function InsightsFeedPage() {
   const [insights, setInsights] = useState<AdvisorInsight[]>([]);
@@ -54,7 +55,7 @@ export default function InsightsFeedPage() {
             <p className="text-xs text-gray-400">{new Date(insight.createdAt).toLocaleDateString()}</p>
           </div>
           <h3 className="font-bold text-gray-900 text-lg mb-2">{insight.title}</h3>
-          <p className="text-gray-700 whitespace-pre-line">{insight.body}</p>
+          <p className="text-gray-700 whitespace-pre-line break-words"><Linkify text={insight.body} /></p>
           {insight.tickers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {insight.tickers.map((t) => (

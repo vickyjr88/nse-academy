@@ -27,6 +27,33 @@ export class CampaignsController {
     return this.campaigns.sendSamples(body.to, body.audience ? [checkAudience(body.audience)] : undefined);
   }
 
+  /** Body: { audience, confirm: true, scheduledAt: ISO UTC, force? } - schedules a Brevo campaign that Brevo sends at that time. */
+  @Post('schedule')
+  schedule(@Body() body: { audience?: string; confirm?: boolean; scheduledAt?: string; force?: boolean }) {
+    return this.campaigns.scheduleCampaign(checkAudience(body?.audience), {
+      confirm: body?.confirm === true,
+      scheduledAt: body?.scheduledAt ?? '',
+      force: body?.force === true,
+    });
+  }
+
+  /** Body: { campaignId, to: ["a@x.com"] } - Brevo renders the real campaign and sends it to those addresses only. */
+  @Post('test')
+  test(@Body() body: { campaignId?: number; to?: string[] }) {
+    if (!Number.isInteger(body?.campaignId)) throw new BadRequestException('campaignId is required');
+    if (!Array.isArray(body?.to) || body.to.length === 0 || body.to.length > 5 || body.to.some((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))) {
+      throw new BadRequestException('"to" must be 1-5 valid email addresses');
+    }
+    return this.campaigns.testCampaign(body.campaignId as number, body.to);
+  }
+
+  /** Body: { campaignId } - cancels a scheduled campaign. */
+  @Post('cancel')
+  cancel(@Body() body: { campaignId?: number }) {
+    if (!Number.isInteger(body?.campaignId)) throw new BadRequestException('campaignId is required');
+    return this.campaigns.cancelCampaign(body.campaignId as number);
+  }
+
   /** Body: { audience, confirm: true } - REAL send to every user on that tier via a Brevo campaign. */
   @Post('send')
   send(@Body() body: { audience?: string; confirm?: boolean }) {

@@ -166,6 +166,8 @@ export class BrevoService {
     subject: string;
     htmlContent: string;
     listIds: number[];
+    /** UTC ISO timestamp. When set, Brevo itself sends the campaign then (no sendNow call is needed). */
+    scheduledAt?: string;
   }): Promise<{ id: number }> {
     if (!this.apiKey) {
       throw new Error('BREVO_API_KEY is not set - cannot create a campaign');
@@ -176,11 +178,58 @@ export class BrevoService {
       htmlContent: input.htmlContent,
       sender: { email: this.senderEmail, name: this.senderName },
       recipients: { listIds: input.listIds },
+      ...(input.scheduledAt ? { scheduledAt: input.scheduledAt } : {}),
     });
     if (!result?.id) {
       throw new Error('Brevo did not return a campaign id');
     }
     return result;
+  }
+
+  async getList(listId: number): Promise<{ id: number; name: string; folderId: number; totalSubscribers: number } | null> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    return this.request('GET', `/contacts/lists/${listId}`);
+  }
+
+  /**
+   * Finds a contact list by exact name, or creates it in `folderId`. Lets a feature own a list that no other
+   * broadcast touches - a scheduled campaign reads its list when it sends, so a shared list would change its audience.
+   */
+  async findOrCreateList(name: string, folderId: number): Promise<number> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    for (let offset = 0; offset < 1000; offset += 50) {
+      const page = await this.request<{ lists?: { id: number; name: string }[] }>('GET', `/contacts/lists?limit=50&offset=${offset}`);
+      const lists = page?.lists ?? [];
+      const hit = lists.find((l) => l.name === name);
+      if (hit) return hit.id;
+      if (lists.length < 50) break;
+    }
+    const created = await this.request<{ id: number }>('POST', '/contacts/lists', { name, folderId });
+    if (!created?.id) throw new Error('Brevo did not return a list id');
+    return created.id;
+  }
+
+  /** Removes every contact from a list (the contacts themselves are kept). */
+  async clearList(listId: number): Promise<void> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    await this.request('POST', `/contacts/lists/${listId}/contacts/remove`, { all: true });
+  }
+
+  async getCampaign(campaignId: number): Promise<{ id: number; name: string; status: string; scheduledAt?: string; htmlContent?: string; recipients?: unknown } | null> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    return this.request('GET', `/emailCampaigns/${campaignId}`);
+  }
+
+  /** Sends a rendered copy of a real campaign to a few addresses, exactly as recipients will get it. */
+  async sendCampaignTest(campaignId: number, emails: string[]): Promise<void> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    await this.request('POST', `/emailCampaigns/${campaignId}/sendTest`, { emailTo: emails });
+  }
+
+  /** Deletes a campaign (works while it is still scheduled, which cancels the send). */
+  async deleteCampaign(campaignId: number): Promise<void> {
+    if (!this.apiKey) throw new Error('BREVO_API_KEY is not set');
+    await this.request('DELETE', `/emailCampaigns/${campaignId}`);
   }
 
   /** Triggers immediate sending of a previously created campaign. */

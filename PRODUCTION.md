@@ -261,3 +261,14 @@ Changing the pitch means editing `COPY` / `MATRIX` in `src/campaigns/subscriptio
 
 - A subscription payment now **adds** to the account instead of overwriting the end date (`computeNewPeriod` in `payments.service.ts`): same plan while it is running -> the new months start at the current end; an upgrade (Intermediary -> Premium) carries the unused days over at the price ratio (a day of the KSh 300 plan is worth 0.6 of a day of the KSh 500 plan); a lapsed or new account starts today. `POST /payments/initialize` refuses a lower plan while a higher one is running. The billing page offers "Extend" / "Upgrade to" to active members and shows the API's error message when a payment cannot start.
 - Each Paystack reference is recorded once in `ProcessedPayment` (migration `21_processed_payment`) in the same transaction as the subscription change, so the webhook and the return-page verify can both fire - even simultaneously - and only one applies the payment, sends the email and alerts the admin. A failure rolls the record back so Paystack's retry still applies it. Payments applied before this table existed are recognised by the reference stored on the subscription.
+
+### Scheduling the subscription email
+
+`POST /admin/campaigns/subscription/schedule` `{ "audience": "free", "confirm": true, "scheduledAt": "2026-11-06T04:00:00Z" }` creates a Brevo campaign that **Brevo itself sends at that instant** (no dependence on this server being up). Rules built in:
+- Each audience gets its own Brevo list ("NSE Academy subscription campaign - free|intermediary|premium"), created next to `BREVO_BROADCAST_LIST_ID`. A campaign reads its list when it sends, so a list shared with other broadcasts could change who a scheduled campaign reaches.
+- Addresses with no mail server, throwaway domains or bad syntax are left out and reported (`src/campaigns/deliverability.ts`). Contacts Brevo has blocklisted (unsubscribed or hard-bounced) are skipped by Brevo itself.
+- Contact uploads are made in batches of 5 with retries: ten at once tripped Brevo's rate limit and dropped a third of the Free audience in the first run.
+- The same subject for the same tier is refused a second time within 24 h unless `force: true`.
+- `POST .../test` `{ "campaignId": 5, "to": ["you@example.com"] }` has Brevo send you the real campaign; `POST .../cancel` `{ "campaignId": 5 }` deletes a scheduled campaign (also possible in the Brevo dashboard under Campaigns > Scheduled).
+
+Known issue in the older broadcast tool (`POST /admin/broadcast/send`): it adds the chosen audience to the single shared list but never empties it first, so a later send to a smaller tier also reaches everyone synced earlier. Use the campaign tool above, or empty the list first.

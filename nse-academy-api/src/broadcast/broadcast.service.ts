@@ -43,6 +43,11 @@ export class BroadcastService {
     return { AND: clauses };
   }
 
+  /** Everyone a broadcast to this tier would reach (same rule as the broadcast tool). */
+  listAudience(tier: Tier): Promise<{ email: string; name: string }[]> {
+    return this.prisma.user.findMany({ where: this.audienceWhere(tier), select: { email: true, name: true }, orderBy: { createdAt: 'asc' } });
+  }
+
   async getAudiencePreview(tier?: Tier, tagId?: string): Promise<{ count: number }> {
     const count = await this.prisma.user.count({ where: this.audienceWhere(tier, tagId) });
     return { count };

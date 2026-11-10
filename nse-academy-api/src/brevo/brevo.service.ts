@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EmailSuppressionService } from '../email-suppression/email-suppression.service';
 
 /**
  * Thin HTTP wrapper over the Brevo (formerly Sendinblue) v3 REST API. We
@@ -62,6 +63,9 @@ export interface BrevoCampaignSummary {
   complaints: number;
 }
 
+/** Added to every transactional email this app sends. */
+export const BREVO_APP_TAG = 'nse-academy';
+
 export interface BrevoTransactionalEmailInput {
   to: { email: string; name?: string };
   subject?: string;
@@ -76,6 +80,8 @@ export interface BrevoTransactionalEmailInput {
   replyTo?: { email: string; name?: string };
   /** Optional tags Brevo indexes for analytics. */
   tags?: string[];
+  /** Send even to an address we have marked undeliverable. For the admin's own alerts, whose failures must stay visible. */
+  ignoreSuppression?: boolean;
 }
 
 @Injectable()
@@ -86,7 +92,10 @@ export class BrevoService {
   private readonly senderName: string;
   private warnedMissingKey = false;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    @Optional() private suppression?: EmailSuppressionService,
+  ) {
     this.apiKey = this.config.get<string>('BREVO_API_KEY') ?? '';
     this.senderEmail =
       this.config.get<string>('BREVO_SENDER_EMAIL') ??
@@ -169,6 +178,13 @@ export class BrevoService {
     input: BrevoTransactionalEmailInput,
   ): Promise<void> {
     if (this.warnIfDisabled()) return;
+    if (!input.ignoreSuppression && this.suppression) {
+      const v = await this.suppression.verdict(input.to.email);
+      if (!v.send) {
+        this.log.warn(`Not sending "${(input.subject ?? '').slice(0, 60)}" to ${input.to.email}: ${v.reason}`);
+        return;
+      }
+    }
     const sender = input.sender ?? {
       email: this.senderEmail,
       name: this.senderName,
@@ -185,7 +201,9 @@ export class BrevoService {
       if (input.htmlContent) body.htmlContent = input.htmlContent;
       if (input.textContent) body.textContent = input.textContent;
     }
-    if (input.tags?.length) body.tags = input.tags;
+    // Every message from this app carries one common tag, so the daily report can count ours and not mail from other
+    // apps that share the Brevo account.
+    body.tags = [...new Set([...(input.tags ?? []), BREVO_APP_TAG])];
     if (input.replyTo) body.replyTo = input.replyTo;
     try {
       await this.request('POST', '/smtp/email', body);
@@ -291,10 +309,10 @@ export class BrevoService {
    * complaints, unsubscribes, opens and clicks. Null when Brevo is not configured or the call fails - a report must
    * still go out without it.
    */
-  async getEmailStats(startDate: string, endDate: string): Promise<BrevoEmailStats | null> {
+  async getEmailStats(startDate: string, endDate: string, tag?: string): Promise<BrevoEmailStats | null> {
     if (!this.apiKey) return null;
     try {
-      const r = await this.request<Record<string, number>>('GET', `/smtp/statistics/aggregatedReport?startDate=${startDate}&endDate=${endDate}`);
+      const r = await this.request<Record<string, number>>('GET', `/smtp/statistics/aggregatedReport?startDate=${startDate}&endDate=${endDate}${tag ? `&tag=${encodeURIComponent(tag)}` : ''}`);
       if (!r) return null;
       return {
         requests: r.requests ?? 0,

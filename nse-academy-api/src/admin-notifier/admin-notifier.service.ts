@@ -92,6 +92,7 @@ export class AdminNotifierService {
           textContent,
           replyTo: input.replyTo,
           tags: ['admin-alert', ...(input.tags ?? [])],
+          ignoreSuppression: true,
         });
       } catch (err) {
         this.logger.error(`Admin alert "${input.subject}" to ${email} failed: ${(err as Error).message}`);

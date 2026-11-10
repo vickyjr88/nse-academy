@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { BrevoCampaignStats, BrevoEmailStats, BrevoService } from '../brevo/brevo.service';
+import { BrevoCampaignStats, BrevoEmailStats, BrevoService, BREVO_APP_TAG } from '../brevo/brevo.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
 import { AiUsageService, AiUsageRow } from '../monitoring/ai-usage.service';
 import { JobHealth } from '../monitoring/job-specs';
 import { DayBounds } from './report-helpers';
 
-/** A weekday's polls: every 7 minutes for six hours is about 54; fewer than this many snapshots means gaps. */
-export const EXPECTED_POLLS_PER_DAY = 54;
+/** A weekday's polls: the data plan allows 4 requests an hour and polling runs 09:00-16:00 Nairobi, about 27; fewer snapshots than this means gaps. */
+export const EXPECTED_POLLS_PER_DAY = 27;
 
 export interface SystemReport {
   jobs: JobHealth[];
@@ -42,7 +42,7 @@ export class SystemHealthService {
       this.feed(day, now),
       this.marketReport(sessionYmd),
       this.aiUsage.summary(day.start, day.end),
-      this.brevo.getEmailStats(day.ymd, day.ymd),
+      this.brevo.getEmailStats(day.ymd, day.ymd, BREVO_APP_TAG),
       this.brevo.getCampaignStats(day.start.toISOString(), day.end.toISOString()),
     ]);
     return {
@@ -56,7 +56,7 @@ export class SystemHealthService {
         unverified: aiRows.reduce((n, r) => n + r.unverified, 0),
         costUsd: aiRows.reduce((n, r) => n + r.costUsd, 0),
       },
-      email,
+      email: email && email.requests > 0 ? email : null,
       campaigns,
     };
   }

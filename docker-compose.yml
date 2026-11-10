@@ -58,6 +58,8 @@ services:
       SITE_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
       ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-info@vitaldigitalmedia.net}
       WHATSAPP_CHANNEL_URL: ${WHATSAPP_CHANNEL_URL:-}
+      BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET:-}
+      RAPID_API_MAX_REQUESTS_PER_HOUR: ${RAPID_API_MAX_REQUESTS_PER_HOUR:-4}
       CMS_ADMIN_URL: ${CMS_ADMIN_URL:-https://nseacademy-admin.vitaldigitalmedia.net}
       PORT: 3011
     depends_on:

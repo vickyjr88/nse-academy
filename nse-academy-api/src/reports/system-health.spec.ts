@@ -35,12 +35,18 @@ describe('SystemHealthService.build', () => {
     expect((await make([]).svc.build(day, now, null)).marketReport).toEqual({ sessionYmd: null, exists: false, status: null, aiGenerated: null, model: null });
   });
 
-  it('totals the AI usage for the day and asks Brevo about exactly that day', async () => {
+  it('totals the AI usage for the day and asks Brevo about exactly that day, counting only this app\'s tagged mail', async () => {
     const { svc, brevo, aiUsage } = make([]);
     const r = await svc.build(day, now, '2026-11-05');
     expect(aiUsage.summary).toHaveBeenCalledWith(day.start, day.end);
     expect(r.ai).toMatchObject({ calls: 3, failed: 1, unverified: 1, costUsd: 0.002 });
-    expect(brevo.getEmailStats).toHaveBeenCalledWith('2026-11-05', '2026-11-05');
+    expect(brevo.getEmailStats).toHaveBeenCalledWith('2026-11-05', '2026-11-05', 'nse-academy');
     expect(brevo.getCampaignStats).toHaveBeenCalledWith(day.start.toISOString(), day.end.toISOString());
+  });
+
+  it('reports no email data for a day with no tagged mail, instead of zero sent (mail sent before the tag existed)', async () => {
+    const { svc, brevo } = make([]);
+    brevo.getEmailStats.mockResolvedValue({ requests: 0, delivered: 0, hardBounces: 0, softBounces: 0, blocked: 0, invalid: 0, spamReports: 0, unsubscribed: 0, opens: 0, clicks: 0 });
+    expect((await svc.build(day, now, '2026-11-05')).email).toBeNull();
   });
 });

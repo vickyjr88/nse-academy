@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LifecycleFlow } from '../lifecycle/lifecycle.service';
+import { EmailSuppressionService, SUPPRESSING_EVENTS } from '../email-suppression/email-suppression.service';
 
 /**
  * Maps the Brevo `tags` value sent with each transactional email (see the
@@ -39,7 +40,10 @@ export interface BrevoWebhookEvent {
 export class BrevoWebhookService {
   private readonly logger = new Logger(BrevoWebhookService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private suppression: EmailSuppressionService,
+  ) {}
 
   /**
    * Brevo can batch multiple events in one POST (an array) or send one
@@ -55,12 +59,27 @@ export class BrevoWebhookService {
     return { processed: events.length, matched };
   }
 
-  private async handleSingleEvent(event: BrevoWebhookEvent): Promise<boolean> {
+  private async handleSingleEvent(rawEvent: BrevoWebhookEvent): Promise<boolean> {
+    // A hard bounce, block, spam complaint, unsubscribe or invalid address means every further send to it only harms
+    // our reputation, so it goes on the suppression list the sender checks. Soft bounces (a full mailbox, a server
+    // that is down) are temporary and are left alone.
+    const reason = SUPPRESSING_EVENTS[rawEvent.event];
+    if (reason && rawEvent.email) {
+      try {
+        await this.suppression.suppress(rawEvent.email, reason);
+        this.logger.log(`Suppressed ${rawEvent.email} after a Brevo ${rawEvent.event} event`);
+        return true;
+      } catch (err) {
+        this.logger.error(`Could not suppress ${rawEvent.email}: ${(err as Error).message}`);
+        return false;
+      }
+    }
+
+    // Brevo reports a first open as "unique_opened"; the funnel only needs to know it happened.
+    const event: BrevoWebhookEvent = rawEvent.event === 'unique_opened' ? { ...rawEvent, event: 'opened' } : rawEvent;
     if (event.event !== 'opened' && event.event !== 'click') {
-      // Bounces/spam/unsubscribe are real signals too, but out of scope for
-      // this pass - only open/click feed the funnel today. Silently
-      // acknowledged rather than logged as noise; Brevo will send every
-      // event type once any webhook is configured, not just the ones we act on.
+      // Every other event type (delivered, deferred, soft_bounce...) is acknowledged without comment: Brevo sends all
+      // of them once a webhook exists, not just the ones we act on.
       return false;
     }
     if (!event.email || !event.tags?.length) {

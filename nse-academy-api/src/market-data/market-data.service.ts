@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
 import axios from 'axios';
+import { DEFAULT_MAX_PER_HOUR, WINDOW_MS, parseRateLimit, pollDecision } from './poll-guard';
 
 @Injectable()
 export class MarketDataService {
@@ -24,16 +25,57 @@ export class MarketDataService {
     return this.monitor?.record('market-poll', ok ? { ok, startedAt, summary: detail } : { ok, startedAt, error: detail });
   }
 
+  /** When each recent request to the provider was made. Seeded from the job log so a restart cannot cause a burst. */
+  private sentAt: number[] | null = null;
+  private warnedAboutLimit = false;
+
+  private maxPerHour(): number {
+    const n = Number(this.configService.get<string>('RAPID_API_MAX_REQUESTS_PER_HOUR'));
+    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_MAX_PER_HOUR;
+  }
+
+  private async recentRequests(): Promise<number[]> {
+    if (this.sentAt === null) {
+      try {
+        const rows = await this.prisma.jobRun.findMany({ where: { job: 'market-poll', startedAt: { gt: new Date(Date.now() - WINDOW_MS) } }, select: { startedAt: true } });
+        this.sentAt = rows.map((r) => r.startedAt.getTime());
+      } catch {
+        this.sentAt = [];
+      }
+    }
+    const cutoff = Date.now() - WINDOW_MS;
+    this.sentAt = this.sentAt.filter((t) => t > cutoff);
+    return this.sentAt;
+  }
+
   /**
-   * Polls NSE stock data from RapidAPI.
-   * Runs every 7 minutes (~8.5 times per hour), Mon-Fri, from 9:00 AM to 2:59 PM.
+   * Polls NSE stock data from RapidAPI. The timer ticks every minute from 09:00 to 15:59 Nairobi time, Mon-Fri (the NSE
+   * trades 09:30-15:00), and a request goes out only when the provider's allowance (RAPID_API_MAX_REQUESTS_PER_HOUR,
+   * default 4, the BASIC plan) has room and the last one was an even gap ago. Ticks that do not qualify do nothing.
    */
-  @Cron('0 */7 9-14 * * 1-5')
+  @Cron('0 * 9-15 * * 1-5', { timeZone: 'Africa/Nairobi' })
   async handleMarketPolling() {
+    const decision = pollDecision(await this.recentRequests(), Date.now(), this.maxPerHour());
+    if (!decision.ok) return;
+    await this.pollNow();
+  }
+
+  /** The admin's manual sync: ignores the even spacing but not the provider's limit. */
+  async syncManually(): Promise<{ polled: boolean; message: string }> {
+    const decision = pollDecision(await this.recentRequests(), Date.now(), this.maxPerHour(), false);
+    if (!decision.ok) {
+      return { polled: false, message: `The data plan allows ${this.maxPerHour()} requests an hour and they are used up. The next one is possible in about ${Math.ceil(decision.waitMs / 60_000)} minutes.` };
+    }
+    await this.pollNow();
+    return { polled: true, message: 'Market data sync triggered' };
+  }
+
+  private async pollNow() {
     const start = Date.now();
     const startedAt = new Date(start);
+    (this.sentAt ??= []).push(start);
     this.logger.log('Starting market data polling...');
-    
+
     const apiKey = this.configService.get<string>('RAPID_API_KEY');
     if (!apiKey) {
       this.logger.error('RAPID_API_KEY not found in configuration. Polling skipped.');
@@ -95,6 +137,11 @@ export class MarketDataService {
       await this.note(startedAt, false, error.response?.status ? `HTTP ${error.response.status}` : String(error.message));
       if (error.response) {
         this.logger.error(`Status: ${error.response.status} - Data: ${JSON.stringify(error.response.data)}`);
+        const limit = error.response.status === 429 ? parseRateLimit(error.response.data) : null;
+        if (limit && !this.warnedAboutLimit && limit.limit < this.maxPerHour() * (limit.windowMinutes / 60)) {
+          this.warnedAboutLimit = true;
+          this.logger.warn(`The data provider's ${limit.plan ?? ''} plan allows only ${limit.limit} requests per ${limit.windowMinutes} minutes, less than the ${this.maxPerHour()} an hour this server is set to use. Set RAPID_API_MAX_REQUESTS_PER_HOUR to match.`);
+        }
       }
     }
   }

@@ -805,3 +805,12 @@ model ResearchNote {
 
   @@index([kind, status])
 }
+
+// Addresses we must not send to: Brevo reported a hard bounce, a block, a spam complaint, an unsubscribe or an invalid
+// address, or an admin added it. Sending to them again only damages the sender's reputation.
+model EmailSuppression {
+  email     String   @id
+  // hard_bounce | blocked | spam | unsubscribed | invalid_email | manual
+  reason    String
+  createdAt DateTime @default(now())
+}

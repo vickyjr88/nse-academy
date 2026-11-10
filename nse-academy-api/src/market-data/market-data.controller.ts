@@ -14,8 +14,8 @@ export class MarketDataController {
   @ApiHeader({ name: 'x-admin-key', required: true, description: 'Admin API key' })
   @ApiOperation({ summary: 'Admin manually triggers the market data sync' })
   async triggerSync() {
-    await this.marketDataService.handleMarketPolling();
-    return { success: true, message: 'Market data sync successfully triggered' };
+    const r = await this.marketDataService.syncManually();
+    return { success: r.polled, message: r.message };
   }
 
   @Get('latest')

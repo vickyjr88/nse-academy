@@ -8,8 +8,9 @@ function makeService() {
       update: jest.fn().mockResolvedValue({}),
     },
   };
-  const service = new BrevoWebhookService(prisma as never);
-  return { service, prisma };
+  const suppression = { suppress: jest.fn().mockResolvedValue(undefined) };
+  const service = new BrevoWebhookService(prisma as never, suppression as never);
+  return { service, prisma, suppression };
 }
 
 describe('BrevoWebhookService.handleEvent', () => {
@@ -108,5 +109,36 @@ describe('BrevoWebhookService.handleEvent', () => {
       { event: 'click', email: 'a@test.com', tags: ['lifecycle-day7'] },
     ]);
     expect(result).toEqual({ processed: 3, matched: 2 });
+  });
+});
+
+describe('BrevoWebhookService suppression events', () => {
+  it.each([['hard_bounce', 'hard_bounce'], ['blocked', 'blocked'], ['spam', 'spam'], ['unsubscribed', 'unsubscribed'], ['invalid_email', 'invalid_email']])('suppresses the address on a %s event', async (event, reason) => {
+    const { service, suppression } = makeService();
+    const r = await service.handleEvent({ event, email: 'Bad@Example.com', tags: ['lifecycle-day7'] });
+    expect(r).toEqual({ processed: 1, matched: 1 });
+    expect(suppression.suppress).toHaveBeenCalledWith('Bad@Example.com', reason);
+  });
+
+  it('leaves soft bounces, deliveries and deferrals alone: a full mailbox is temporary', async () => {
+    const { service, suppression } = makeService();
+    await service.handleEvent([{ event: 'soft_bounce', email: 'a@x.com' }, { event: 'delivered', email: 'a@x.com' }, { event: 'deferred', email: 'a@x.com' }]);
+    expect(suppression.suppress).not.toHaveBeenCalled();
+  });
+
+  it('keeps going when one suppression fails to save', async () => {
+    const { service, suppression } = makeService();
+    suppression.suppress.mockRejectedValueOnce(new Error('db down'));
+    const r = await service.handleEvent([{ event: 'hard_bounce', email: 'a@x.com' }, { event: 'blocked', email: 'b@x.com' }]);
+    expect(r).toEqual({ processed: 2, matched: 1 });
+  });
+
+  it('counts a unique_opened event as an open for the funnel', async () => {
+    const { service, prisma } = makeService();
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
+    prisma.flowEntry.findFirst.mockResolvedValue({ id: 'f1', openedAt: null });
+    const r = await service.handleEvent({ event: 'unique_opened', email: 'a@x.com', tags: ['lifecycle-day1'] });
+    expect(r.matched).toBe(1);
+    expect(prisma.flowEntry.update).toHaveBeenCalled();
   });
 });

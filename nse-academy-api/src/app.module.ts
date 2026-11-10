@@ -17,6 +17,7 @@ import { ContactModule } from './contact/contact.module';
 import { LeadsModule } from './leads/leads.module';
 import { BrevoModule } from './brevo/brevo.module';
 import { CommunityModule } from './community/community.module';
+import { EmailSuppressionModule } from './email-suppression/email-suppression.module';
 import { AllocationModule } from './allocation/allocation.module';
 import { ModelPortfoliosModule } from './model-portfolios/model-portfolios.module';
 import { ResearchModule } from './research/research.module';
@@ -68,6 +69,7 @@ import { AppService } from './app.service';
     ContactModule,
     BrevoModule,
     CommunityModule,
+    EmailSuppressionModule,
     AllocationModule,
     ModelPortfoliosModule,
     ResearchModule,

@@ -49,7 +49,8 @@ export function buildDigestPortfolio(positions: { ticker: string; quantity: numb
   let change = 0;
   let prevValue = 0;
   for (const [ticker, quantity] of merged) {
-    const closes = (series.get(ticker) ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    // Priced at the report's own session: a later close (a test sent the next evening, say) must not leak into it.
+    const closes = (series.get(ticker) ?? []).filter((c) => c.date <= sessionYmd).sort((a, b) => a.date.localeCompare(b.date));
     if (closes.length === 0) continue;
     const last = closes[closes.length - 1];
     const prev = closes.length > 1 ? closes[closes.length - 2] : null;

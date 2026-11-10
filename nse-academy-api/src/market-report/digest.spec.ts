@@ -38,6 +38,13 @@ describe('buildDigestPortfolio', () => {
     expect(p.holdings.find((h) => h.ticker === 'SCOM')!.quantity).toBe(1000);
   });
 
+  it('prices holdings at the report\'s session even when later closes exist', () => {
+    const later = new Map([['SCOM', [{ date: '2026-11-04', price: 34 }, { date: '2026-11-05', price: 35.2 }, { date: '2026-11-06', price: 40 }]]]);
+    const p = buildDigestPortfolio([{ ticker: 'SCOM', quantity: 1000 }], later, '2026-11-05')!;
+    expect(p.valueKes).toBeCloseTo(35_200, 6);
+    expect(p.holdings[0].dayChangePct).toBeCloseTo(((35.2 - 34) / 34) * 100, 6);
+  });
+
   it('is null with nothing priced', () => {
     expect(buildDigestPortfolio([], series, '2026-11-05')).toBeNull();
     expect(buildDigestPortfolio([{ ticker: 'NOPE', quantity: 5 }], series, '2026-11-05')).toBeNull();

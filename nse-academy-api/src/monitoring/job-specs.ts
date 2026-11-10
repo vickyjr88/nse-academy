@@ -1,7 +1,7 @@
 // What the system is supposed to be doing in the background, and how to tell whether it is. The names are the ones the
 // instrumented services record under (JobMonitorService.track / record).
 
-export type Cadence = 'daily' | 'weekdays' | 'frequent';
+export type Cadence = 'daily' | 'weekdays' | 'frequent' | 'quarterly';
 
 export interface JobSpec {
   name: string;
@@ -16,6 +16,7 @@ export const JOB_SPECS: JobSpec[] = [
   { name: 'daily-admin-report', label: 'Daily admin report', schedule: '08:00 Nairobi daily', cadence: 'daily' },
   { name: 'market-report', label: 'Public market report', schedule: '21:00 Nairobi, Mon-Fri', cadence: 'weekdays' },
   { name: 'market-digest', label: 'Evening market digest emails', schedule: '21:20 Nairobi, Mon-Fri', cadence: 'weekdays' },
+  { name: 'portfolio-review', label: 'Quarterly portfolio review emails', schedule: 'first week of Jan, Apr, Jul, Oct, 09:00 Nairobi', cadence: 'quarterly' },
   { name: 'portfolio-watch', label: 'Portfolio watch emails', schedule: '16:30 Nairobi, Mon-Fri', cadence: 'weekdays' },
   { name: 'subscription-expiry', label: 'Expire lapsed subscriptions', schedule: '06:00 UTC daily', cadence: 'daily' },
   { name: 'subscription-expiring-soon', label: 'Expiring-soon reminders', schedule: '07:00 UTC daily', cadence: 'daily' },
@@ -56,6 +57,7 @@ const HOUR = 3_600_000;
 /** How far back a successful run must be for the job to count as on time. Weekday-only jobs get the weekend off. */
 export function expectedWindowHours(cadence: Cadence, now: Date): number {
   if (cadence === 'daily') return 26;
+  if (cadence === 'quarterly') return 100 * 24;
   const dow = now.getUTCDay(); // 0 Sun ... 6 Sat
   return dow === 0 || dow === 1 || dow === 6 ? 74 : 26;
 }

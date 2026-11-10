@@ -46,6 +46,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/stocks": "Stock Advisor",
   "/dashboard/journal": "Trade Journal",
   "/dashboard/journal/performance": "Portfolio Performance",
+  "/dashboard/journal/allocation": "Portfolio Allocation",
   "/dashboard/research": "Research",
   "/dashboard/glossary": "Glossary",
   "/dashboard/referrals": "Refer Friends",

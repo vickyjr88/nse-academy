@@ -20,7 +20,7 @@ export async function loadDailyCloses(prisma: PrismaService, tickers: string[], 
              to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d,
              price, timestamp
       FROM "StockPrice"
-      WHERE ticker = ANY(${tickers}::text[]) AND price > 0 AND timestamp > now() - make_interval(days => ${days})
+      WHERE ticker = ANY(${tickers}::text[]) AND price > 0 AND timestamp > now() - make_interval(days => ${days}::int)
     ) x
     ORDER BY ticker, d, timestamp DESC`;
   for (const r of rows) {

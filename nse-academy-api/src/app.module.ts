@@ -17,6 +17,7 @@ import { ContactModule } from './contact/contact.module';
 import { LeadsModule } from './leads/leads.module';
 import { BrevoModule } from './brevo/brevo.module';
 import { CommunityModule } from './community/community.module';
+import { AllocationModule } from './allocation/allocation.module';
 import { PaystackModule } from './paystack/paystack.module';
 import { OpenRouterModule } from './openrouter/openrouter.module';
 import { TavilyModule } from './tavily/tavily.module';
@@ -65,6 +66,7 @@ import { AppService } from './app.service';
     ContactModule,
     BrevoModule,
     CommunityModule,
+    AllocationModule,
     PaystackModule,
     OpenRouterModule,
     TavilyModule,

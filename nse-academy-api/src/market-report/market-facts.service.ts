@@ -67,6 +67,11 @@ export class MarketFactsService {
     });
   }
 
+  /** ticker -> sector, cached for six hours; empty when the CMS cannot be reached. */
+  async sectorMap(): Promise<Record<string, string>> {
+    return this.sectors();
+  }
+
   /**
    * ticker -> sector from the CMS stock profiles. Sector analysis is a nice-to-
    * have: if the CMS is unreachable the report is built without it.

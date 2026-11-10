@@ -216,6 +216,12 @@ export default function JournalPage() {
           >
             Performance
           </Link>
+          <Link
+            href="/dashboard/journal/allocation"
+            className="inline-flex items-center justify-center h-11 px-5 font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-xl transition-all text-sm"
+          >
+            Allocation
+          </Link>
           <label className="inline-flex items-center justify-center h-11 px-5 font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all cursor-pointer text-sm">
             {importing ? "Importing…" : "Import CDSC Statement"}
             <input

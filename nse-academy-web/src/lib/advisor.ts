@@ -279,3 +279,17 @@ export function sendAlert(input: { ticker: string; action: "BUY" | "SELL"; messa
 export function listMyAlerts(): Promise<AdvisorAlert[]> {
   return fetch(apiUrl("/financial-advisor/alerts"), { headers: authHeaders() }).then((r) => handle(r));
 }
+
+export interface QuestionAllowance {
+  tier: "free" | "intermediary" | "premium";
+  limit: number;
+  used: number;
+  /** null for members who joined through a firm: they are not limited. */
+  remaining: number | null;
+  unlimited: boolean;
+  resetsOn: string;
+}
+
+export function getQuestionAllowance(): Promise<QuestionAllowance> {
+  return fetch(apiUrl("/financial-advisor/queries/allowance"), { headers: authHeaders() }).then((r) => handle(r));
+}

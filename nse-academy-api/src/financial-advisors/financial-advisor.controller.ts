@@ -75,6 +75,11 @@ export class FinancialAdvisorController {
     return this.advisor.getClientProfile(req.user.id, userId);
   }
 
+  @Get('queries/allowance')
+  allowance(@Request() req: any) {
+    return this.advisor.questionAllowance(req.user.id);
+  }
+
   @Post('queries')
   submitQuery(@Request() req: any, @Body() body: SubmitQueryDto) {
     return this.advisor.submitQuery(req.user.id, body.advisorId, body);

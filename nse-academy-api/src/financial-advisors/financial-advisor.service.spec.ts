@@ -114,3 +114,52 @@ describe('FinancialAdvisorService.sendAlert', () => {
     expect(result).toMatchObject({ recipientCount: 1 });
   });
 });
+
+describe('advisor question allowance', () => {
+  const { allowanceTier, nairobiMonthWindow, ADVISOR_QUESTION_ALLOWANCE } = jest.requireActual('./advisor-allowance');
+  const now = new Date('2026-11-10T10:00:00Z');
+
+  it('counts a paid plan only while it is active and unexpired', () => {
+    expect(allowanceTier({ tier: 'premium', status: 'active', currentPeriodEnd: new Date('2026-12-01T00:00:00Z') }, now)).toBe('premium');
+    expect(allowanceTier({ tier: 'premium', status: 'active', currentPeriodEnd: new Date('2026-11-01T00:00:00Z') }, now)).toBe('free');
+    expect(allowanceTier({ tier: 'intermediary', status: 'expired' }, now)).toBe('free');
+    expect(allowanceTier(null, now)).toBe('free');
+    expect(ADVISOR_QUESTION_ALLOWANCE).toEqual({ free: 1, intermediary: 2, premium: 5 });
+  });
+
+  it('starts the month at midnight Nairobi time', () => {
+    const w = nairobiMonthWindow(new Date('2026-11-30T22:30:00Z')); // already 1 December in Nairobi
+    expect(w.start.toISOString()).toBe('2026-11-30T21:00:00.000Z');
+    expect(w.next.toISOString()).toBe('2026-12-31T21:00:00.000Z');
+  });
+
+  function asking(opts: { tier?: string; used: number; firm?: boolean }) {
+    return makeService({
+      prisma: {
+        advisorClient: { findUnique: jest.fn().mockResolvedValue({ status: 'accepted' }), findFirst: jest.fn().mockResolvedValue(opts.firm ? { id: 'c' } : null) },
+        subscription: { findUnique: jest.fn().mockResolvedValue(opts.tier ? { tier: opts.tier, status: 'active', currentPeriodEnd: new Date(Date.now() + 86_400_000) } : null) },
+        advisorQuery: { count: jest.fn().mockResolvedValue(opts.used), create: jest.fn().mockResolvedValue({ id: 'q1' }) },
+        advisorQueryMessage: { create: jest.fn().mockResolvedValue({}) },
+        advisorProfile: { findUnique: jest.fn().mockResolvedValue({ id: 'adv1', userId: 'advisorUser1' }) },
+        $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn({ advisorQuery: { create: jest.fn().mockResolvedValue({ id: 'q1' }) }, advisorQueryMessage: { create: jest.fn().mockResolvedValue({}) } })),
+      },
+    });
+  }
+
+  it('refuses the question after the plan allowance is used, naming the limit and when it resets', async () => {
+    const { service } = asking({ tier: 'intermediary', used: 2 });
+    await expect(service.submitQuery('u1', 'adv1', { question: 'Is X a good buy?' } as never)).rejects.toMatchObject({
+      response: { code: 'ADVISOR_QUESTION_LIMIT', limit: 2, used: 2, remaining: 0, tier: 'intermediary' },
+    });
+  });
+
+  it('lets a member ask while they have allowance left, and a firm\'s member always', async () => {
+    await expect(asking({ tier: 'premium', used: 4 }).service.submitQuery('u1', 'adv1', { question: 'Hello?' } as never)).resolves.toMatchObject({ id: 'q1' });
+    await expect(asking({ used: 50, firm: true }).service.submitQuery('u1', 'adv1', { question: 'Hello?' } as never)).resolves.toMatchObject({ id: 'q1' });
+  });
+
+  it('reports the remaining allowance', async () => {
+    const { service } = asking({ tier: 'premium', used: 3 });
+    expect(await service.questionAllowance('u1')).toMatchObject({ tier: 'premium', limit: 5, used: 3, remaining: 2, unlimited: false });
+  });
+});

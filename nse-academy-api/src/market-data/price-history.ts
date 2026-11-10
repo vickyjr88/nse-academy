@@ -8,9 +8,10 @@ export interface DailyClose {
 
 /**
  * The last recorded price of each Nairobi trading day, per ticker, oldest first. Snapshots arrive every
- * few minutes, so "the close" is the final snapshot of the day. Zero prices (parse failures) are ignored. Looks back 120 days (about 80 sessions).
+ * few minutes, so "the close" is the final snapshot of the day. Zero prices (parse failures) are ignored. Looks back `lookbackDays` (default 120, about 80 sessions).
  */
-export async function loadDailyCloses(prisma: PrismaService, tickers: string[]): Promise<Map<string, DailyClose[]>> {
+export async function loadDailyCloses(prisma: PrismaService, tickers: string[], lookbackDays = 120): Promise<Map<string, DailyClose[]>> {
+  const days = Math.min(Math.max(Math.floor(lookbackDays) || 120, 1), 800);
   const map = new Map<string, DailyClose[]>();
   if (tickers.length === 0) return map;
   const rows = await prisma.$queryRaw<{ ticker: string; d: string; price: number }[]>`
@@ -19,7 +20,7 @@ export async function loadDailyCloses(prisma: PrismaService, tickers: string[]):
              to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d,
              price, timestamp
       FROM "StockPrice"
-      WHERE ticker = ANY(${tickers}::text[]) AND price > 0 AND timestamp > now() - interval '120 days'
+      WHERE ticker = ANY(${tickers}::text[]) AND price > 0 AND timestamp > now() - make_interval(days => ${days})
     ) x
     ORDER BY ticker, d, timestamp DESC`;
   for (const r of rows) {

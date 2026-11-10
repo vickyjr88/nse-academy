@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import DigestToggle from "@/components/DigestToggle";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { requestFeatureTour } from "@/lib/feature-tour";
@@ -174,6 +175,13 @@ function AccountPageContent() {
             Take the tour
           </button>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+          <h2 className="text-sm font-semibold text-gray-700">Email</h2>
+        </div>
+        <DigestToggle />
       </div>
 
       {/* Security */}

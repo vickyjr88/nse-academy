@@ -16,6 +16,7 @@ import { CorporateModule } from './corporate/corporate.module';
 import { ContactModule } from './contact/contact.module';
 import { LeadsModule } from './leads/leads.module';
 import { BrevoModule } from './brevo/brevo.module';
+import { CommunityModule } from './community/community.module';
 import { PaystackModule } from './paystack/paystack.module';
 import { OpenRouterModule } from './openrouter/openrouter.module';
 import { TavilyModule } from './tavily/tavily.module';
@@ -63,6 +64,7 @@ import { AppService } from './app.service';
     CorporateModule,
     ContactModule,
     BrevoModule,
+    CommunityModule,
     PaystackModule,
     OpenRouterModule,
     TavilyModule,

@@ -1,4 +1,5 @@
 import { TrackedLink } from "@/components/TrackedLink";
+import DigestToggle from "@/components/DigestToggle";
 
 /** A pointer from the daily report to the Portfolio Watch example: readers of closing prices are the audience for it. */
 export default function PortfolioWatchTeaser({ sessionYmd }: { sessionYmd: string }) {
@@ -17,6 +18,7 @@ export default function PortfolioWatchTeaser({ sessionYmd }: { sessionYmd: strin
       >
         See an example on real closing prices &rarr;
       </TrackedLink>
+      <DigestToggle variant="cta" />
     </section>
   );
 }

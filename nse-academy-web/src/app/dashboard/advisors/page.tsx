@@ -10,6 +10,8 @@ import {
   listMyConnections,
   requestConnection,
   submitQuery,
+  getQuestionAllowance,
+  type QuestionAllowance,
   listMyQueries,
 } from "@/lib/advisor";
 import { listPublicAdvisors } from "@/lib/advisor-public";
@@ -31,6 +33,8 @@ export default function DashboardAdvisorsPage() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const [askingId, setAskingId] = useState<string | null>(null);
+  const [allowance, setAllowance] = useState<QuestionAllowance | null>(null);
+  const [askError, setAskError] = useState<{ advisorId: string; message: string } | null>(null);
 
   useEffect(() => {
     Promise.all([listPublicAdvisors({ limit: 100 }), listMyConnections(), listMyQueries()])
@@ -38,6 +42,8 @@ export default function DashboardAdvisorsPage() {
         setAdvisors(advisorsRes.data);
         setConnections(connectionsRes);
         setQueries(queriesRes);
+        // The allowance is a convenience: the page works without it, and the API enforces the limit regardless.
+        getQuestionAllowance().then(setAllowance).catch(() => undefined);
       })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
@@ -57,9 +63,12 @@ export default function DashboardAdvisorsPage() {
     const question = questionDrafts[advisorId];
     if (!question?.trim()) return;
     setAskingId(advisorId);
+    setAskError(null);
     try {
       const query = await submitQuery(advisorId, question);
       router.push(`/dashboard/advisors/queries/${query.id}`);
+    } catch (err) {
+      setAskError({ advisorId, message: err instanceof Error ? err.message : "Could not send your question. Please try again." });
     } finally {
       setAskingId(null);
     }
@@ -83,6 +92,20 @@ export default function DashboardAdvisorsPage() {
         Connect with a financial advisor for personalised guidance. Advisors accept connection requests
         before you can ask them questions — billing for advisory services is arranged directly with them.
       </p>
+
+      {allowance ? (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-900">
+          {allowance.unlimited ? (
+            "Your firm covers your advisor questions, so there is no monthly limit."
+          ) : (
+            <>
+              <strong>{allowance.remaining} of {allowance.limit}</strong> advisor question{allowance.limit === 1 ? "" : "s"} left this month on your {allowance.tier} plan
+              (resets {new Date(allowance.resetsOn).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}).
+              {allowance.tier !== "premium" ? <> <Link href="/dashboard/billing" className="font-medium underline">Upgrade for more</Link>.</> : null}
+            </>
+          )}
+        </div>
+      ) : null}
 
       {advisors.map((advisor) => {
         const connection = connections.find((c) => c.advisorId === advisor.id);
@@ -154,6 +177,12 @@ export default function DashboardAdvisorsPage() {
                     Ask
                   </button>
                 </div>
+                {askError?.advisorId === advisor.id ? (
+                  <p className="mt-2 text-sm text-red-600" role="alert">
+                    {askError.message}{" "}
+                    {allowance && allowance.tier !== "premium" ? <Link href="/dashboard/billing" className="font-medium underline">See plans</Link> : null}
+                  </p>
+                ) : null}
               </div>
             )}
           </div>

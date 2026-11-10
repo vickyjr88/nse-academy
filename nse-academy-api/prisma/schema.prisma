@@ -35,6 +35,11 @@ model User {
   lastActiveAt        DateTime?
   // Daily portfolio-watch email (Premium). The in-app notification is always created.
   portfolioWatchEnabled Boolean          @default(true)
+  // Evening market digest email. Opt-in (off until the member turns it on); digestLastSentOn (Nairobi YYYY-MM-DD) stops a rerun sending twice.
+  digestEnabled       Boolean              @default(false)
+  digestLastSentOn    String?
+  allocationTargets   AllocationTarget[]
+  portfolioReviews    PortfolioReview[]
   dividends           Dividend[]
   realizedGains       RealizedGain[]
   passwordResetTokens PasswordResetToken[]
@@ -716,4 +721,27 @@ model SignupAttribution {
   landingPath  String?
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// The weights a member wants each stock to have in their portfolio. Rebalancing suggestions are the gap between these and what they hold.
+model AllocationTarget {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker    String
+  weightPct Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, ticker])
+}
+
+// One row per member per quarter ("2026-Q4") once their quarterly portfolio review email has gone out: the dedupe key.
+model PortfolioReview {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period String
+  sentAt DateTime @default(now())
+
+  @@unique([userId, period])
 }

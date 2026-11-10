@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { TrackedAnchor } from "@/components/TrackedLink";
+import { whatsappLink } from "@/lib/whatsapp";
 
-const SITE_MANAGER_PHONE = "254747206415";
 const DEFAULT_MESSAGE = "Hi! I have a question about NSE Academy.";
 
 /**
@@ -15,7 +15,7 @@ export function WhatsAppButton() {
   const pathname = usePathname();
   if (pathname?.startsWith("/dashboard")) return null;
 
-  const href = `https://wa.me/${SITE_MANAGER_PHONE}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
+  const href = whatsappLink(DEFAULT_MESSAGE);
 
   return (
     <TrackedAnchor

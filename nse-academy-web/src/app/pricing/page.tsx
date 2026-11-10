@@ -4,6 +4,8 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import PortfolioWatchExample from "@/components/PortfolioWatchExample";
 import { getPortfolioWatchExample } from "@/lib/portfolio-watch-example";
+import { TrackedAnchor } from "@/components/TrackedLink";
+import { whatsappLink } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "NSE Academy Pricing - Free, KSh 300 and KSh 500 Plans",
@@ -21,6 +23,8 @@ const pricingTiers = [
       "First 3 modules (Getting Started)",
       "NSE glossary access",
       "Basic stock profiles",
+      "Evening market digest by email",
+      "1 advisor question a month",
     ],
     cta: "Get Started Free",
     href: "/auth/register",
@@ -38,6 +42,7 @@ const pricingTiers = [
       "Stockbroker comparison module",
       "Market indices & strategies",
       "NSE Complete Trading Guide PDF",
+      "2 advisor questions a month",
     ],
     cta: "Start Intermediary",
     href: "/auth/register?plan=intermediary",
@@ -53,6 +58,7 @@ const pricingTiers = [
       "Full 13-chapter Investor's Guide academy",
       "Personalized stock advisor",
       "Daily Portfolio Watch email on your own holdings",
+      "5 advisor questions a month",
       "Portfolio building tools",
       "NSE Complete Investor's Guide PDF",
       "Priority support",
@@ -144,6 +150,20 @@ export default async function PricingPage() {
               </div>
             ))}
           </div>
+
+          <p className="mt-8 text-center text-sm text-gray-600">
+            Not sure which plan suits you?{" "}
+            <TrackedAnchor
+              href={whatsappLink("Hi! I'd like help choosing an NSE Academy plan.")}
+              target="_blank"
+              rel="noopener noreferrer"
+              event="whatsapp_pricing_clicked"
+              className="font-semibold text-emerald-700 underline"
+            >
+              Ask us on WhatsApp
+            </TrackedAnchor>
+            .
+          </p>
 
           {example ? <PortfolioWatchExample example={example} /> : null}
 

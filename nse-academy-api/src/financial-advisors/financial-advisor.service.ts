@@ -12,6 +12,7 @@ import { SubmitQueryDto } from './dto/submit-query.dto';
 import { PostMessageDto } from './dto/post-message.dto';
 import { PublishInsightDto } from './dto/publish-insight.dto';
 import { SendAlertDto } from './dto/send-alert.dto';
+import { ADVISOR_QUESTION_ALLOWANCE, allowanceTier, nairobiMonthWindow } from './advisor-allowance';
 
 const NOTIFICATION_EYEBROWS: Record<string, string> = {
   ADVISOR_QUERY: 'New Message',
@@ -205,6 +206,21 @@ export class FinancialAdvisorService {
     if (!row || row.status !== 'accepted') {
       throw new ForbiddenException('This user is not a connected client');
     }
+    return row;
+  }
+
+  /** What this member may still ask this month. `unlimited` for members who joined through a firm. */
+  async questionAllowance(userId: string, now = new Date()) {
+    const [sub, firmClient, window] = await Promise.all([
+      this.prisma.subscription.findUnique({ where: { userId }, select: { tier: true, status: true, currentPeriodEnd: true } }),
+      this.prisma.advisorClient.findFirst({ where: { userId, status: 'accepted', source: 'org_member' }, select: { id: true } }),
+      Promise.resolve(nairobiMonthWindow(now)),
+    ]);
+    const tier = allowanceTier(sub, now);
+    const used = await this.prisma.advisorQuery.count({ where: { userId, createdAt: { gte: window.start, lt: window.next } } });
+    const unlimited = !!firmClient;
+    const limit = ADVISOR_QUESTION_ALLOWANCE[tier];
+    return { tier, limit, used, remaining: unlimited ? null : Math.max(limit - used, 0), unlimited, resetsOn: window.next.toISOString() };
   }
 
   async getClientProfile(advisorUserId: string, clientUserId: string) {
@@ -241,6 +257,17 @@ export class FinancialAdvisorService {
 
   async submitQuery(userId: string, advisorId: string, dto: SubmitQueryDto) {
     await this.assertAcceptedClient(advisorId, userId);
+
+    const allowance = await this.questionAllowance(userId);
+    if (!allowance.unlimited && allowance.remaining === 0) {
+      const upgrade = allowance.tier === 'premium' ? '' : ' Upgrade your plan for more questions.';
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ADVISOR_QUESTION_LIMIT',
+        message: `You have used your ${allowance.limit} advisor question${allowance.limit === 1 ? '' : 's'} for this month on the ${allowance.tier} plan.${upgrade} Your allowance resets on ${allowance.resetsOn.slice(0, 10)}.`,
+        ...allowance,
+      });
+    }
 
     const subject = dto.question.length > 140 ? `${dto.question.slice(0, 140)}...` : dto.question;
     const query = await this.prisma.$transaction(async (tx) => {

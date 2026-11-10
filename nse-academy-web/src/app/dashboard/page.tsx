@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import InvestorCard from "@/components/InvestorCard";
 import PersonalizedUpgrade from "@/components/PersonalizedUpgrade";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import CommunityCard from "@/components/CommunityCard";
 import { useSubscription, type Tier } from "@/hooks/useSubscription";
 import { getPersonalization } from "@/lib/investorPersonalization";
 
@@ -207,6 +208,8 @@ export default function DashboardPage() {
               </Link>
             </div>
           )}
+
+          <CommunityCard tier={tier} />
 
           {/* Quick links */}
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Quick Access</h2>

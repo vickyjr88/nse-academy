@@ -15,6 +15,7 @@ export const JOB_SPECS: JobSpec[] = [
   { name: 'market-poll', label: 'Market price feed', schedule: 'every 7 min, 09:00-15:00 UTC, Mon-Fri', cadence: 'frequent' },
   { name: 'daily-admin-report', label: 'Daily admin report', schedule: '08:00 Nairobi daily', cadence: 'daily' },
   { name: 'market-report', label: 'Public market report', schedule: '21:00 Nairobi, Mon-Fri', cadence: 'weekdays' },
+  { name: 'market-digest', label: 'Evening market digest emails', schedule: '21:20 Nairobi, Mon-Fri', cadence: 'weekdays' },
   { name: 'portfolio-watch', label: 'Portfolio watch emails', schedule: '16:30 Nairobi, Mon-Fri', cadence: 'weekdays' },
   { name: 'subscription-expiry', label: 'Expire lapsed subscriptions', schedule: '06:00 UTC daily', cadence: 'daily' },
   { name: 'subscription-expiring-soon', label: 'Expiring-soon reminders', schedule: '07:00 UTC daily', cadence: 'daily' },

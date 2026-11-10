@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { getAccessToken } from "@/lib/ebook";
 
 /** Premium members' door to the investors' community. Renders nothing until a channel has been set up, so it never links to a place that is not there. */
 export default function CommunityCard({ tier }: { tier: string }) {
@@ -10,7 +11,9 @@ export default function CommunityCard({ tier }: { tier: string }) {
   useEffect(() => {
     if (tier !== "premium") return;
     let live = true;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/community`)
+    const token = getAccessToken();
+    if (!token) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/community`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => live && setUrl(d?.whatsappChannelUrl ?? null))
       .catch(() => undefined);

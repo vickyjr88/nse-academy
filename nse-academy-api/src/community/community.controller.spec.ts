@@ -1,3 +1,5 @@
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { TIER_KEY } from '../auth/tier.decorator';
 import { CommunityController } from './community.controller';
 
 const make = (url?: string) => new CommunityController({ get: () => url } as never);
@@ -12,5 +14,11 @@ describe('CommunityController', () => {
     expect(make('').get().whatsappChannelUrl).toBeNull();
     expect(make('https://evil.example/whatsapp.com/channel/x').get().whatsappChannelUrl).toBeNull();
     expect(make('javascript:alert(1)').get().whatsappChannelUrl).toBeNull();
+  });
+
+  it('is only for signed-in Premium members, because a group invite link lets anyone in', () => {
+    expect(Reflect.getMetadata(GUARDS_METADATA, CommunityController).map((g: { name: string }) => g.name)).toEqual(['JwtAuthGuard', 'TierGuard']);
+    expect(Reflect.getMetadata(TIER_KEY, CommunityController)).toBe('premium');
+    expect(Reflect.getMetadata('path', CommunityController)).toBe('community');
   });
 });

@@ -19,6 +19,7 @@ export default function PublicFooter() {
           <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
           <Link href="/companies" className="hover:text-gray-600 transition-colors">Companies</Link>
           <Link href="/market-report" className="hover:text-gray-600 transition-colors">Market Report</Link>
+          <Link href="/research" className="hover:text-gray-600 transition-colors">Research</Link>
           <Link href="/model-portfolios" className="hover:text-gray-600 transition-colors">Model Portfolios</Link>
           <Link href="/store" className="hover:text-gray-600 transition-colors">Store</Link>
           <Link href="/calculators" className="hover:text-gray-600 transition-colors">Calculators</Link>

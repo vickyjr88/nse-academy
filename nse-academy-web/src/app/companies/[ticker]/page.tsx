@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { getStockProfileByTicker, getStockProfiles, type StockProfile } from "@/lib/cms";
+import { getBriefFor } from "@/lib/research";
 import { getMarketQuote } from "@/lib/market-quote";
 import { SITE_NAME, abs, breadcrumbJsonLd, faqJsonLd, leadSentence, truncate } from "@/lib/seo";
 import CompanyPriceWidget from "@/components/CompanyPriceWidget";
@@ -84,10 +85,11 @@ export default async function CompanyDetailPage({ params }: Props) {
   const upper = ticker.toUpperCase();
   if (ticker !== upper) permanentRedirect(companyPath(upper));
 
-  const [profile, quote, { profiles: all }] = await Promise.all([
+  const [profile, quote, { profiles: all }, brief] = await Promise.all([
     getStockProfileByTicker(upper),
     getMarketQuote(upper),
     getStockProfiles({ limit: 100 }),
+    getBriefFor(upper),
   ]);
 
   if (!profile) notFound();
@@ -195,6 +197,16 @@ export default async function CompanyDetailPage({ params }: Props) {
                   )}
                 </div>
               </section>
+
+              {brief ? (
+                <section className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Research brief</p>
+                  <h2 className="mt-1 text-xl font-bold text-gray-900">{brief.title}</h2>
+                  <p className="mt-2 text-gray-700">{brief.summary}</p>
+                  <p className="mt-2 text-xs text-gray-500">Reviewed by {brief.reviewedBy}.</p>
+                  <Link href={`/research/${brief.slug}`} className="mt-4 inline-block font-semibold text-emerald-700 underline">Read the brief</Link>
+                </section>
+              ) : null}
 
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-emerald-600 pl-4">

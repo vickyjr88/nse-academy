@@ -19,6 +19,7 @@ import { BrevoModule } from './brevo/brevo.module';
 import { CommunityModule } from './community/community.module';
 import { AllocationModule } from './allocation/allocation.module';
 import { ModelPortfoliosModule } from './model-portfolios/model-portfolios.module';
+import { ResearchModule } from './research/research.module';
 import { PaystackModule } from './paystack/paystack.module';
 import { OpenRouterModule } from './openrouter/openrouter.module';
 import { TavilyModule } from './tavily/tavily.module';
@@ -69,6 +70,7 @@ import { AppService } from './app.service';
     CommunityModule,
     AllocationModule,
     ModelPortfoliosModule,
+    ResearchModule,
     PaystackModule,
     OpenRouterModule,
     TavilyModule,

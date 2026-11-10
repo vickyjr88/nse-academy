@@ -3,6 +3,7 @@ import { getAllArticleEntries, getStockProfiles } from "@/lib/cms";
 import { listPublicAdvisors } from "@/lib/advisor-public";
 import { listMarketReports } from "@/lib/market-report";
 import { listModelPortfolios } from "@/lib/model-portfolios";
+import { listResearch } from "@/lib/research";
 
 import { SITE_URL } from "@/lib/seo";
 
@@ -26,13 +27,14 @@ async function getPublicProfileSlugs(): Promise<PublicSlug[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, profileSlugs, { profiles: companies }, { data: advisors }, reports, { data: models }] = await Promise.all([
+  const [articles, profileSlugs, { profiles: companies }, { data: advisors }, reports, { data: models }, research] = await Promise.all([
     getAllArticleEntries(),
     getPublicProfileSlugs(),
     getStockProfiles({ limit: 100 }),
     listPublicAdvisors({ limit: 100 }),
     listMarketReports(100),
     listModelPortfolios(),
+    listResearch(),
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -47,6 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/companies`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE_URL}/advisors`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/market-report`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/research`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/model-portfolios`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/brokers-compare`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/about`, changeFrequency: "yearly", priority: 0.6 },
@@ -91,5 +94,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...articlePages, ...profilePages, ...companyPages, ...advisorPages, ...reportPages, ...modelPages];
+  const researchPages: MetadataRoute.Sitemap = research.map((n) => ({
+    url: `${SITE_URL}/research/${n.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...articlePages, ...profilePages, ...companyPages, ...advisorPages, ...reportPages, ...modelPages, ...researchPages];
 }

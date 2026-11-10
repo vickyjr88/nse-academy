@@ -780,3 +780,28 @@ model ModelPortfolioHolding {
 
   @@unique([modelId, ticker])
 }
+
+// Reviewed research content: the monthly focus list and per-company briefs. The facts are computed from stored prices
+// when the draft is made; the commentary is written by a person who is named on the note before it can be published.
+model ResearchNote {
+  id          String    @id @default(cuid())
+  // FOCUS_LIST | BRIEF
+  kind        String
+  slug        String    @unique
+  title       String
+  summary     String
+  body        String
+  tickers     String[]  @default([])
+  // YYYY-MM for a focus list
+  period      String?
+  // The computed facts at draft time: criteria, as-of date and one row per stock.
+  facts       Json
+  // draft | published
+  status      String    @default("draft")
+  reviewedBy  String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([kind, status])
+}

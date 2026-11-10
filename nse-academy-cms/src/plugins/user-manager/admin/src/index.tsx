@@ -209,6 +209,18 @@ export default {
       permissions: [],
     });
 
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/research`,
+      icon: Message,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.research`, defaultMessage: 'Research' },
+      permissions: [],
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/research`,
+      Component: lazyPage(() => import('./pages/ResearchAdmin'), 'ResearchAdmin'),
+    });
+
     app.router.addRoute({
       path: `plugins/${PLUGIN_ID}/model-portfolios`,
       Component: lazyPage(() => import('./pages/ModelPortfoliosAdmin'), 'ModelPortfoliosAdmin'),

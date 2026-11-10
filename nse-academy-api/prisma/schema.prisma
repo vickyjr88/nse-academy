@@ -745,3 +745,38 @@ model PortfolioReview {
 
   @@unique([userId, period])
 }
+
+// An illustrative NSE portfolio an investor can study and copy as their own target weights. Published only after a
+// named reviewer has signed it off; performance is worked out from the stored closes, never typed in.
+model ModelPortfolio {
+  id           String                  @id @default(cuid())
+  slug         String                  @unique
+  name         String
+  summary      String
+  description  String
+  // conservative | moderate | aggressive | dividend | growth: matches the investor profiler's types. 
+  riskProfile  String?
+  // draft | published 
+  status       String                  @default("draft")
+  // Who reviewed it, with their credentials. Required to publish. 
+  reviewedBy   String?
+  // Nairobi YYYY-MM-DD: the weights are measured from this day's closes. 
+  inceptionDate String
+  publishedAt  DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  holdings     ModelPortfolioHolding[]
+
+  @@index([status])
+}
+
+model ModelPortfolioHolding {
+  id         String         @id @default(cuid())
+  modelId    String
+  model      ModelPortfolio @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  ticker     String
+  weightPct  Float
+  rationale  String?
+
+  @@unique([modelId, ticker])
+}

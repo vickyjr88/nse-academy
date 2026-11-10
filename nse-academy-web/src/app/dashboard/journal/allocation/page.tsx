@@ -29,7 +29,6 @@ export default function AllocationPage() {
   const premium = tier === "premium";
 
   const load = useCallback(() => {
-    setLoading(true);
     getAllocation()
       .then((d) => {
         setData(d);
@@ -47,10 +46,7 @@ export default function AllocationPage() {
       return;
     }
     if (subLoading) return;
-    if (tier === "free") {
-      setLoading(false);
-      return;
-    }
+    if (tier === "free") return;
     load();
   }, [router, tier, subLoading, load]);
 
@@ -106,7 +102,7 @@ export default function AllocationPage() {
     }
   }
 
-  if (subLoading || loading) return <div className="text-center py-20 text-gray-400">Loading allocation…</div>;
+  if (subLoading || (tier !== "free" && loading)) return <div className="text-center py-20 text-gray-400">Loading allocation…</div>;
   if (tier === "free") {
     return (
       <TierGate required="intermediary" currentTier={tier} loading={false} featureName="Portfolio Allocation">
@@ -126,7 +122,7 @@ export default function AllocationPage() {
         <Link href="/dashboard/journal" className="text-xs text-emerald-600 hover:underline">← Back to journal</Link>
         <h1 className="text-3xl font-bold text-gray-900 mt-2">Portfolio Allocation</h1>
         <p className="text-gray-500 mt-2 max-w-2xl">
-          Where your money sits, by stock and by sector, at last close. {premium ? "Set the weights you want, and see what it would take to get there, with your broker's fees." : "Premium adds target weights and a rebalancing plan."} Information only, not investment advice.
+          Where your money sits, by stock and by sector, at last close. {premium ? "Set the weights you want, and see what it would take to get there, with your broker's fees." : "Premium adds target weights and a rebalancing plan."} Information only, not investment advice. <Link href="/model-portfolios" className="font-medium text-emerald-700 underline">Browse model portfolios</Link> for a starting point.
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { lazyPage } from './actor';
-import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail, ChartBubble, ChartCircle, Cog, PriceTag, Layout, Hashtag, List, PresentationChart } from '@strapi/icons';
+import { User, ShoppingCart, ChartPie, Book, Briefcase, Heart, Message, TrendUp, SealCheck, Mail, ChartBubble, ChartCircle, Cog, PriceTag, Layout, Hashtag, List, PresentationChart, Stack } from '@strapi/icons';
 
 const PLUGIN_ID = 'user-manager';
 
@@ -200,6 +200,18 @@ export default {
       icon: List,
       intlLabel: { id: `${PLUGIN_ID}.plugin.audit-log`, defaultMessage: 'Audit Log' },
       permissions: [],
+    });
+
+    app.addMenuLink({
+      to: `plugins/${PLUGIN_ID}/model-portfolios`,
+      icon: Stack,
+      intlLabel: { id: `${PLUGIN_ID}.plugin.model-portfolios`, defaultMessage: 'Model Portfolios' },
+      permissions: [],
+    });
+
+    app.router.addRoute({
+      path: `plugins/${PLUGIN_ID}/model-portfolios`,
+      Component: lazyPage(() => import('./pages/ModelPortfoliosAdmin'), 'ModelPortfoliosAdmin'),
     });
 
     app.router.addRoute({

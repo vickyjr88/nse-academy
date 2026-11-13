@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:nse_academy/core/theme.dart';
 import 'package:nse_academy/widgets/reading.dart';
 
 Widget _app(Widget child) => MaterialApp(theme: buildTheme(Brightness.light), home: child);
 
 void main() {
-  setUp(() => GoogleFonts.config.allowRuntimeFetching = false);
-
   testWidgets('does not count a page as read while its text is still loading', (tester) async {
     final seen = <double>[];
     Widget page({required bool ready}) => _app(ReadingScaffold(title: 'T', ready: ready, onProgress: seen.add, children: [if (ready) for (var i = 0; i < 80; i++) Text('line $i') else const CircularProgressIndicator()]));

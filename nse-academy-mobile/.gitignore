@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Signed release bundles and the raw API recordings used for store screenshots
+/store/release/

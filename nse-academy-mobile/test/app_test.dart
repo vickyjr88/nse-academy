@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nse_academy/app.dart';
@@ -31,7 +30,6 @@ Future<http.Response> _server(http.Request r, {bool offline = false}) async {
 }
 
 Future<void> _launch(WidgetTester tester, {Map<String, Object> prefs = const {}, bool offline = false}) async {
-  GoogleFonts.config.allowRuntimeFetching = false;
   SharedPreferences.setMockInitialValues(prefs);
   final sp = await SharedPreferences.getInstance();
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -186,7 +184,8 @@ void main() {
     await tester.tap(find.text('NSE Complete Trading Guide'));
     await tester.pumpAndSettle();
     expect(find.text('Intermediary course'), findsOneWidget);
-    expect(find.text('See plans'), findsOneWidget);
+    expect(find.text('See plans'), findsNothing); // the Play build does not steer members to a purchase on the website
+    expect(find.text('Sign in'), findsOneWidget);
   });
 
   testWidgets('an article opens, can be bookmarked, and the bookmark appears on Profile', (tester) async {

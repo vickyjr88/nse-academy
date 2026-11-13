@@ -119,6 +119,12 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(),
             ListTile(leading: Icon(Icons.info_outline_rounded, color: c.primary), title: Text('About NSE Academy', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => _about(context)),
             const Divider(),
+            ListTile(leading: Icon(Icons.privacy_tip_outlined, color: c.primary), title: Text('Privacy policy', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/privacy'), mode: LaunchMode.externalApplication)),
+            const Divider(),
+            if (session != null) ...[
+              ListTile(leading: Icon(Icons.person_remove_outlined, color: c.primary), title: Text('Delete my account', style: AppText.body(c.textPrimary)), subtitle: Text('How to remove your account and data', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/delete-account'), mode: LaunchMode.externalApplication)),
+              const Divider(),
+            ],
             if (session == null)
               ListTile(leading: Icon(Icons.login_rounded, color: c.primary), title: Text('Sign in', style: AppText.body(c.textPrimary)), subtitle: Text('Unlock the courses on your plan', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/signin'))
             else

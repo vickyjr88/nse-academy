@@ -61,8 +61,8 @@ themes, and offline reading (opened articles, bookmarks, the glossary and the la
 
 ## Before a store release
 
-- **Fonts:** Plus Jakarta Sans, Inter and JetBrains Mono are downloaded on first use by `google_fonts` and cached. Offline on the
-  very first launch the system font is used. To bundle them, add the font files and declare them as `google_fonts` assets.
+- **Fonts:** Plus Jakarta Sans, Inter and JetBrains Mono are bundled in `assets/fonts` (static, Latin-subset cuts of the OFL
+  families, licences alongside), so the app looks the same offline and makes no request to a font host.
 - **App icon and splash:** still the Flutter defaults.
 - **Android:** accept the SDK licences once (`flutter doctor --android-licenses`), then `flutter build appbundle`. Application id
   `net.vitaldigitalmedia.nse_academy`; set up release signing in `android/app/build.gradle.kts`.
@@ -82,3 +82,18 @@ lib/
   widgets/     shared components (cards, callouts, progress bar, chart, markdown, upgrade card)
 test/          fixtures use the real shapes returned by the CMS and the API
 ```
+
+## Releasing to Google Play
+
+Listing text, store graphics, the Play Console answers and a pre-submit checklist are in [`store/LISTING.md`](store/LISTING.md).
+
+- **Signing:** `android/key.properties` (gitignored, see `key.properties.example`) points at the upload keystore. Without it a release
+  build falls back to the debug key and cannot be uploaded to Play.
+- **Build:** `flutter build appbundle --release`. Raise `version:` in `pubspec.yaml` for every upload.
+- **Play build vs web upgrade links:** the app sells nothing and, by default, does not link to the website's pricing page (Play's
+  payments policy). `--dart-define=WEB_UPGRADE_LINKS=true` brings the "See plans" button back for other channels.
+- **Store graphics:** `LIVE_CACHE=<dir> COURSE_ID=2 LESSON_ID=2 TICKER=SCOM flutter test tool/store_screenshots_test.dart` captures the
+  real app on recorded live data (re-run `python3 tool/fetch_live.py` after each run until nothing is missing), then
+  `python3 store/build_graphics.py` frames them and makes the 1024x500 feature graphic. Needs Chrome and ImageMagick.
+- **Fonts:** static Latin-subset cuts of the three OFL families were made from the Google Fonts variable files with fontTools
+  (`instancer` + `subset`); the licences are next to them in `assets/fonts`.

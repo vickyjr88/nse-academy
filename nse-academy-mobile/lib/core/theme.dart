@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// The design system's colour tokens (section 5.1), one set per brightness.
 @immutable
@@ -133,37 +132,30 @@ class Gap {
   static const radiusPill = 24.0;
 }
 
-/// Plus Jakarta Sans, Inter and JetBrains Mono are fetched on first use and then cached on the device. If a font cannot
-/// be fetched (first launch offline, or a test with downloads switched off) the text falls back to the system font
-/// rather than failing, so the app is always readable.
-TextStyle _font(TextStyle Function() google, TextStyle fallback) {
-  try {
-    return google();
-  } catch (_) {
-    return fallback;
-  }
-}
-
 /// The type scale (section 5.2): Plus Jakarta Sans for headings, Inter for text, JetBrains Mono for prices and metrics.
+/// All three are bundled with the app (see pubspec.yaml), so there is no download and no fallback to handle.
 class AppText {
-  static TextStyle h1(Color c) => _font(() => GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w700, height: 34 / 28, color: c), TextStyle(fontSize: 28, fontWeight: FontWeight.w700, height: 34 / 28, color: c));
-  static TextStyle h2(Color c) => _font(() => GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w600, height: 28 / 22, color: c), TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 28 / 22, color: c));
-  static TextStyle h3(Color c) => _font(() => GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w600, height: 24 / 18, color: c), TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 24 / 18, color: c));
-  static TextStyle body(Color c) => _font(() => GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w400, height: 24 / 16, color: c), TextStyle(fontSize: 16, fontWeight: FontWeight.w400, height: 24 / 16, color: c));
-  static TextStyle bodySmall(Color c) => _font(() => GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400, height: 20 / 14, color: c), TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 20 / 14, color: c));
-  static TextStyle caption(Color c) => _font(() => GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, height: 16 / 12, color: c), TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 16 / 12, color: c));
-  static TextStyle tab(Color c) => _font(() => GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, height: 12 / 10, color: c), TextStyle(fontSize: 10, fontWeight: FontWeight.w500, height: 12 / 10, color: c));
-  static TextStyle price(Color c) => _font(() => GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w600, height: 24 / 20, color: c), TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 24 / 20, color: c));
-  static TextStyle metric(Color c) => _font(() => GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w500, height: 20 / 16, color: c), TextStyle(fontSize: 16, fontWeight: FontWeight.w500, height: 20 / 16, color: c));
+  static const _heading = 'PlusJakartaSans';
+  static const _text = 'Inter';
+  static const _mono = 'JetBrainsMono';
+
+  static TextStyle _s(String family, double size, FontWeight weight, double line, Color c) =>
+      TextStyle(fontFamily: family, fontSize: size, fontWeight: weight, height: line / size, color: c);
+
+  static TextStyle h1(Color c) => _s(_heading, 28, FontWeight.w700, 34, c);
+  static TextStyle h2(Color c) => _s(_heading, 22, FontWeight.w600, 28, c);
+  static TextStyle h3(Color c) => _s(_heading, 18, FontWeight.w600, 24, c);
+  static TextStyle body(Color c) => _s(_text, 16, FontWeight.w400, 24, c);
+  static TextStyle bodySmall(Color c) => _s(_text, 14, FontWeight.w400, 20, c);
+  static TextStyle caption(Color c) => _s(_text, 12, FontWeight.w500, 16, c);
+  static TextStyle tab(Color c) => _s(_text, 10, FontWeight.w500, 12, c);
+  static TextStyle price(Color c) => _s(_mono, 20, FontWeight.w600, 24, c);
+  static TextStyle metric(Color c) => _s(_mono, 16, FontWeight.w500, 20, c);
 }
 
 TextTheme _textTheme(Brightness brightness, NseColors c) {
   final base = ThemeData(brightness: brightness).textTheme;
-  try {
-    return GoogleFonts.interTextTheme(base).apply(bodyColor: c.textPrimary, displayColor: c.textPrimary);
-  } catch (_) {
-    return base.apply(bodyColor: c.textPrimary, displayColor: c.textPrimary);
-  }
+  return base.apply(fontFamily: AppText._text, bodyColor: c.textPrimary, displayColor: c.textPrimary);
 }
 
 ThemeData buildTheme(Brightness brightness) {

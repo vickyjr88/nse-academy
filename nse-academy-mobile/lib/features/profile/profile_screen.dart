@@ -121,6 +121,8 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(),
             ListTile(leading: Icon(Icons.privacy_tip_outlined, color: c.primary), title: Text('Privacy policy', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/privacy'), mode: LaunchMode.externalApplication)),
             const Divider(),
+            ListTile(leading: Icon(Icons.description_outlined, color: c.primary), title: Text('Terms of service', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/terms'), mode: LaunchMode.externalApplication)),
+            const Divider(),
             if (session != null) ...[
               ListTile(leading: Icon(Icons.person_remove_outlined, color: c.primary), title: Text('Delete my account', style: AppText.body(c.textPrimary)), subtitle: Text('How to remove your account and data', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/delete-account'), mode: LaunchMode.externalApplication)),
               const Divider(),

@@ -1,4 +1,4 @@
-import { Controller, Get, Header, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, Header, NotFoundException, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MarketDataService } from './market-data.service';
 
@@ -13,6 +13,25 @@ const TICKER = /^[A-Za-z0-9.]{1,12}$/;
 @Controller('public/market-data')
 export class PublicMarketDataController {
   constructor(private readonly marketData: MarketDataService) {}
+
+  @Get()
+  @Header('Cache-Control', 'public, max-age=60, s-maxage=300')
+  @ApiOperation({ summary: 'Latest delayed price of every listed NSE stock (no login)' })
+  async list() {
+    return this.marketData.listQuotes();
+  }
+
+  // Declared before ':ticker' only for readability; the paths do not overlap.
+  @Get(':ticker/history')
+  @Header('Cache-Control', 'public, max-age=300, s-maxage=900')
+  @ApiOperation({ summary: 'Daily closing prices for one ticker, for charts (no login)' })
+  async history(@Param('ticker') ticker: string, @Query('days') days?: string) {
+    if (!TICKER.test(ticker)) throw new NotFoundException('Unknown ticker');
+    const d = Math.min(Math.max(parseInt(days ?? '90', 10) || 90, 7), 400);
+    const points = await this.marketData.getDailyHistory(ticker, d);
+    if (points.length === 0) throw new NotFoundException('No price history for this ticker');
+    return { ticker: ticker.toUpperCase(), days: d, points };
+  }
 
   @Get(':ticker')
   @Header('Cache-Control', 'public, max-age=60, s-maxage=300')

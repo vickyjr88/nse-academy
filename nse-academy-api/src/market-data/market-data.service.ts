@@ -8,6 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
 import axios from 'axios';
 import { DEFAULT_MAX_PER_HOUR, WINDOW_MS, parseRateLimit, pollDecision } from './poll-guard';
+import { loadDailyCloses } from './price-history';
+import { cleanName } from '../market-report/market-facts';
+import { parseNumber } from '../reports/report-helpers';
 
 @Injectable()
 export class MarketDataService {
@@ -144,6 +147,29 @@ export class MarketDataService {
         }
       }
     }
+  }
+
+  /** The latest delayed quote of every listed stock, with the percentage change as a number and a clean company name. */
+  async listQuotes() {
+    const rows = (await this.getLatestPrices()) as { ticker: string; name: string; price: number; volume: string; change: string; timestamp: Date }[];
+    return rows
+      .filter((r) => r.price > 0)
+      .map((r) => ({
+        ticker: r.ticker,
+        name: cleanName(r.name),
+        price: r.price,
+        changePct: parseNumber(r.change),
+        volume: parseNumber(r.volume),
+        updatedAt: r.timestamp,
+      }))
+      .sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }
+
+  /** One close per trading day for a stock, oldest first, as far back as `days` and our records go. */
+  async getDailyHistory(ticker: string, days: number): Promise<{ date: string; price: number }[]> {
+    const t = ticker.toUpperCase();
+    const series = await loadDailyCloses(this.prisma, [t], Math.min(Math.max(Math.floor(days) || 90, 7), 400));
+    return series.get(t) ?? [];
   }
 
   /**

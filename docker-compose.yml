@@ -31,6 +31,10 @@ services:
       JWT_EXPIRY: 7d
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
       PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
+      # Google Play Billing (Android app subscriptions); empty = off. See nse-academy-mobile/store/BILLING.md.
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}
+      GOOGLE_PLAY_PACKAGE_NAME: ${GOOGLE_PLAY_PACKAGE_NAME:-net.vitaldigitalmedia.nse_academy}
+      GOOGLE_PLAY_RTDN_TOKEN: ${GOOGLE_PLAY_RTDN_TOKEN:-}
       CMS_URL: http://cms:1337
       CMS_API_TOKEN: ${CMS_API_TOKEN:-}
       WEB_URL: ${WEB_URL:-http://localhost:3010}

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/config.dart';
 import '../core/theme.dart';
 import '../data/models/course.dart';
+import '../features/billing/billing_gateway.dart';
 import 'common.dart';
 
 /// Shown where a lesson needs a plan the member does not have. The app never sells anything; see AppConfig.webUpgradeLinks.
@@ -17,6 +18,7 @@ class UpgradeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final inAppPlans = PlayBillingGateway.supported && signedIn;
     const size = Size.fromHeight(44);
     void goSignIn() => context.push('/signin');
     // With a "See plans" button beside it Sign in is the quieter action; on its own it is the main one.
@@ -31,13 +33,14 @@ class UpgradeCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           signedIn
-              ? 'This part is included in the ${required.label} plan.${AppConfig.webUpgradeLinks ? ' You can upgrade on the NSE Academy website, then come back here.' : ''}'
+              ? 'This part is included in the ${required.label} plan.${AppConfig.webUpgradeLinks ? ' You can upgrade on the NSE Academy website, then come back here.' : (inAppPlans ? ' You can subscribe in the app.' : '')}'
               : 'Sign in with your NSE Academy account to unlock what your plan includes.',
           style: AppText.bodySmall(c.textSecondary),
         ),
-        if (AppConfig.webUpgradeLinks || !signedIn) ...[
+        if (AppConfig.webUpgradeLinks || !signedIn || inAppPlans) ...[
           const SizedBox(height: 14),
           Row(children: [
+            if (inAppPlans) Expanded(child: FilledButton(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)), onPressed: () => context.push('/profile/plan'), child: const Text('See plans'))),
             if (AppConfig.webUpgradeLinks) Expanded(child: FilledButton(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)), onPressed: () => launchUrl(Uri.parse('${AppConfig.siteBase}/pricing'), mode: LaunchMode.externalApplication), child: const Text('See plans'))),
             if (!signedIn) ...[
               if (AppConfig.webUpgradeLinks) const SizedBox(width: 10),

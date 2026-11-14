@@ -168,6 +168,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await ref.read(authRepositoryProvider).signOut();
     state = const AsyncData(AuthState());
   }
+
+  /// Re-reads the plan from the server, after a purchase or when the app comes back to the front.
+  Future<void> refreshPlan() async {
+    if (state.value?.signedIn != true) return;
+    final s = await ref.read(authRepositoryProvider).restore();
+    if (s != null) state = AsyncData(AuthState(session: s));
+  }
 }
 
 final authProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
@@ -229,6 +236,7 @@ FutureProvider<T> _member<T>(Future<T> Function(MemberRepository r) load) => Fut
       return load(ref.watch(memberRepositoryProvider));
     });
 
+final planStatusProvider = _member((r) => r.planStatus());
 final accountProvider = _member((r) => r.account());
 final digestProvider = _member((r) => r.digestEnabled());
 final referralsProvider = _member((r) => r.referrals());

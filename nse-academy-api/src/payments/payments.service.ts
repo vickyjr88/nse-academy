@@ -315,10 +315,11 @@ export class PaymentsService {
       const next = computeNewPeriod(existing, plan, months, now);
       await tx.subscription.upsert({
         where: { userId },
-        create: { userId, tier: next.tier, status: 'active', paystackSubId: reference, currentPeriodEnd: next.currentPeriodEnd },
+        create: { userId, tier: next.tier, status: 'active', source: 'paystack', paystackSubId: reference, currentPeriodEnd: next.currentPeriodEnd },
         update: {
           tier: next.tier,
           status: 'active',
+          source: 'paystack',
           paystackSubId: reference,
           currentPeriodEnd: next.currentPeriodEnd,
           expiryWarningSentAt: null,
@@ -435,7 +436,7 @@ export class PaymentsService {
     }
   }
 
-  private async alertAdminOfSubscription(
+  async alertAdminOfSubscription(
     user: { id: string; name: string; email: string },
     plan: SubscriptionPlan,
     months: BillingMonths,
@@ -451,7 +452,7 @@ export class PaymentsService {
     });
   }
 
-  private async sendSubscriptionConfirmedEmail(
+  async sendSubscriptionConfirmedEmail(
     email: string,
     name: string,
     plan: SubscriptionPlan,

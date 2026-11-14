@@ -25,6 +25,14 @@ class MemberRepository {
   Future<dynamic> _patch(String path, Map<String, dynamic> body) async => _api.patchJson(_uri(path), body, headers: await _auth());
   Future<dynamic> _delete(String path) async => _api.deleteJson(_uri(path), headers: await _auth());
 
+  // plan and Google Play billing
+  Future<PlanStatus> planStatus() async => PlanStatus.fromJson(await _get('payments/status'));
+  Future<String> playAccountId() async => ((await _get('payments/google/config')) as Map)['accountId'] as String;
+  Future<PlanStatus> verifyPlayPurchase(String purchaseToken) async {
+    await _post('payments/google/verify', {'purchaseToken': purchaseToken});
+    return planStatus();
+  }
+
   // account
   Future<Account> account() async => Account.fromJson(await _get('users/me'));
   Future<void> updateAccount({String? name, String? phone}) => _patch('users/me', {'name': ?name, 'phone': ?phone});

@@ -41,6 +41,7 @@ model User {
   allocationTargets   AllocationTarget[]
   portfolioReviews    PortfolioReview[]
   dividends           Dividend[]
+  playPurchases       PlayPurchase[]
   realizedGains       RealizedGain[]
   passwordResetTokens PasswordResetToken[]
   advisorProfile      AdvisorProfile?
@@ -94,6 +95,8 @@ model Subscription {
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id])
   tier             String // free | intermediary | premium
+  // Where the current paid period came from: paystack (web) or play (Google Play Billing in the Android app).
+  source           String    @default("paystack")
   paystackSubId    String?
   currentPeriodEnd DateTime?
   status           String // active | cancelled | past_due
@@ -612,6 +615,28 @@ model PortfolioAlertLog {
 // One row per subscription payment already applied to an account, keyed by the Paystack reference. The unique key
 // makes applying a payment idempotent even when the webhook and the return-page verify arrive at the same moment,
 // which matters now that a renewal adds time to the existing end date instead of overwriting it.
+// One row per Google Play subscription purchase token. Google is the source of truth for the state and expiry; the
+// row is re-synced on purchase, on Play's real-time notifications and by a cron (see PlayBillingService).
+model PlayPurchase {
+  purchaseToken String    @id
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  productId     String // nse_intermediary | nse_premium
+  basePlanId    String?
+  orderId       String?
+  tier          String // intermediary | premium
+  state         String // Google's subscriptionState, without the SUBSCRIPTION_STATE_ prefix
+  autoRenewing  Boolean   @default(false)
+  expiryTime    DateTime?
+  acknowledged  Boolean   @default(false)
+  linkedToken   String?
+  createdAt     DateTime  @default(now())
+  lastSyncedAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([state, lastSyncedAt])
+}
+
 model ProcessedPayment {
   reference String   @id
   userId    String

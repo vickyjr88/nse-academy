@@ -25,7 +25,7 @@ export default function TermsPage() {
       <main className="flex-grow pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-gray-600 leading-relaxed">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-gray-900">Terms of Service</h1>
-          <p className="text-sm text-gray-400 mb-8">Effective 13 November 2026</p>
+          <p className="text-sm text-gray-400 mb-8">Effective 15 November 2026</p>
 
           <p className="mb-4">
             These terms govern your use of the NSE Academy website (nseacademy.vitaldigitalmedia.net) and the NSE
@@ -65,9 +65,26 @@ export default function TermsPage() {
           <H2>Plans and payment</H2>
           <ul className="list-disc pl-6 space-y-2">
             <li>Some content is free. Paid plans (for example Intermediary and Premium) unlock more courses and tools, as described on the <Link href="/pricing" className="text-emerald-700 hover:underline">pricing page</Link>.</li>
-            <li>Paid plans are billed monthly in Kenyan shillings through our payment processor, Paystack, by M-Pesa or card.</li>
-            <li>You can cancel at any time from your account. Cancellation takes effect at the end of the period you have paid for, and you keep access until then.</li>
-            <li>We do not refund partial months. If you were charged in error, write to us within 14 days and we will put it right.</li>
+            <li>
+              On the website, a paid plan is paid for in advance for the period you choose (1, 3, 6 or 12 months) in Kenyan
+              shillings through our payment processor, Paystack, by M-Pesa or card. It does not renew by itself.
+            </li>
+            <li>
+              In the Android app, a paid plan is a subscription bought through Google Play. Google Play charges your Google
+              account at the price shown when you subscribe, and the subscription renews automatically for the same period
+              until you cancel it in Google Play (Payments &amp; subscriptions, then Subscriptions). Cancelling stops the next
+              renewal; you keep access until the end of the period you have paid for. Deleting the app or your NSE Academy
+              account does not cancel a Google Play subscription, so cancel it in Google Play first.
+            </li>
+            <li>
+              A plan works wherever you sign in with your account, on the website and in the app. If you pay for the same
+              plan in both places you are paying twice, so choose one.
+            </li>
+            <li>
+              We do not refund partial periods. If you were charged in error, write to us within 14 days and we will put
+              it right. For a subscription bought in the app, refunds are handled by Google Play under its refund policy, and
+              we will help where we can.
+            </li>
             <li>We may change prices or plan contents. A change does not affect a period you have already paid for, and we will tell you before it applies to your next one.</li>
             <li>Ebooks and other one-off purchases are for your personal use and are delivered as described at checkout.</li>
           </ul>

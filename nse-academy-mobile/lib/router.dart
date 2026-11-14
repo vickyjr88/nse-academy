@@ -11,6 +11,7 @@ import 'features/learn/course_screen.dart';
 import 'features/learn/learn_screen.dart';
 import 'features/learn/lesson_screen.dart';
 import 'data/models/member.dart';
+import 'features/billing/plans_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/profile/account_screen.dart';
 import 'features/profile/bookmarks_screen.dart';
@@ -75,6 +76,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/bookmarks', builder: (_, _) => const BookmarksScreen()),
       GoRoute(path: '/glossary', builder: (_, _) => const GlossaryScreen()),
       GoRoute(path: '/profile/account', builder: (_, _) => const AccountScreen()),
+      GoRoute(path: '/profile/plan', builder: (_, _) => const PlansScreen()),
       GoRoute(path: '/tools/profiler', builder: (_, _) => const ProfilerScreen()),
       GoRoute(path: '/tools/picks', builder: (_, _) => const PicksScreen()),
       GoRoute(path: '/tools/portfolio', builder: (_, _) => const PortfolioScreen()),

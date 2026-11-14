@@ -11,6 +11,8 @@ interface Subscription {
   tier: Tier;
   status: string;
   currentPeriodEnd?: string;
+  // "play" when the plan was bought in the Android app through Google Play, which then owns renewal and cancellation.
+  source?: string;
 }
 
 const TIER_LABEL: Record<Tier, string> = {
@@ -122,7 +124,8 @@ export default function BillingPage() {
   const daysLeft = periodEnd ? Math.max(0, Math.ceil((periodEnd.getTime() - now) / 86_400_000)) : 0;
 
   // Premium can extend Premium; Intermediary can extend itself or upgrade; everyone else can pick either plan.
-  const visiblePlans = UPGRADE_OPTIONS.filter(({ plan }) => !(isPremium && plan === "intermediary"));
+  const playManaged = (isPremium || isIntermediary) && sub?.source === "play";
+  const visiblePlans = playManaged ? [] : UPGRADE_OPTIONS.filter(({ plan }) => !(isPremium && plan === "intermediary"));
   const actionFor = (plan: "intermediary" | "premium") =>
     (isPremium && plan === "premium") || (isIntermediary && plan === "intermediary")
       ? "Extend"
@@ -164,6 +167,17 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {playManaged && (
+        <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 text-sm text-gray-600">
+          <p className="font-semibold text-gray-900 mb-1">Your plan is billed through Google Play</p>
+          <p>
+            You subscribed in the NSE Academy Android app, so Google Play renews it and is where you change or cancel it:
+            open the Play Store, then Payments &amp; subscriptions, then Subscriptions. Your plan works here on the website
+            too. If it ends, you can choose a plan on this page.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">

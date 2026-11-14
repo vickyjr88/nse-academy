@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode, Headers, UnauthorizedException, Req, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, HttpCode, Headers, UnauthorizedException, Req, Logger, Query } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
+import { PlayBillingService } from './play-billing.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -15,6 +16,7 @@ export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
   constructor(
     private readonly paymentsService: PaymentsService,
+    private readonly playBilling: PlayBillingService,
     private readonly adminNotifier: AdminNotifierService,
   ) {}
 
@@ -100,5 +102,35 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get current subscription status' })
   async getStatus(@Req() req) {
     return this.paymentsService.getSubscriptionStatus(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('payments/google/config')
+  @ApiOperation({ summary: 'Google Play Billing set-up for the signed-in member: whether it is on, the account id to attach to a purchase, and the product ids' })
+  googleConfig(@Req() req) {
+    return this.playBilling.appConfig(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('payments/google/verify')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify a Google Play subscription purchase token with Google and grant the plan' })
+  googleVerify(@Req() req, @Body() body: { purchaseToken?: string }) {
+    return this.playBilling.verify(req.user.id, body?.purchaseToken ?? '');
+  }
+
+  @Post('payments/google/notifications')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Google Play real-time developer notifications (Pub/Sub push); guarded by a shared token in the URL' })
+  async googleNotifications(@Query('token') token: string, @Body() body: any) {
+    if (!this.playBilling.checkNotificationToken(token)) throw new UnauthorizedException('Invalid notification token');
+    try {
+      return await this.playBilling.handleNotification(body);
+    } catch (err) {
+      this.logger.error(`Play notification failed: ${(err as Error).message}`);
+      throw err; // a non-2xx makes Pub/Sub redeliver
+    }
   }
 }

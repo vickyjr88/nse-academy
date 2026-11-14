@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <main className="flex-grow pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-gray-600 leading-relaxed">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-gray-900">Privacy Policy</h1>
-          <p className="text-sm text-gray-400 mb-8">Effective 14 November 2026</p>
+          <p className="text-sm text-gray-400 mb-8">Effective 15 November 2026</p>
 
           <p className="mb-4">
             This policy covers the NSE Academy website (nseacademy.vitaldigitalmedia.net) and the NSE Academy mobile app
@@ -47,7 +47,9 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong className="text-gray-800">Plan and payment status.</strong> Which plan you are on and its dates.
-              Card and mobile-money details are entered with our payment processor, Paystack, and never reach our servers.
+              On the website, card and mobile-money details are entered with our payment processor, Paystack, and never reach
+              our servers. In the Android app, payment is made through Google Play, which holds your payment details; we
+              receive only a purchase token and the plan, state and dates of the subscription, which we check with Google.
               We keep the reference and amount of each payment.
             </li>
             <li>
@@ -101,7 +103,7 @@ export default function PrivacyPage() {
             Only service providers that process data for us, and only what they need:
           </p>
           <ul className="list-disc pl-6 space-y-2">
-            <li>Paystack, to process payments.</li>
+            <li>Paystack, to process payments made on the website, and Google, whose Google Play service processes subscriptions bought in the Android app.</li>
             <li>Brevo, to deliver email. We keep a suppression list so we stop writing to addresses that bounce or unsubscribe.</li>
             <li>Our hosting provider, where the database and servers run.</li>
             <li>

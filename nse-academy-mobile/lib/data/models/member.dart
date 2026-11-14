@@ -3,6 +3,8 @@
 /// sensible default rather than an exception, so one odd record never blanks a whole screen.
 library;
 
+import 'course.dart';
+
 double _d(dynamic v, [double or = 0]) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) ?? or : or);
 double? _dn(dynamic v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
 int _i(dynamic v, [int or = 0]) => v is num ? v.toInt() : (v is String ? int.tryParse(v) ?? or : or);
@@ -611,5 +613,37 @@ class Account {
       tier: _s(j['effectiveTier'] ?? sub?['tier'], 'free'),
       renews: sub == null ? null : _tn(sub['currentPeriodEnd']),
     );
+  }
+}
+
+
+/// What the server knows about the member's plan: the tier they get (including a firm's licence), and where a paid
+/// period came from, so the app never offers to buy on top of time already paid for elsewhere.
+class PlanStatus {
+  const PlanStatus({required this.effective, required this.paidTier, required this.live, this.source = 'paystack', this.periodEnd});
+  final Tier effective;
+
+  /// The tier of the member's own paid subscription (Free when none or ended).
+  final Tier paidTier;
+
+  /// Whether that subscription is active and has not run out.
+  final bool live;
+  final String source;
+  final DateTime? periodEnd;
+
+  bool get viaPlay => live && source == 'play';
+
+  /// Paid and live, but not through Google Play: the website owns it.
+  bool get viaWeb => live && source != 'play';
+
+  /// Premium that comes from a firm's licence rather than the member's own subscription.
+  bool get viaOrganisation => effective != Tier.free && !live;
+
+  factory PlanStatus.fromJson(dynamic json, {DateTime? now}) {
+    final j = _map(json);
+    final end = _tn(j['currentPeriodEnd']);
+    final paid = Tier.parse(_sn(j['tier']));
+    final live = _s(j['status']) == 'active' && paid != Tier.free && end != null && end.isAfter(now ?? DateTime.now());
+    return PlanStatus(effective: Tier.parse(_sn(j['effectiveTier']) ?? _sn(j['tier'])), paidTier: live ? paid : Tier.free, live: live, source: _s(j['source'], 'paystack'), periodEnd: end);
   }
 }

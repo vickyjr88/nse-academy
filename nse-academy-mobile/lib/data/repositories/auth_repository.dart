@@ -71,6 +71,21 @@ class AuthRepository {
     return _session(token, (m['user'] as Map?)?.cast<String, dynamic>());
   }
 
+  /// Creates a free account (the same endpoint the website uses) and signs in. Paid plans are not sold in the app.
+  Future<Session> register({required String name, required String email, required String password, String? referralCode}) async {
+    final json = await _api.postJson(_uri('auth/register'), {
+      'name': name.trim(),
+      'email': email.trim().toLowerCase(),
+      'password': password,
+      if (referralCode != null && referralCode.trim().isNotEmpty) 'referralCode': referralCode.trim(),
+    });
+    final m = (json as Map).cast<String, dynamic>();
+    final token = m['access_token'] as String?;
+    if (token == null) throw ApiException('Your account was created, but sign-in did not return a session. Please sign in.');
+    await _tokens.write(token);
+    return _session(token, (m['user'] as Map?)?.cast<String, dynamic>());
+  }
+
   /// The saved session, if its token is still accepted. A rejected token is discarded.
   Future<Session?> restore() async {
     final token = await _tokens.read();
@@ -87,7 +102,8 @@ class AuthRepository {
 
   Future<Session> _session(String token, Map<String, dynamic>? user) async {
     final headers = {'Authorization': 'Bearer $token'};
-    final me = user ?? ((await _api.getJson(_uri('users/me'), headers: headers)) as Map).cast<String, dynamic>();
+    // Sign-in and sign-up answer with only the id and email, so read the profile for the name.
+    final me = (user != null && user['name'] != null) ? user : ((await _api.getJson(_uri('users/me'), headers: headers)) as Map).cast<String, dynamic>();
     Tier tier = Tier.free;
     try {
       final s = ((await _api.getJson(_uri('payments/status'), headers: headers)) as Map).cast<String, dynamic>();

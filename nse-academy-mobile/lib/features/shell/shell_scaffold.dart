@@ -18,7 +18,7 @@ const _tabs = [
   _Tab('Home', Icons.home_outlined, Icons.home_rounded),
   _Tab('Learn', Icons.menu_book_outlined, Icons.menu_book_rounded),
   _Tab('Stocks', Icons.show_chart_rounded, Icons.show_chart_rounded),
-  _Tab('Glossary', Icons.search_rounded, Icons.search_rounded),
+  _Tab('Tools', Icons.dashboard_customize_outlined, Icons.dashboard_customize_rounded),
   _Tab('Profile', Icons.person_outline_rounded, Icons.person_rounded),
 ];
 

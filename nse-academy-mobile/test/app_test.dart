@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:nse_academy/app.dart';
 import 'package:nse_academy/core/api_client.dart';
 import 'package:nse_academy/data/repositories/auth_repository.dart';
+import 'package:nse_academy/features/tools/tools_screen.dart';
 import 'package:nse_academy/state/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -139,7 +140,10 @@ void main() {
 
   testWidgets('the glossary hides malformed entries and opens a term with related terms', (tester) async {
     await _launch(tester, prefs: _onboarded);
-    await _tab(tester, 'Glossary');
+    await _tab(tester, 'Tools');
+    await tester.scrollUntilVisible(find.text('Glossary'), 200, scrollable: find.descendant(of: find.byType(ToolsScreen), matching: find.byType(Scrollable)).first);
+    await tester.tap(find.text('Glossary'));
+    await tester.pumpAndSettle();
     expect(find.text('Bear Market'), findsOneWidget);
     expect(find.text('(IPO)'), findsNothing);
     expect(find.text('(P/E)'), findsNothing);

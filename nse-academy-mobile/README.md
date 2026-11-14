@@ -97,3 +97,5 @@ Listing text, store graphics, the Play Console answers and a pre-submit checklis
   `python3 store/build_graphics.py` frames them and makes the 1024x500 feature graphic. Needs Chrome and ImageMagick.
 - **Fonts:** static Latin-subset cuts of the three OFL families were made from the Google Fonts variable files with fontTools
   (`instancer` + `subset`); the licences are next to them in `assets/fonts`.
+
+See [FEATURES.md](FEATURES.md) for what the app covers compared with the website, and which plan each feature needs.

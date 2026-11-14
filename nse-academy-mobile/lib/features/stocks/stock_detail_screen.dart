@@ -13,6 +13,7 @@ import '../../widgets/cards.dart';
 import '../../widgets/common.dart';
 import '../../widgets/price_chart.dart';
 import '../glossary/glossary_screen.dart';
+import 'stock_member_sections.dart';
 
 /// One company (design section 4.6): price, chart, key metrics, about, and glossary links.
 class StockDetailScreen extends ConsumerStatefulWidget {
@@ -73,6 +74,8 @@ class _StockDetailScreenState extends ConsumerState<StockDetailScreen> {
               Text(s.description!, style: AppText.bodySmall(c.textSecondary).copyWith(height: 1.55), maxLines: _expanded ? null : 5, overflow: _expanded ? null : TextOverflow.ellipsis),
               TextButton(style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft), onPressed: () => setState(() => _expanded = !_expanded), child: Text(_expanded ? 'Show less' : 'Read more', style: AppText.bodySmall(c.primary).copyWith(fontWeight: FontWeight.w600))),
             ],
+            const SizedBox(height: Gap.section),
+            MemberStockSections(ticker: ticker, price: s.price),
             const SizedBox(height: 8),
             _LearnAbout(),
             const SizedBox(height: 12),

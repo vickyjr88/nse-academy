@@ -117,6 +117,10 @@ class ProfileScreen extends ConsumerWidget {
               },
             ),
             const Divider(),
+            if (session != null) ...[
+              ListTile(leading: Icon(Icons.manage_accounts_rounded, color: c.primary), title: Text('My account', style: AppText.body(c.textPrimary)), subtitle: Text('Details, plan, email and referrals', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/profile/account')),
+              const Divider(),
+            ],
             ListTile(leading: Icon(Icons.info_outline_rounded, color: c.primary), title: Text('About NSE Academy', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => _about(context)),
             const Divider(),
             ListTile(leading: Icon(Icons.privacy_tip_outlined, color: c.primary), title: Text('Privacy policy', style: AppText.body(c.textPrimary)), trailing: const Icon(Icons.open_in_new_rounded, size: 18), onTap: () => launchUrl(Uri.parse('${AppConfig.siteBase}/privacy'), mode: LaunchMode.externalApplication)),

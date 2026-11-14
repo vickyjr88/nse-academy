@@ -18,8 +18,9 @@ SLIDES = [
     ("04-lesson", "Lessons in plain English", "Short chapters you can finish on a commute. Progress is saved.", False),
     ("05-stocks", "Every listed company, one list", "See who is up or down, filter by sector, search by name.", False),
     ("06-stock", "Prices, charts, key metrics", "Delayed NSE prices with charts from one week to one year.", False),
-    ("07-glossary", "Jargon, decoded", "A searchable glossary of the terms investors actually use.", False),
-    ("08-home-dark", "Easy on the eyes", "Light or dark, whichever suits the hour.", True),
+    ("09-tools", "Tools beyond the reading", "Investor profile, portfolio, alerts, research and calculators.", False),
+    ("10-profile", "Find your investor type", "A 10-question quiz, then NSE stocks that fit you.", False),
+    ("11-portfolio", "Track what you own", "Holdings, gains and dividends at the latest prices. Sample data shown.", False),
 ]
 
 FONT_CSS = """
@@ -79,7 +80,7 @@ p{{margin-top:18px;font:400 21px/1.38 IN;opacity:.88}}
 </style><div class=glow></div>
 <div class=brand>{MARK.format(s=38)}<span>NSE Academy</span></div>
 <div class=txt><h1>Learn the NSE. Invest with confidence.</h1>
-<p>Courses, stock prices and charts, and a glossary of investing terms.</p></div>
+<p>Courses, NSE prices, your investor profile and a portfolio tracker.</p></div>
 <div class=chip>Made for Kenyan investors</div>
 {ph(b, 560, 70, 190, 7, 1)}{ph(a, 700, 40, 210, -3, 3)}{ph(c, 850, 78, 190, 8, 2)}'''
 

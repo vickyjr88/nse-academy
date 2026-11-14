@@ -6,6 +6,7 @@
 // The app runs against recorded copies of the live public API/CMS responses (never the network from inside the test).
 // A request with no recording is logged to $LIVE_CACHE/_misses.txt as "<file>\t<url>"; tool/fetch_live.py downloads those
 // and the test is run again. PNGs land in store/screens/raw.
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -42,10 +43,43 @@ Future<http.Response> _serve(http.Request r) async {
   return http.Response('{"message":"not recorded"}', 404);
 }
 
+
+// ---- a sample Premium member, for the screenshots of the signed-in features (clearly invented numbers)
+
+http.Response _j(Object o) => http.Response(jsonEncode(o), 200, headers: {'content-type': 'application/json; charset=utf-8'});
+
+({String t, String n, int q, double cost, double px}) _lot(String t, String n, int q, double cost, double px) => (t: t, n: n, q: q, cost: cost, px: px);
+final _book = [_lot('SCOM', 'Safaricom PLC', 1200, 17.40, 28.50), _lot('EQTY', 'Equity Group Holdings', 400, 44.00, 58.25), _lot('KCB', 'KCB Group', 350, 38.50, 41.00), _lot('EABL', 'East African Breweries', 60, 142.00, 168.00), _lot('KPLC', 'Kenya Power & Lighting', 2000, 1.95, 2.60)];
+
+Future<http.Response> _member(http.Request r) async {
+  if (r.headers['Authorization'] != 'Bearer shot') return _serve(r);
+  final p = r.url.path;
+  final value = _book.fold<double>(0, (a, x) => a + x.q * x.px);
+  final cost = _book.fold<double>(0, (a, x) => a + x.q * x.cost);
+  if (p == '/users/me') {
+    return _j({'id': 'u1', 'email': 'sample@example.com', 'name': 'Wanjiru Kamau', 'effectiveTier': 'premium', 'subscription': {'tier': 'premium', 'currentPeriodEnd': '2027-01-12T00:00:00.000Z'}, 'investorProfile': {'type': 'dividend', 'riskScore': 40, 'horizonYears': 5, 'capitalRange': '100k-500k', 'isPublic': false}});
+  }
+  if (p == '/payments/status') return _j({'effectiveTier': 'premium', 'tier': 'premium'});
+  if (p == '/notifications/unread-count') return _j({'count': 2});
+  if (p == '/journal/portfolio') {
+    return _j({
+      'positions': [],
+      'consolidated': [for (final x in _book) {'ticker': x.t, 'companyName': x.n, 'quantity': x.q, 'avgCost': x.cost, 'costEstimated': false, 'costBasisKes': x.q * x.cost, 'currentPrice': x.px, 'marketValueKes': x.q * x.px, 'unrealizedGainKes': x.q * (x.px - x.cost)}],
+      'totalCostBasisKes': cost,
+      'totalMarketValueKes': value,
+      'totalUnrealizedGainKes': value - cost,
+    });
+  }
+  if (p == '/portfolio-watch') {
+    return _j({'enabled': true, 'result': {'valueKes': value, 'dayChangeKes': 1430.0, 'dayChangePct': 1.67}, 'fresh': [{'kind': 'TAKE_PROFIT', 'ticker': 'SCOM', 'key': 'a', 'text': 'SCOM is 64% above what you paid. Consider whether to take some profit.'}, {'kind': 'CONCENTRATION', 'ticker': 'SCOM', 'key': 'b', 'text': 'SCOM is 39% of your portfolio.'}]});
+  }
+  return http.Response('{"message":"not found"}', 404);
+}
+
 const _w = 1080.0, _h = 1920.0, _dpr = 2.75;
 final _key = GlobalKey();
 
-Future<void> _launch(WidgetTester tester, {bool dark = false, String? goTo}) async {
+Future<void> _launch(WidgetTester tester, {bool dark = false, String? goTo, bool member = false}) async {
   debugDisableShadows = false; // flutter_test paints shadows as solid black unless told otherwise (reset in _shot)
   SharedPreferences.setMockInitialValues({
     'flutter.settings': '{"onboarded":true,"level":"basics","interests":["analysis"],"theme":"${dark ? 'dark' : 'light'}"}',
@@ -63,8 +97,8 @@ Future<void> _launch(WidgetTester tester, {bool dark = false, String? goTo}) asy
       retry: (_, _) => null,
       overrides: [
         sharedPrefsProvider.overrideWithValue(sp),
-        apiClientProvider.overrideWithValue(ApiClient(client: MockClient(_serve))),
-        tokenStoreProvider.overrideWithValue(MemoryTokenStore()),
+        apiClientProvider.overrideWithValue(ApiClient(client: MockClient(member ? _member : _serve))),
+        tokenStoreProvider.overrideWithValue(member ? (MemoryTokenStore()..write('shot')) : MemoryTokenStore()),
       ],
       child: const NseAcademyApp(),
     ),
@@ -148,5 +182,17 @@ void main() {
   testWidgets('home dark', (t) async {
     await _launch(t, dark: true);
     await _shot(t, '08-home-dark');
+  });
+  testWidgets('tools', (t) async {
+    await _launch(t, goTo: '/tools', member: true);
+    await _shot(t, '09-tools');
+  });
+  testWidgets('investor profile', (t) async {
+    await _launch(t, goTo: '/tools/profiler', member: true);
+    await _shot(t, '10-profile');
+  });
+  testWidgets('portfolio', (t) async {
+    await _launch(t, goTo: '/tools/portfolio', member: true);
+    await _shot(t, '11-portfolio');
   });
 }

@@ -12,11 +12,13 @@ import '../data/models/article.dart';
 import '../data/models/course.dart';
 import '../data/models/glossary_term.dart';
 import '../data/models/market_report.dart';
+import '../data/models/member.dart';
 import '../data/models/stock.dart';
 import '../data/quiz_bank.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/content_repository.dart';
 import '../data/repositories/market_repository.dart';
+import '../data/repositories/member_repository.dart';
 
 // ---- plumbing (overridden in main() and in tests)
 
@@ -26,6 +28,8 @@ final jsonCacheProvider = Provider<JsonCache>((ref) => JsonCache(ref.watch(share
 final tokenStoreProvider = Provider<TokenStore>((ref) => const SecureTokenStore());
 final contentRepositoryProvider = Provider<ContentRepository>((ref) => ContentRepository(ref.watch(apiClientProvider), ref.watch(jsonCacheProvider)));
 final marketRepositoryProvider = Provider<MarketRepository>((ref) => MarketRepository(ref.watch(apiClientProvider), ref.watch(jsonCacheProvider)));
+final memberRepositoryProvider = Provider<MemberRepository>((ref) => MemberRepository(ref.watch(apiClientProvider), ref.watch(tokenStoreProvider)));
+final toolsRepositoryProvider = Provider<ToolsRepository>((ref) => ToolsRepository(ref.watch(apiClientProvider), ref.watch(jsonCacheProvider)));
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(ref.watch(apiClientProvider), ref.watch(tokenStoreProvider)));
 
 // ---- settings
@@ -155,6 +159,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = AsyncData(AuthState(session: s));
   }
 
+  Future<void> register({required String name, required String email, required String password, String? referralCode}) async {
+    final s = await ref.read(authRepositoryProvider).register(name: name, email: email, password: password, referralCode: referralCode);
+    state = AsyncData(AuthState(session: s));
+  }
+
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
     state = const AsyncData(AuthState());
@@ -208,3 +217,61 @@ Future<void> refreshAll(WidgetRef ref) async {
     ..invalidate(reportProvider)
     ..invalidate(stocksProvider);
 }
+
+// ---- member features (signed in; the server enforces the plan)
+
+/// Changes when a different member signs in or out, so account data is never shown to the wrong person.
+final _memberIdProvider = Provider<String?>((ref) => ref.watch(authProvider.select((a) => a.value?.session?.user.id)));
+
+/// A member-only fetch: waits for the account, refetches on every visit, and is dropped on sign-out.
+FutureProvider<T> _member<T>(Future<T> Function(MemberRepository r) load) => FutureProvider.autoDispose<T>((ref) {
+      ref.watch(_memberIdProvider);
+      return load(ref.watch(memberRepositoryProvider));
+    });
+
+final accountProvider = _member((r) => r.account());
+final digestProvider = _member((r) => r.digestEnabled());
+final referralsProvider = _member((r) => r.referrals());
+final quizProvider = FutureProvider<List<ProfilerQuestion>>((ref) => ref.watch(memberRepositoryProvider).quizQuestions());
+final recommendationsProvider = _member((r) => r.recommendations());
+final companyFitProvider = FutureProvider.autoDispose.family<CompanyFit, String>((ref, ticker) {
+  ref.watch(_memberIdProvider);
+  return ref.watch(memberRepositoryProvider).companyFit(ticker);
+});
+
+final portfolioProvider = _member((r) => r.portfolio());
+final tradesProvider = _member((r) => r.trades());
+final realizedProvider = _member((r) => r.realizedGains());
+final dividendsProvider = _member((r) => r.dividends());
+final yieldOnCostProvider = _member((r) => r.yieldOnCost());
+final allocationProvider = _member((r) => r.allocation());
+final rebalanceProvider = FutureProvider.autoDispose.family<RebalancePlan, double>((ref, cash) {
+  ref.watch(_memberIdProvider);
+  return ref.watch(memberRepositoryProvider).rebalance(cash);
+});
+final comparisonProvider = FutureProvider.autoDispose.family<ModelComparison, String>((ref, slug) {
+  ref.watch(_memberIdProvider);
+  return ref.watch(memberRepositoryProvider).compareModel(slug);
+});
+final alertsProvider = _member((r) => r.alerts());
+final notificationsProvider = _member((r) => r.notifications());
+final watchProvider = _member((r) => r.watch());
+
+/// Brokers are public and cached; the trade form and the broker list both use them.
+final brokersProvider = FutureProvider<Cached<List<Broker>>>((ref) => ref.watch(toolsRepositoryProvider).brokers());
+final researchListProvider = FutureProvider.family<Cached<List<ResearchSummary>>, String?>((ref, kind) => ref.watch(toolsRepositoryProvider).research(kind: kind));
+final researchNoteProvider = FutureProvider.family<Cached<ResearchNote>, String>((ref, slug) => ref.watch(toolsRepositoryProvider).researchNote(slug));
+final modelsProvider = FutureProvider<Cached<ModelList>>((ref) => ref.watch(toolsRepositoryProvider).models());
+final modelProvider = FutureProvider.family<Cached<ModelDetail>, String>((ref, slug) => ref.watch(toolsRepositoryProvider).model(slug));
+
+/// Unread notification count for the badge. 0 when signed out or below the plan that has alerts.
+final unreadProvider = FutureProvider.autoDispose<int>((ref) async {
+  final tier = ref.watch(tierProvider);
+  ref.watch(_memberIdProvider);
+  if (!tier.atLeast(Tier.intermediary)) return 0;
+  try {
+    return await ref.watch(memberRepositoryProvider).unreadCount();
+  } catch (_) {
+    return 0;
+  }
+});

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -10,6 +12,8 @@ import 'package:nse_academy/core/api_client.dart';
 import 'package:nse_academy/data/models/member.dart';
 import 'package:nse_academy/data/repositories/auth_repository.dart';
 import 'package:nse_academy/features/profile/account_screen.dart';
+import 'package:nse_academy/features/push/push_controller.dart';
+import 'package:nse_academy/features/push/push_gateway.dart';
 import 'package:nse_academy/features/tools/profiler_screen.dart';
 import 'package:nse_academy/features/tools/tools_screen.dart';
 import 'package:nse_academy/state/providers.dart';
@@ -44,8 +48,62 @@ final _portfolio = {
   'totalUnrealizedGainKes': 850.0,
 };
 
+class FakePush implements PushGateway {
+  FakePush({this.isSupported = true, this.allow = true});
+  final bool isSupported;
+  final bool allow;
+  final taps = StreamController<String>.broadcast();
+  bool forgot = false;
+  @override
+  Future<bool> get supported async => isSupported;
+  @override
+  Future<bool> requestPermission() async => allow;
+  @override
+  Future<String?> token() async => 'fcm-token-0123456789abcdef0123456789';
+  @override
+  Future<void> forgetToken() async => forgot = true;
+  @override
+  Stream<String> get tokenRefreshed => const Stream.empty();
+  @override
+  Stream<String> get tapped => taps.stream;
+  @override
+  Future<String?> launchedFrom() async => null;
+  @override
+  Stream<void> get arrived => const Stream.empty();
+}
+
+/// What the fake adviser endpoints remember between calls.
+class _Advisers {
+  String? connection; // null | pending | accepted | declined
+  bool adviserProfile = false;
+  String approval = 'approved';
+  int remaining = 1;
+  final messages = <Map<String, dynamic>>[];
+  final questions = <Map<String, dynamic>>[];
+  final answers = <String>[];
+}
+
+final _amina = {'id': 'a1', 'headline': 'Certified financial planner', 'bio': 'I help Kenyans build dividend portfolios.', 'specialties': ['Dividend investing'], 'credentials': 'CFP', 'user': {'name': 'Amina Otieno'}};
+
+/// What the fake organisation endpoints answer: `me` is the member's own row, null for no organisation.
+class _Org {
+  _Org(this.me);
+  Map<String, dynamic>? me;
+  final invited = <String>[];
+  final accepted = <String>[];
+  final removed = <String>[];
+}
+
+Map<String, dynamic> _orgRow({String role = 'member', bool accepted = true, String? token}) => {
+      'id': 'om1',
+      'role': role,
+      'inviteAccepted': accepted,
+      'inviteToken': token,
+      'org': {'name': 'Mwalimu SACCO', 'license': {'tier': 'premium', 'seats': 5, 'seatsUsed': 2, 'status': 'active', 'currentPeriodEnd': '2027-06-01T00:00:00.000Z'}},
+    };
+
 /// A fake of the API and CMS for a member on [tier], with the calls the member screens make.
-Future<http.Response> Function(http.Request) _server({String tier = 'premium', List<http.Request>? seen, bool hasProfile = false}) {
+Future<http.Response> Function(http.Request) _server({String tier = 'premium', List<http.Request>? seen, bool hasProfile = false, _Advisers? adv, _Org? org}) {
   return (r) async {
     seen?.add(r);
     final p = r.url.path;
@@ -93,13 +151,70 @@ Future<http.Response> Function(http.Request) _server({String tier = 'premium', L
     if (p == '/brokers') return _json([{'id': 'b1', 'name': 'Faida Investment Bank', 'feePercent': 1.8, 'cdsRequired': true}]);
     if (p == '/public/research') return _json([]);
     if (p == '/public/model-portfolios') return _json({'note': 'Examples only.', 'data': []});
+    if (p == '/financial-advisors') return _json({'data': [_amina], 'total': 1, 'page': 1, 'limit': 20, 'totalPages': 1});
+    if (p == '/financial-advisors/a1') return _json(_amina);
+    if (adv != null && p.startsWith('/financial-advisor/')) {
+      if (!ok) return _json({'message': 'Unauthorized'}, 401);
+      if (p == '/financial-advisor/connections') return _json([if (adv.connection != null) {'id': 'c1', 'status': adv.connection, 'source': 'request', 'advisor': _amina}]);
+      if (p == '/financial-advisor/connect/a1') {
+        adv.connection = 'pending';
+        return _json({'id': 'c1', 'status': 'pending'}, 201);
+      }
+      if (p == '/financial-advisor/queries/allowance') return _json({'tier': tier, 'limit': 1, 'used': 1 - adv.remaining, 'remaining': adv.remaining, 'unlimited': false, 'resetsOn': '2026-12-01T00:00:00.000Z'});
+      if (p == '/financial-advisor/queries' && r.method == 'POST') {
+        final body = jsonDecode(r.body) as Map<String, dynamic>;
+        adv.remaining = 0;
+        adv.messages.add({'id': 'm1', 'senderRole': 'client', 'body': body['question'], 'createdAt': '2026-11-14T09:00:00.000Z'});
+        adv.questions.add({'id': 'q1', 'subject': body['question'], 'status': 'open', 'updatedAt': '2026-11-14T09:00:00.000Z', 'advisor': _amina, '_count': {'messages': 1}});
+        return _json({'id': 'q1'}, 201);
+      }
+      if (p == '/financial-advisor/queries/mine') return _json(adv.questions);
+      if (p == '/financial-advisor/queries/q1' && r.method == 'GET') return _json({'id': 'q1', 'subject': 'q', 'advisor': _amina, 'user': {'id': 'u1', 'name': 'Jane Doe'}, 'messages': adv.messages});
+      if (p == '/financial-advisor/queries/q1/reply') {
+        adv.messages.add({'id': 'm${adv.messages.length + 1}', 'senderRole': 'client', 'body': (jsonDecode(r.body) as Map)['body'], 'createdAt': '2026-11-14T10:00:00.000Z'});
+        return _json({'id': 'q1'}, 201);
+      }
+      if (p == '/financial-advisor/insights/feed') return _json({'data': [{'id': 'i1', 'title': 'Why I like Safaricom', 'body': 'Strong cash flow and a growing dividend.', 'tickers': ['SCOM'], 'createdAt': '2026-11-13T09:00:00.000Z', 'advisor': _amina}], 'total': 1, 'page': 1, 'limit': 50, 'totalPages': 1});
+      if (p == '/financial-advisor/me') return adv.adviserProfile ? _json({'id': 'a9', 'headline': 'Me', 'approvalStatus': adv.approval, 'isActive': true}) : http.Response('', 200);
+      if (p == '/financial-advisor/clients') return _json([{'id': 'r1', 'status': 'pending', 'requestedAt': '2026-11-12T09:00:00.000Z', 'user': {'id': 'u7', 'name': 'Peter Kamau', 'email': 'p@example.com'}}]);
+      if (p == '/financial-advisor/queries' && r.method == 'GET') return _json([{'id': 'q5', 'subject': 'Should I buy KCB?', 'status': 'open', 'updatedAt': '2026-11-14T08:00:00.000Z', 'user': {'id': 'u7', 'name': 'Peter Kamau'}, '_count': {'messages': 1}}]);
+      if (p == '/financial-advisor/insights') return _json(<Object>[]);
+    }
+    if (org != null && p.startsWith('/corporate/')) {
+      if (!ok) return _json({'message': 'Unauthorized'}, 401);
+      if (p == '/corporate/me') return org.me == null ? http.Response('', 200) : _json(org.me!);
+      if (p == '/corporate/invite/accept') {
+        org.accepted.add((jsonDecode(r.body) as Map)['token'] as String);
+        org.me = _orgRow();
+        return _json({'success': true}, 201);
+      }
+      if (p == '/corporate/dashboard') {
+        return _json({
+          'name': 'Mwalimu SACCO',
+          'license': (_orgRow()['org'] as Map)['license'],
+          'members': [
+            {'id': 'om1', 'role': 'admin', 'inviteAccepted': true, 'user': {'name': 'Jane Doe', 'email': 'jane@example.com'}},
+            {'id': 'om2', 'role': 'member', 'inviteAccepted': false, 'user': {'name': 'Peter Kamau', 'email': 'peter@example.com'}},
+          ],
+        });
+      }
+      if (p == '/corporate/invite') {
+        org.invited.add((jsonDecode(r.body) as Map)['email'] as String);
+        return _json({'inviteLink': 'x'}, 201);
+      }
+      if (p == '/corporate/members/om2' && r.method == 'DELETE') {
+        org.removed.add('om2');
+        return _json({'success': true});
+      }
+    }
+    if (p == '/devices') return !ok ? _json({'message': 'Unauthorized'}, 401) : _json({'registered': r.method == 'POST'});
     if (p == '/digest') return _json({'enabled': false});
     if (p == '/referrals/stats') return _json({'referralCode': 'JANE123', 'totalReferrals': 3, 'completedReferrals': 1, 'pendingReferrals': 2, 'freeMonthsEarned': 1});
     return http.Response('{"message":"not found"}', 404);
   };
 }
 
-Future<void> _launch(WidgetTester tester, {Future<http.Response> Function(http.Request)? server, bool signedIn = false}) async {
+Future<void> _launch(WidgetTester tester, {Future<http.Response> Function(http.Request)? server, bool signedIn = false, List<Override> overrides = const []}) async {
   SharedPreferences.setMockInitialValues(_onboarded);
   final sp = await SharedPreferences.getInstance();
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -113,6 +228,7 @@ Future<void> _launch(WidgetTester tester, {Future<http.Response> Function(http.R
       sharedPrefsProvider.overrideWithValue(sp),
       apiClientProvider.overrideWithValue(ApiClient(client: MockClient(server ?? _server()))),
       tokenStoreProvider.overrideWithValue(tokens),
+      ...overrides,
     ],
     child: const NseAcademyApp(),
   ));
@@ -303,6 +419,229 @@ void main() {
       expect(a.value, 12.5);
       expect(a.rows.single.ticker, 'X');
       expect(RebalancePlan.fromJson(null).trades, isEmpty);
+    });
+  });
+
+  group('Financial advisers', () {
+    testWidgets('anyone can browse the directory and read a profile; connecting asks them to sign in', (tester) async {
+      await _launch(tester, server: _server(tier: 'free', adv: _Advisers()));
+      await _openTool(tester, 'Financial advisers');
+      expect(find.text('Amina Otieno'), findsOneWidget);
+      expect(find.textContaining('does not give investment advice'), findsOneWidget);
+      await tester.tap(find.text('Amina Otieno'));
+      await tester.pumpAndSettle();
+      expect(find.text('Certified financial planner'), findsOneWidget);
+      expect(find.text('Dividend investing'), findsOneWidget);
+      expect(find.text('Sign in to connect'), findsOneWidget);
+    });
+
+    testWidgets('a member connects, then (once accepted) asks a question and replies in the thread', (tester) async {
+      final adv = _Advisers();
+      await _launch(tester, server: _server(tier: 'free', adv: adv), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      await tester.tap(find.text('Amina Otieno'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Request to connect'));
+      await tester.pumpAndSettle();
+      expect(adv.connection, 'pending');
+      expect(find.textContaining('has not answered yet'), findsOneWidget);
+
+      adv.connection = 'accepted';
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Amina Otieno'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ask a question'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('1 of 1 question left this month on your free plan'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'Is SCOM a good dividend stock?');
+      await tester.tap(find.text('Send question'));
+      await tester.pumpAndSettle();
+      expect(find.text('Is SCOM a good dividend stock?'), findsOneWidget); // now in the conversation
+      await tester.pump(const Duration(seconds: 6)); // let any snack bar go
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Thank you, and what about KCB?');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(adv.messages.map((m) => m['body']), ['Is SCOM a good dividend stock?', 'Thank you, and what about KCB?']); // the server has both
+      expect(find.text('Thank you, and what about KCB?'), findsOneWidget); // and the thread shows the reply, not the draft
+      expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, isEmpty);
+    });
+
+    testWidgets('with no questions left the Send button is off and the sheet says so', (tester) async {
+      final adv = _Advisers()
+        ..connection = 'accepted'
+        ..remaining = 0;
+      await _launch(tester, server: _server(tier: 'free', adv: adv), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      await tester.tap(find.text('Amina Otieno'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ask a question'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('0 of 1 question left'), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Send question')).onPressed, isNull);
+    });
+
+    testWidgets('insights from connected advisers are listed', (tester) async {
+      await _launch(tester, server: _server(tier: 'free', adv: _Advisers()), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      await tester.tap(find.text('Insights'));
+      await tester.pumpAndSettle();
+      expect(find.text('Why I like Safaricom'), findsOneWidget);
+      expect(find.text('SCOM'), findsOneWidget);
+    });
+
+    testWidgets('a member who is not an adviser sees no workspace', (tester) async {
+      await _launch(tester, server: _server(tier: 'free', adv: _Advisers()), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      expect(find.text('My questions'), findsOneWidget);
+      expect(find.text('Adviser workspace'), findsNothing);
+    });
+
+    testWidgets('an approved adviser gets the workspace with requests and client questions', (tester) async {
+      final adv = _Advisers()..adviserProfile = true;
+      await _launch(tester, server: _server(tier: 'free', adv: adv), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      await tester.tap(find.text('Adviser workspace'));
+      await tester.pumpAndSettle();
+      expect(find.text('Peter Kamau'), findsOneWidget);
+      await tester.tap(find.text('Questions'));
+      await tester.pumpAndSettle();
+      expect(find.text('Should I buy KCB?'), findsOneWidget);
+      expect(find.text('Needs answer'), findsOneWidget);
+    });
+
+    testWidgets('an adviser whose profile is not approved yet is told to wait', (tester) async {
+      final adv = _Advisers()
+        ..adviserProfile = true
+        ..approval = 'pending';
+      await _launch(tester, server: _server(tier: 'free', adv: adv), signedIn: true);
+      await _openTool(tester, 'Financial advisers');
+      await tester.tap(find.text('Adviser workspace'));
+      await tester.pumpAndSettle();
+      expect(find.text('Waiting for approval'), findsOneWidget);
+    });
+  });
+
+  group('My organisation', () {
+    Future<void> open(WidgetTester tester, _Org org) async {
+      await _launch(tester, server: _server(tier: 'free', org: org), signedIn: true);
+      await tester.tap(find.descendant(of: find.byType(InkResponse), matching: find.text('Profile')).last);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('My organisation'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a member with no organisation is told how one is set up', (tester) async {
+      await open(tester, _Org(null));
+      expect(find.text('No organisation'), findsOneWidget);
+    });
+
+    testWidgets('an invitation can be accepted, and then shows the seat', (tester) async {
+      final org = _Org(_orgRow(accepted: false, token: 'tok-123'));
+      await open(tester, org);
+      expect(find.text('Mwalimu SACCO invited you'), findsOneWidget);
+      await tester.tap(find.text('Accept invitation'));
+      await tester.pumpAndSettle();
+      expect(org.accepted, ['tok-123']);
+      expect(find.textContaining('Premium plan through your organisation until'), findsOneWidget);
+    });
+
+    testWidgets('an admin sees seats and people, can invite by email and remove a pending person', (tester) async {
+      final org = _Org(_orgRow(role: 'admin'));
+      await open(tester, org);
+      expect(find.text('2 of 5'), findsOneWidget);
+      expect(find.text('Peter Kamau'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Email'), 'amina@example.com');
+      await tester.tap(find.text('Send invitation'));
+      await tester.pumpAndSettle();
+      expect(org.invited, ['amina@example.com']);
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.pumpAndSettle();
+      expect(org.removed, ['om2']);
+    });
+  });
+
+  group('Push notifications', () {
+    Future<void> openAccount(WidgetTester tester) async {
+      await tester.tap(find.descendant(of: find.byType(InkResponse), matching: find.text('Profile')).last);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('My account'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('where push cannot work the account page has no notification switch', (tester) async {
+      await _launch(tester, server: _server(tier: 'free'), signedIn: true, overrides: [pushGatewayProvider.overrideWithValue(FakePush(isSupported: false))]);
+      await openAccount(tester);
+      expect(find.text('Notifications on this phone'), findsNothing);
+    });
+
+    testWidgets('turning notifications on registers this phone, and off removes it', (tester) async {
+      final seen = <http.Request>[];
+      final gw = FakePush();
+      await _launch(tester, server: _server(tier: 'free', seen: seen), signedIn: true, overrides: [pushGatewayProvider.overrideWithValue(gw)]);
+      await openAccount(tester);
+      await tester.scrollUntilVisible(find.text('Notifications on this phone'), 200, scrollable: find.descendant(of: find.byType(AccountScreen), matching: find.byType(Scrollable)).first);
+      await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Notifications on this phone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notifications on this phone'));
+      await tester.pumpAndSettle();
+      final reg = seen.firstWhere((r) => r.url.path == '/devices' && r.method == 'POST');
+      expect(jsonDecode(reg.body), {'token': 'fcm-token-0123456789abcdef0123456789', 'platform': 'android'});
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notifications on this phone'));
+      await tester.pumpAndSettle();
+      final del = seen.firstWhere((r) => r.url.path == '/devices' && r.method == 'DELETE');
+      expect(del.url.queryParameters['token'], 'fcm-token-0123456789abcdef0123456789');
+      expect(gw.forgot, isTrue);
+    });
+
+    testWidgets('if the member refuses the permission nothing is registered and they are told how to allow it', (tester) async {
+      final seen = <http.Request>[];
+      await _launch(tester, server: _server(tier: 'free', seen: seen), signedIn: true, overrides: [pushGatewayProvider.overrideWithValue(FakePush(allow: false))]);
+      await openAccount(tester);
+      await tester.scrollUntilVisible(find.text('Notifications on this phone'), 200, scrollable: find.descendant(of: find.byType(AccountScreen), matching: find.byType(Scrollable)).first);
+      await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Notifications on this phone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notifications on this phone'));
+      await tester.pumpAndSettle();
+      expect(seen.where((r) => r.url.path == '/devices'), isEmpty);
+      expect(find.textContaining('blocked'), findsOneWidget);
+    });
+
+    testWidgets('tapping a notification opens the screen it names', (tester) async {
+      final gw = FakePush();
+      await _launch(tester, server: _server(tier: 'free', adv: _Advisers()), signedIn: true, overrides: [pushGatewayProvider.overrideWithValue(gw)]);
+      gw.taps.add('/advisers/insights');
+      await tester.pumpAndSettle();
+      expect(find.text('Adviser insights'), findsOneWidget);
+      expect(find.text('Why I like Safaricom'), findsOneWidget);
+    });
+
+    testWidgets('a notification that names a screen outside the member area is ignored', (tester) async {
+      final gw = FakePush();
+      await _launch(tester, server: _server(tier: 'free'), signedIn: true, overrides: [pushGatewayProvider.overrideWithValue(gw)]);
+      gw.taps.add('/signin');
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in'), findsNothing);
+    });
+
+    test('only the app\'s own member screens are allowed as a notification target', () {
+      for (final ok in ['/tools/alerts', '/tools/portfolio', '/advisers', '/advisers/questions/q1', '/profile/account']) {
+        expect(isAllowedPushRoute(ok), isTrue, reason: ok);
+      }
+      for (final bad in ['', '/signin', '/onboarding', 'https://evil.example', '//evil', '/toolsx']) {
+        expect(isAllowedPushRoute(bad), isFalse, reason: bad);
+      }
     });
   });
 }

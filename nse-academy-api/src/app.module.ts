@@ -39,6 +39,7 @@ import { ActivityModule } from './activity/activity.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { PushModule } from './push/push.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { BrevoWebhookModule } from './brevo-webhook/brevo-webhook.module';
@@ -91,6 +92,7 @@ import { AppService } from './app.service';
     AnalyticsModule,
     BrokersModule,
     AlertsModule,
+    PushModule,
     BroadcastModule,
     LifecycleModule,
     BrevoWebhookModule,

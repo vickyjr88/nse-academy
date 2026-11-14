@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config.dart';
 import '../billing/billing_gateway.dart';
+import '../push/push_controller.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
@@ -120,6 +121,7 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(),
             if (session != null) ...[
               if (PlayBillingGateway.supported) ListTile(leading: Icon(Icons.workspace_premium_rounded, color: c.primary), title: Text('Plans', style: AppText.body(c.textPrimary)), subtitle: Text('Subscribe or manage your plan', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/profile/plan')),
+              ListTile(leading: Icon(Icons.apartment_rounded, color: c.primary), title: Text('My organisation', style: AppText.body(c.textPrimary)), subtitle: Text('A seat from your SACCO or company', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/profile/organisation')),
               ListTile(leading: Icon(Icons.manage_accounts_rounded, color: c.primary), title: Text('My account', style: AppText.body(c.textPrimary)), subtitle: Text('Details, plan, email and referrals', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/profile/account')),
               const Divider(),
             ],
@@ -136,7 +138,10 @@ class ProfileScreen extends ConsumerWidget {
             if (session == null)
               ListTile(leading: Icon(Icons.login_rounded, color: c.primary), title: Text('Sign in', style: AppText.body(c.textPrimary)), subtitle: Text('Unlock the courses on your plan', style: AppText.caption(c.textSecondary)), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.push('/signin'))
             else
-              ListTile(leading: Icon(Icons.logout_rounded, color: c.loss), title: Text('Sign out', style: AppText.body(c.textPrimary)), subtitle: Text(session.user.email, style: AppText.caption(c.textSecondary)), onTap: () => ref.read(authProvider.notifier).signOut()),
+              ListTile(leading: Icon(Icons.logout_rounded, color: c.loss), title: Text('Sign out', style: AppText.body(c.textPrimary)), subtitle: Text(session.user.email, style: AppText.caption(c.textSecondary)), onTap: () async {
+                await ref.read(pushProvider.notifier).onSigningOut(); // while the token still works
+                await ref.read(authProvider.notifier).signOut();
+              }),
           ]),
         ),
         const SizedBox(height: 16),

@@ -11,6 +11,7 @@ import '../../data/models/member.dart';
 import '../../state/providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/member_widgets.dart';
+import '../push/push_controller.dart';
 
 /// The signed-in member's own details. Free for every account. Plan and renewal date are shown for information only:
 /// the app never sells or links to buying a plan (see AppConfig.webUpgradeLinks).
@@ -70,6 +71,12 @@ class _BodyState extends ConsumerState<_Body> {
     final c = context.c;
     final a = widget.account;
     final tier = Tier.parse(a.tier);
+    ref.listen(pushProvider.select((p) => p.message), (_, m) {
+      if (m != null && m.isNotEmpty) {
+        showMessage(context, m);
+        ref.read(pushProvider.notifier).clearMessage();
+      }
+    });
     final digest = ref.watch(digestProvider);
     final refs = ref.watch(referralsProvider);
     return ListView(padding: const EdgeInsets.fromLTRB(Gap.screen, 8, Gap.screen, 32), children: [
@@ -127,6 +134,20 @@ class _BodyState extends ConsumerState<_Body> {
           ),
         ),
       ),
+      if (ref.watch(pushProvider.select((p) => p.supported))) ...[
+        const SizedBox(height: Gap.section),
+        Text('Notifications', style: AppText.h3(c.textPrimary)),
+        const SizedBox(height: 10),
+        SurfaceCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            title: Text('Notifications on this phone', style: AppText.body(c.textPrimary)),
+            subtitle: Text('Price alerts, adviser replies and Portfolio Watch. Turn them off here at any time.', style: AppText.caption(c.textSecondary)),
+            value: ref.watch(pushProvider.select((p) => p.enabled)),
+            onChanged: ref.watch(pushProvider.select((p) => p.busy)) ? null : (v) => v ? ref.read(pushProvider.notifier).enable() : ref.read(pushProvider.notifier).disable(),
+          ),
+        ),
+      ],
       const SizedBox(height: Gap.section),
       Text('Invite friends', style: AppText.h3(c.textPrimary)),
       const SizedBox(height: 10),

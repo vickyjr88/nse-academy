@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Optional } from '@nestjs/common';
+import { PushService } from '../push/push.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
 import { tracked } from '../monitoring/track';
 import { Cron } from '@nestjs/schedule';
@@ -42,6 +43,7 @@ export class PortfolioWatchService {
     private brevo: BrevoService,
     private config: ConfigService,
     @Optional() private monitor?: JobMonitorService,
+    @Optional() private push?: PushService,
   ) {}
 
   private webUrl(): string {
@@ -144,15 +146,12 @@ export class PortfolioWatchService {
     if (opts.dryRun) return { status: 'dry-run', email: user.email, items: fresh.length, result, fresh };
 
     const link = `${this.webUrl()}/dashboard/journal/performance`;
-    await this.prisma.notification.create({
-      data: {
-        userId,
-        type: NOTIFICATION_TYPE,
-        title: `Portfolio watch: ${fresh.length} thing${fresh.length === 1 ? '' : 's'} to look at`,
-        body: fresh.map((i) => i.text).slice(0, 4).join(' '),
-        link,
-      },
-    });
+    const note = {
+      title: `Portfolio watch: ${fresh.length} thing${fresh.length === 1 ? '' : 's'} to look at`,
+      body: fresh.map((i) => i.text).slice(0, 4).join(' '),
+    };
+    await this.prisma.notification.create({ data: { userId, type: NOTIFICATION_TYPE, ...note, link } });
+    void this.push?.notifyUser(userId, { type: NOTIFICATION_TYPE, ...note });
     const keys = fresh.filter((i) => i.cooldownDays > 0).map((i) => i.key);
     if (keys.length) await this.prisma.portfolioAlertLog.createMany({ data: keys.map((key) => ({ userId, key })) });
 

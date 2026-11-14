@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { PushService } from '../push/push.service';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
@@ -21,6 +22,7 @@ export class AlertsService {
     private readonly prisma: PrismaService,
     private readonly brevo: BrevoService,
     private readonly config: ConfigService,
+    @Optional() private readonly push?: PushService,
   ) {}
 
   private webUrl(): string {
@@ -83,8 +85,10 @@ export class AlertsService {
     return { count };
   }
 
-  private createNotification(input: NewNotification) {
-    return this.prisma.notification.create({ data: input });
+  private async createNotification(input: NewNotification) {
+    const created = await this.prisma.notification.create({ data: input });
+    void this.push?.notifyUser(input.userId, { type: input.type, title: input.title, body: input.body });
+    return created;
   }
 
   /**

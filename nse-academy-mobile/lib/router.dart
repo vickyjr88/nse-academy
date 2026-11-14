@@ -11,9 +11,12 @@ import 'features/learn/course_screen.dart';
 import 'features/learn/learn_screen.dart';
 import 'features/learn/lesson_screen.dart';
 import 'data/models/member.dart';
+import 'features/advisers/adviser_workspace_screen.dart';
+import 'features/advisers/advisers_screen.dart';
 import 'features/billing/plans_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/profile/account_screen.dart';
+import 'features/profile/organisation_screen.dart';
 import 'features/profile/bookmarks_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/search/search_screen.dart';
@@ -76,7 +79,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/bookmarks', builder: (_, _) => const BookmarksScreen()),
       GoRoute(path: '/glossary', builder: (_, _) => const GlossaryScreen()),
       GoRoute(path: '/profile/account', builder: (_, _) => const AccountScreen()),
+      GoRoute(path: '/profile/organisation', builder: (_, _) => const OrganisationScreen()),
       GoRoute(path: '/profile/plan', builder: (_, _) => const PlansScreen()),
+      GoRoute(path: '/advisers', builder: (_, _) => const AdvisersScreen()),
+      GoRoute(path: '/advisers/questions', builder: (_, _) => const MyQuestionsScreen()),
+      GoRoute(path: '/advisers/questions/:id', builder: (_, s) => QuestionThreadScreen(id: s.pathParameters['id']!, asAdviser: s.uri.queryParameters['as'] == 'adviser')),
+      GoRoute(path: '/advisers/insights', builder: (_, _) => const InsightsScreen()),
+      GoRoute(path: '/advisers/workspace', builder: (_, _) => const AdviserWorkspaceScreen()),
+      GoRoute(path: '/advisers/:id', builder: (_, s) => AdviserDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/tools/profiler', builder: (_, _) => const ProfilerScreen()),
       GoRoute(path: '/tools/picks', builder: (_, _) => const PicksScreen()),
       GoRoute(path: '/tools/portfolio', builder: (_, _) => const PortfolioScreen()),

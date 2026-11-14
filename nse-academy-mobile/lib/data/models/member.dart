@@ -647,3 +647,250 @@ class PlanStatus {
     return PlanStatus(effective: Tier.parse(_sn(j['effectiveTier']) ?? _sn(j['tier'])), paidTier: live ? paid : Tier.free, live: live, source: _s(j['source'], 'paystack'), periodEnd: end);
   }
 }
+
+// ---- financial advisers
+
+class Adviser {
+  const Adviser({required this.id, required this.name, required this.headline, required this.bio, this.specialties = const [], this.credentials, this.photoUrl});
+  final String id;
+  final String name;
+  final String headline;
+  final String bio;
+  final List<String> specialties;
+  final String? credentials;
+  final String? photoUrl;
+
+  /// "Jane Doe" -> "JD", for the avatar.
+  String get initials {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
+  }
+
+  factory Adviser.fromJson(dynamic json) {
+    final j = _map(json);
+    return Adviser(
+      id: _s(j['id']),
+      name: _s(_map(j['user'])['name'], 'Adviser'),
+      headline: _s(j['headline']),
+      bio: _s(j['bio']),
+      specialties: j['specialties'] is List ? [for (final x in j['specialties'] as List) if (x is String && x.isNotEmpty) x] : const [],
+      credentials: _sn(j['credentials']),
+      photoUrl: _sn(j['photoUrl']),
+    );
+  }
+}
+
+class AdviserPage {
+  const AdviserPage({required this.data, required this.page, required this.totalPages});
+  final List<Adviser> data;
+  final int page;
+  final int totalPages;
+  bool get hasMore => page < totalPages;
+  factory AdviserPage.fromJson(dynamic json) {
+    final j = _map(json);
+    return AdviserPage(data: _list(j['data']).map(Adviser.fromJson).toList(), page: _i(j['page'], 1), totalPages: _i(j['totalPages'], 1));
+  }
+}
+
+enum ConnectionStatus {
+  pending,
+  accepted,
+  declined;
+
+  static ConnectionStatus parse(String? s) => switch (s) { 'accepted' => accepted, 'declined' => declined, _ => pending };
+}
+
+/// The member's link to an adviser: asked, accepted or declined.
+class AdviserConnection {
+  const AdviserConnection({required this.id, required this.status, required this.adviser, this.viaFirm = false});
+  final String id;
+  final ConnectionStatus status;
+  final Adviser adviser;
+
+  /// Joined through a firm (a SACCO or company plan): the firm pays, so questions are not rationed.
+  final bool viaFirm;
+  factory AdviserConnection.fromJson(dynamic json) {
+    final j = _map(json);
+    return AdviserConnection(id: _s(j['id']), status: ConnectionStatus.parse(_sn(j['status'])), adviser: Adviser.fromJson(j['advisor']), viaFirm: _s(j['source']) == 'org_member');
+  }
+}
+
+/// How many questions the member may still put to advisers this month.
+class QuestionAllowance {
+  const QuestionAllowance({required this.tier, required this.limit, required this.used, this.remaining, this.unlimited = false, this.resetsOn});
+  final String tier;
+  final int limit;
+  final int used;
+
+  /// Null when unlimited.
+  final int? remaining;
+  final bool unlimited;
+  final DateTime? resetsOn;
+  bool get exhausted => !unlimited && (remaining ?? 0) <= 0;
+  factory QuestionAllowance.fromJson(dynamic json) {
+    final j = _map(json);
+    final unlimited = j['unlimited'] == true;
+    return QuestionAllowance(tier: _s(j['tier'], 'free'), limit: _i(j['limit']), used: _i(j['used']), remaining: unlimited || j['remaining'] == null ? null : _i(j['remaining']), unlimited: unlimited, resetsOn: _tn(j['resetsOn']));
+  }
+}
+
+class AdviserQuestion {
+  const AdviserQuestion({required this.id, required this.subject, required this.answered, required this.withName, required this.updated, this.messages = 0});
+  final String id;
+  final String subject;
+
+  /// The adviser has replied last (otherwise the member, or the adviser, is waiting on the other).
+  final bool answered;
+
+  /// The other party: the adviser for a member, the client for an adviser.
+  final String withName;
+  final DateTime updated;
+  final int messages;
+  factory AdviserQuestion.fromJson(dynamic json, {bool asAdviser = false}) {
+    final j = _map(json);
+    final other = asAdviser ? _map(j['user']) : _map(_map(j['advisor'])['user']);
+    return AdviserQuestion(id: _s(j['id']), subject: _s(j['subject']), answered: _s(j['status']) == 'answered', withName: _s(other['name'], asAdviser ? 'Client' : 'Adviser'), updated: _t(j['updatedAt'] ?? j['createdAt']), messages: _i(_map(j['_count'])['messages']));
+  }
+}
+
+class ThreadMessage {
+  const ThreadMessage({required this.id, required this.fromAdviser, required this.body, required this.at});
+  final String id;
+  final bool fromAdviser;
+  final String body;
+  final DateTime at;
+}
+
+class QuestionThread {
+  const QuestionThread({required this.id, required this.subject, required this.adviserName, required this.clientName, required this.messages});
+  final String id;
+  final String subject;
+  final String adviserName;
+  final String clientName;
+  final List<ThreadMessage> messages;
+  factory QuestionThread.fromJson(dynamic json) {
+    final j = _map(json);
+    return QuestionThread(
+      id: _s(j['id']),
+      subject: _s(j['subject']),
+      adviserName: _s(_map(_map(j['advisor'])['user'])['name'], 'Adviser'),
+      clientName: _s(_map(j['user'])['name'], 'Client'),
+      messages: [for (final m in _list(j['messages'])) ThreadMessage(id: _s(m['id']), fromAdviser: _s(m['senderRole']) == 'advisor', body: _s(m['body']), at: _t(m['createdAt']))],
+    );
+  }
+}
+
+class AdviserInsight {
+  const AdviserInsight({required this.id, required this.title, required this.body, required this.tickers, required this.adviserName, required this.at});
+  final String id;
+  final String title;
+  final String body;
+  final List<String> tickers;
+  final String adviserName;
+  final DateTime at;
+  factory AdviserInsight.fromJson(dynamic json) {
+    final j = _map(json);
+    return AdviserInsight(
+      id: _s(j['id']),
+      title: _s(j['title']),
+      body: _s(j['body']),
+      tickers: j['tickers'] is List ? [for (final x in j['tickers'] as List) if (x is String) x] : const [],
+      adviserName: _s(_map(_map(j['advisor'])['user'])['name']),
+      at: _t(j['createdAt']),
+    );
+  }
+}
+
+/// The signed-in member's own adviser profile, if they are an adviser.
+class AdviserSelf {
+  const AdviserSelf({required this.id, required this.headline, required this.approval, required this.active});
+  final String id;
+  final String headline;
+
+  /// pending | approved | suspended
+  final String approval;
+  final bool active;
+  bool get approved => approval == 'approved' && active;
+  static AdviserSelf? fromJson(dynamic json) {
+    if (json is! Map) return null;
+    final j = _map(json);
+    if (_s(j['id']).isEmpty) return null;
+    return AdviserSelf(id: _s(j['id']), headline: _s(j['headline']), approval: _s(j['approvalStatus'], 'pending'), active: j['isActive'] != false);
+  }
+}
+
+/// A person who asked to connect to the member as their adviser.
+class ClientRequest {
+  const ClientRequest({required this.id, required this.name, required this.status, required this.at});
+  final String id;
+  final String name;
+  final ConnectionStatus status;
+  final DateTime at;
+  factory ClientRequest.fromJson(dynamic json) {
+    final j = _map(json);
+    return ClientRequest(id: _s(j['id']), name: _s(_map(j['user'])['name'], 'Client'), status: ConnectionStatus.parse(_sn(j['status'])), at: _t(j['requestedAt']));
+  }
+}
+
+// ---- organisation (corporate seats)
+
+class OrgLicense {
+  const OrgLicense({required this.tier, required this.seats, required this.seatsUsed, required this.active, this.periodEnd});
+  final Tier tier;
+  final int seats;
+  final int seatsUsed;
+
+  /// Status is active and the period has not run out.
+  final bool active;
+  final DateTime? periodEnd;
+  int get seatsFree => (seats - seatsUsed).clamp(0, seats);
+  static OrgLicense? fromJson(dynamic json, {DateTime? now}) {
+    if (json is! Map) return null;
+    final j = _map(json);
+    final end = _tn(j['currentPeriodEnd']);
+    return OrgLicense(tier: Tier.parse(_sn(j['tier'])), seats: _i(j['seats']), seatsUsed: _i(j['seatsUsed']), active: _s(j['status']) == 'active' && end != null && end.isAfter(now ?? DateTime.now()), periodEnd: end);
+  }
+}
+
+/// The member's place in an organisation: an invitation waiting to be accepted, or a seat they hold.
+class OrgMembership {
+  const OrgMembership({required this.orgName, required this.role, required this.accepted, this.inviteToken, this.license});
+  final String orgName;
+  final String role;
+  final bool accepted;
+  final String? inviteToken;
+  final OrgLicense? license;
+  bool get isAdmin => role == 'admin' && accepted;
+  bool get invited => !accepted && inviteToken != null;
+  static OrgMembership? fromJson(dynamic json) {
+    if (json is! Map) return null;
+    final j = _map(json);
+    final org = _map(j['org']);
+    return OrgMembership(orgName: _s(org['name'], 'Your organisation'), role: _s(j['role'], 'member'), accepted: j['inviteAccepted'] == true, inviteToken: _sn(j['inviteToken']), license: OrgLicense.fromJson(org['license']));
+  }
+}
+
+class OrgPerson {
+  const OrgPerson({required this.id, required this.name, required this.email, required this.admin, required this.accepted});
+  final String id;
+  final String name;
+  final String email;
+  final bool admin;
+  final bool accepted;
+}
+
+class OrgDashboard {
+  const OrgDashboard({required this.name, required this.license, required this.people});
+  final String name;
+  final OrgLicense? license;
+  final List<OrgPerson> people;
+  factory OrgDashboard.fromJson(dynamic json) {
+    final j = _map(json);
+    return OrgDashboard(
+      name: _s(j['name'], 'Your organisation'),
+      license: OrgLicense.fromJson(j['license']),
+      people: [for (final m in _list(j['members'])) OrgPerson(id: _s(m['id']), name: _s(_map(m['user'])['name'], 'Member'), email: _s(_map(m['user'])['email']), admin: _s(m['role']) == 'admin', accepted: m['inviteAccepted'] == true)],
+    );
+  }
+}

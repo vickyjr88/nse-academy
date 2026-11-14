@@ -42,6 +42,7 @@ model User {
   portfolioReviews    PortfolioReview[]
   dividends           Dividend[]
   playPurchases       PlayPurchase[]
+  deviceTokens        DeviceToken[]
   realizedGains       RealizedGain[]
   passwordResetTokens PasswordResetToken[]
   advisorProfile      AdvisorProfile?
@@ -348,6 +349,18 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+// A phone that has push notifications switched on (see PushService). One row per FCM registration token.
+model DeviceToken {
+  token      String   @id
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   String   @default("android")
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Dividend {

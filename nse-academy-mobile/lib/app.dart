@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
 import 'features/billing/billing_controller.dart';
+import 'features/push/push_controller.dart';
 import 'router.dart';
 import 'state/providers.dart';
 
@@ -39,6 +40,7 @@ class _NseAcademyAppState extends ConsumerState<NseAcademyApp> with WidgetsBindi
   Widget build(BuildContext context) {
     // Keeps the Google Play purchase listener alive for the whole session (Play can report a purchase at any time).
     ref.watch(billingProvider);
+    ref.watch(pushProvider); // taps on notifications open the right screen
     final mode = ref.watch(settingsProvider.select((s) => s.themeMode));
     final router = ref.watch(routerProvider);
     return MaterialApp.router(

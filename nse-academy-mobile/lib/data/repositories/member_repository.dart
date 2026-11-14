@@ -6,6 +6,8 @@ import 'auth_repository.dart';
 
 Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${AppConfig.apiBase}/$path').replace(queryParameters: q);
 
+List<T> _listOf<T>(dynamic json, T Function(dynamic) parse) => json is List ? [for (final e in json) parse(e)] : <T>[];
+
 /// The signed-in features. Every call carries the member's token; the server decides what their plan allows and answers
 /// 403 for the rest, which the screens show as a locked feature rather than an error.
 class MemberRepository {
@@ -23,7 +25,7 @@ class MemberRepository {
   Future<dynamic> _post(String path, [Map<String, dynamic> body = const {}]) async => _api.postJson(_uri(path), body, headers: await _auth());
   Future<dynamic> _put(String path, Map<String, dynamic> body) async => _api.putJson(_uri(path), body, headers: await _auth());
   Future<dynamic> _patch(String path, Map<String, dynamic> body) async => _api.patchJson(_uri(path), body, headers: await _auth());
-  Future<dynamic> _delete(String path) async => _api.deleteJson(_uri(path), headers: await _auth());
+  Future<dynamic> _delete(String path, [Map<String, String>? q]) async => _api.deleteJson(_uri(path, q), headers: await _auth());
 
   // plan and Google Play billing
   Future<PlanStatus> planStatus() async => PlanStatus.fromJson(await _get('payments/status'));
@@ -32,6 +34,10 @@ class MemberRepository {
     await _post('payments/google/verify', {'purchaseToken': purchaseToken});
     return planStatus();
   }
+
+  // push notifications
+  Future<void> registerDevice(String token) => _post('devices', {'token': token, 'platform': 'android'});
+  Future<void> unregisterDevice(String token) => _delete('devices', {'token': token});
 
   // account
   Future<Account> account() async => Account.fromJson(await _get('users/me'));
@@ -86,6 +92,39 @@ class MemberRepository {
     final j = await _get('notifications/unread-count');
     return j is Map && j['count'] is num ? (j['count'] as num).toInt() : 0;
   }
+
+  // financial advisers (any signed-in member; questions are rationed by plan)
+  Future<AdviserPage> advisers({int page = 1}) async => AdviserPage.fromJson(await _api.getJson(_uri('financial-advisors', {'page': '$page', 'limit': '20'})));
+  Future<Adviser> adviser(String id) async => Adviser.fromJson(await _api.getJson(_uri('financial-advisors/${Uri.encodeComponent(id)}')));
+  Future<List<AdviserConnection>> adviserConnections() async => _listOf(await _get('financial-advisor/connections'), AdviserConnection.fromJson);
+  Future<void> connectToAdviser(String id) => _post('financial-advisor/connect/${Uri.encodeComponent(id)}');
+  Future<QuestionAllowance> questionAllowance() async => QuestionAllowance.fromJson(await _get('financial-advisor/queries/allowance'));
+  /// Returns the id of the new conversation.
+  Future<String> askAdviser(String adviserId, String question) async {
+    final j = await _post('financial-advisor/queries', {'advisorId': adviserId, 'question': question});
+    return j is Map && j['id'] is String ? j['id'] as String : '';
+  }
+  Future<List<AdviserQuestion>> myQuestions() async => _listOf(await _get('financial-advisor/queries/mine'), AdviserQuestion.fromJson);
+  Future<QuestionThread> questionThread(String id) async => QuestionThread.fromJson(await _get('financial-advisor/queries/${Uri.encodeComponent(id)}'));
+  Future<void> replyToQuestion(String id, String body) => _post('financial-advisor/queries/${Uri.encodeComponent(id)}/reply', {'body': body});
+  Future<List<AdviserInsight>> insightsFeed() async => _listOf((await _get('financial-advisor/insights/feed', {'limit': '50'}) as Map)['data'], AdviserInsight.fromJson);
+
+  // adviser workspace (members who are advisers)
+  Future<AdviserSelf?> adviserSelf() async => AdviserSelf.fromJson(await _get('financial-advisor/me'));
+  Future<List<ClientRequest>> clientRequests() async => _listOf(await _get('financial-advisor/clients', {'status': 'pending'}), ClientRequest.fromJson);
+  Future<void> respondToRequest(String id, bool accept) => _post('financial-advisor/clients/${Uri.encodeComponent(id)}/respond', {'accept': accept});
+  Future<List<AdviserQuestion>> clientQuestions() async => _listOf(await _get('financial-advisor/queries'), (j) => AdviserQuestion.fromJson(j, asAdviser: true));
+  Future<void> answerQuestion(String id, String body) => _post('financial-advisor/queries/${Uri.encodeComponent(id)}/answer', {'body': body});
+  Future<List<AdviserInsight>> myInsights() async => _listOf(await _get('financial-advisor/insights'), AdviserInsight.fromJson);
+  Future<void> publishInsight({required String title, required String body, List<String> tickers = const []}) => _post('financial-advisor/insights', {'title': title, 'body': body, if (tickers.isNotEmpty) 'tickers': tickers});
+
+  // organisation (corporate seats)
+  Future<OrgMembership?> organisation() async => OrgMembership.fromJson(await _get('corporate/me'));
+  Future<OrgDashboard> organisationDashboard() async => OrgDashboard.fromJson(await _get('corporate/dashboard'));
+  Future<void> acceptInvite(String token) => _post('corporate/invite/accept', {'token': token});
+  Future<void> inviteToOrganisation(String email) => _post('corporate/invite', {'email': email});
+  Future<void> resendOrgInvite(String memberId) => _post('corporate/members/${Uri.encodeComponent(memberId)}/resend-invite');
+  Future<void> removeOrgMember(String memberId) => _delete('corporate/members/${Uri.encodeComponent(memberId)}');
 
   // portfolio watch (Premium)
   Future<PortfolioWatch> watch() async => PortfolioWatch.fromJson(await _get('portfolio-watch'));

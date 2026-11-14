@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { PushService } from '../push/push.service';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
@@ -39,6 +40,7 @@ export class FinancialAdvisorService {
     private journal: JournalService,
     private config: ConfigService,
     private adminNotifier: AdminNotifierService,
+    @Optional() private push?: PushService,
   ) {}
 
   private webUrl(): string {
@@ -507,6 +509,7 @@ export class FinancialAdvisorService {
     subjectOverride?: string,
   ): Promise<void> {
     await this.prisma.notification.create({ data: { userId, type, title, body, link } });
+    void this.push?.notifyUser(userId, { type, title, body });
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;

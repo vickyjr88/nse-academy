@@ -24,6 +24,10 @@ const _myMoney = [
   _Tool('Price alerts', 'Get a note in your inbox when a stock crosses your price.', Icons.notifications_active_rounded, '/tools/alerts', Tier.intermediary),
 ];
 
+const _advice = [
+  _Tool('Financial advisers', 'Connect with an adviser, ask questions and read their insights.', Icons.groups_rounded, '/advisers', Tier.free),
+];
+
 const _research = [
   _Tool('Glossary', 'Plain-English definitions of market terms.', Icons.menu_book_rounded, '/glossary', Tier.free),
   _Tool('Research', 'Focus lists and company briefs from the NSE Academy desk.', Icons.science_rounded, '/tools/research', Tier.free),
@@ -64,6 +68,10 @@ class ToolsScreen extends ConsumerWidget {
         Text('My money', style: AppText.h3(c.textPrimary)),
         const SizedBox(height: 10),
         for (final t in _myMoney) _ToolTile(t, tier: tier, signedIn: signedIn, badge: t.route == '/tools/alerts' ? unread : 0),
+        const SizedBox(height: Gap.section),
+        Text('Advice', style: AppText.h3(c.textPrimary)),
+        const SizedBox(height: 10),
+        for (final t in _advice) _ToolTile(t, tier: tier, signedIn: signedIn),
         const SizedBox(height: Gap.section),
         Text('Research and learning', style: AppText.h3(c.textPrimary)),
         const SizedBox(height: 10),

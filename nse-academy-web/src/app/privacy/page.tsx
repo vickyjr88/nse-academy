@@ -56,7 +56,10 @@ export default function PrivacyPage() {
               <strong className="text-gray-800">Things you create in your account.</strong> Investor-profile quiz answers
               and result, lesson progress and, if your plan includes the portfolio journal, the trades, holdings,
               dividends, target weights and price alerts you enter, plus any connection you make to a financial adviser on
-              the platform. This is the same whether you use the website or the mobile app, because both use your account.
+              the platform, the questions you ask an adviser and their replies, and, if a SACCO or company gave you a seat,
+              the organisation&rsquo;s name and your role in it. The adviser you ask, or the organisation&rsquo;s admin, can see
+              what is theirs to see (your questions to them; whether you accepted your seat). This is the same whether you use
+              the website or the mobile app, because both use your account.
             </li>
             <li>
               <strong className="text-gray-800">CDS statements you import.</strong> If you upload a CDS statement (PDF) to
@@ -76,9 +79,12 @@ export default function PrivacyPage() {
             </li>
           </ul>
           <p className="mt-4">
-            The mobile app asks for no device permissions beyond internet access. When you choose to import a CDS statement,
-            Android shows its own file chooser and the app receives only the file you pick. It does not use your location,
-            contacts, camera, microphone or advertising ID, and it has no advertising or analytics software in it. Like
+            The mobile app uses the internet, Google Play&rsquo;s billing service when you subscribe, and, only if you turn
+            notifications on in My account, Android&rsquo;s notification permission and a notification address for your phone
+            (a token from Google&rsquo;s Firebase Cloud Messaging, which we keep so we can reach that phone, and which is removed
+            when you turn notifications off or sign out). When you choose to import a CDS statement, Android shows its own file
+            chooser and the app receives only the file you pick. It does not use your location, contacts, camera, microphone or
+            advertising ID, and it has no advertising or analytics software in it. Like
             any internet service, our servers see your IP address and the app version when the app requests content, and
             keep routine technical logs for security and fault-finding.
           </p>
@@ -103,7 +109,7 @@ export default function PrivacyPage() {
             Only service providers that process data for us, and only what they need:
           </p>
           <ul className="list-disc pl-6 space-y-2">
-            <li>Paystack, to process payments made on the website, and Google, whose Google Play service processes subscriptions bought in the Android app.</li>
+            <li>Paystack, to process payments made on the website, and Google, whose Google Play service processes subscriptions bought in the Android app and whose Firebase Cloud Messaging service delivers notifications if you turn them on.</li>
             <li>Brevo, to deliver email. We keep a suppression list so we stop writing to addresses that bounce or unsubscribe.</li>
             <li>Our hosting provider, where the database and servers run.</li>
             <li>
@@ -111,7 +117,7 @@ export default function PrivacyPage() {
             </li>
           </ul>
           <p className="mt-4">
-            A financial adviser on the platform sees your details only if you connect to them. We disclose data to
+            A financial adviser on the platform sees your details only if you connect to them, and an organisation&rsquo;s admin sees the people it has given seats to. We disclose data to
             authorities only where the law requires it. We do not sell personal data.
           </p>
 

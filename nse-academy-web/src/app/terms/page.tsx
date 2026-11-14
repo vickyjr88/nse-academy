@@ -43,6 +43,12 @@ export default function TermsPage() {
             Authority. Nothing here is a recommendation to buy, sell or hold any security. Investments can fall as well as
             rise, and you can lose money. Make your own decisions, or speak to a licensed professional.
           </p>
+          <p className="mt-4">
+            Financial advisers listed on NSE Academy are independent. We introduce you and pass your questions and their
+            replies between you; we do not employ them, supervise their advice or take responsibility for it. What an
+            adviser tells you is theirs, and whether to act on it is your decision. Do not send an adviser passwords, card
+            numbers or CDS login details.
+          </p>
 
           <H2>Prices and data</H2>
           <p>

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Signed release bundles and the raw API recordings used for store screenshots
 /store/release/
+
+# Firebase project config for push notifications (not secret, but specific to your Firebase project; see store/PUSH.md)
+android/app/google-services.json

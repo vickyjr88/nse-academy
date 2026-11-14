@@ -48,6 +48,12 @@ TRACK YOUR MONEY (for members on paid plans)
 • Portfolio allocation by stock and sector, price alerts with an in-app inbox, and a comparison with model portfolios.
 • Target weights, a rebalancing plan that includes broker fees, a daily Portfolio Watch on your own holdings, and a plain-English AI analysis of a stock, built from our recorded prices.
 
+ASK AN ADVISER
+• Browse independent financial advisers, ask to connect, and put your questions to them. Replies and the insights they publish arrive in the app.
+
+PLANS
+• Intermediary and Premium subscriptions are bought through Google Play, renew automatically until you cancel in Google Play, and work on the website too. A seat from your SACCO or company also unlocks your plan.
+
 MADE TO BE USED
 • Light and dark themes.
 • Bookmark the articles and stocks you want to come back to.
@@ -63,7 +69,7 @@ NSE Academy is built by Infinity Digital Works in Nairobi.
 ### Release notes (500)
 
 ```
-First release of NSE Academy: courses, articles, NSE prices and charts, a glossary and daily quiz, plus your investor profile, a portfolio journal, price alerts, research and calculators.
+First release of NSE Academy: courses, articles, NSE prices and charts, a glossary and daily quiz, plus your investor profile, a portfolio journal, price alerts, research and calculators, financial advisers you can ask, and Intermediary and Premium plans through Google Play.
 ```
 
 ## Graphics
@@ -83,13 +89,13 @@ The screenshots are real captures of the app, framed with a caption. Screens 1 t
 |---|---|
 | Privacy policy | https://nseacademy.vitaldigitalmedia.net/privacy |
 | Ads | No, the app contains no ads |
-| App access | Much of the app works with no sign-in. The investor profile needs a free account, and the portfolio journal, alerts, allocation, rebalancing, Portfolio Watch and AI analysis need paid plans: **give the reviewer a Premium test account** (see "Before you submit") and tell them to open the Tools tab |
+| App access | Much of the app works with no sign-in. The investor profile needs a free account, and the portfolio journal, alerts, allocation, rebalancing, Portfolio Watch and AI analysis need paid plans: **give the reviewer a Premium test account** (see "Before you submit") and tell them to open the Tools tab. Plans are Google Play subscriptions (Profile > Plans); the reviewer does not need to buy anything |
 | Target audience | 18 and over (investing on the NSE requires an adult; the app is not designed for children) |
 | News app | No |
 | Government app | No |
 | Health / COVID-19 | Not applicable |
 | Content rating (IARC) | Category "Reference, News or Educational". Answer No to violence, sexuality, language, controlled substances, gambling, user-generated content, and sharing of location. Expected result: Everyone / PEGI 3 |
-| Financial features declaration | The app does not trade, hold money, lend, or move money, and has no payments. It has a portfolio journal where the member types in their own trades, and it shows educational content and delayed prices. If the form offers an investment-tracking or personal-finance option, that is the closest fit; do not claim brokerage, trading or advice. **Check this yourself against the options Play shows.** |
+| Financial features declaration | The app does not trade, hold money, lend, or move money. Its only payments are Google Play subscriptions to its own Intermediary and Premium plans. It has a portfolio journal where the member types in their own trades, shows educational content and delayed prices, and lets members message independent advisers (messages only; no money passes through the app). If the form offers an investment-tracking or personal-finance option, that is the closest fit; do not claim brokerage, trading or advice. **Check this yourself against the options Play shows.** |
 | Account deletion URL (Data safety) | https://nseacademy.vitaldigitalmedia.net/delete-account |
 
 ### Data safety form
@@ -106,8 +112,11 @@ Collected data. Everything is optional: the app works for reading and prices wit
 | Financial info: Other financial info | Yes, if you use the portfolio journal | No | Yes | App functionality | Trades, holdings, dividends, target weights and price alerts the member types in or imports. No card, bank or payment data |
 | Files and docs | Yes, only if you import a CDS statement | No | Yes | App functionality | The PDF is read on our server to extract holdings; the file is not kept, only the holdings, CDS account number, period and file name |
 | App activity: Other user-generated content | Yes, with an account | No | Yes | App functionality | Referral code and the email-digest setting |
+| Messages: Other in-app messages | Yes, if you ask an adviser a question | Yes, with the adviser you chose | Yes | App functionality | The question, replies, and your connection requests. Adviser and organisation admin are people using the service, not third parties; check Play's wording for "shared" |
+| Financial info: Purchase history | Yes, if you subscribe in the app | No | Yes | App functionality | Google Play purchase token, plan, state and dates, kept to verify the plan with Google. Card and payment details stay with Google Play |
+| Personal info: Other (organisation membership) | Yes, if a SACCO or company gave you a seat | No | Yes | App functionality | Organisation name, your role and whether you accepted |
 
-Not collected: location, contacts, photos or videos, audio, calendar, health, payment info (the app takes no payments), web browsing, device or other IDs, advertising ID, crash logs, diagnostics. The app has no analytics or advertising software. Reading progress, bookmarks, daily-quiz answers and settings stay on the phone.
+Not collected: location, contacts, photos or videos, audio, calendar, health, card or bank details (Google Play takes the payment), web browsing, advertising ID, crash logs, diagnostics. The app has no analytics or advertising software. **Device or other IDs** are collected only if you switch push notifications on (see store/PUSH.md): declare "Device or other IDs" (the notification address), App functionality, optional, and say it is shared with Google (Firebase Cloud Messaging) if the form treats that as sharing. Reading progress, bookmarks, daily-quiz answers and settings stay on the phone.
 
 | Question | Answer |
 |---|---|
@@ -118,17 +127,18 @@ Not collected: location, contacts, photos or videos, audio, calendar, health, pa
 ## Before you submit
 
 1. **Reviewer account.** Create an NSE Academy account with a **Premium** plan (the app lets you create the free account; the plan has to be given on the website or in the admin) and put its email and password in Play Console under App access. Add a few sample trades to it so the portfolio, allocation and rebalance screens are not empty. Without a Premium account the reviewer sees locked screens throughout the Tools tab and may reject the app as not working.
-2. **Payments policy.** The Play build does not link to pricing or sell anything. Members upgrade on the website. If a reviewer asks about paid plans: the app sells nothing and shows no prices. Do not turn on `--dart-define=WEB_UPGRADE_LINKS=true` for the Play build unless you have joined a Play programme that allows external links.
+2. **Payments policy.** Paid plans are sold in the app through Google Play Billing only (set-up: `BILLING.md`). The Play build does not link to the website's pricing page; do not turn on `--dart-define=WEB_UPGRADE_LINKS=true` for it. The Plans screen shows price, length, automatic renewal and how to cancel, with Terms and Privacy links, as Play requires. Subscriptions must be created in Play Console and the API connected before the plans screen shows anything; until then it says no plans were returned.
 3. **Developer account testing rule.** A personal Play developer account created after 13 November 2023 must run a closed test with at least 12 testers for 14 days before production access. An organisation account does not.
 4. **Package name** `net.vitaldigitalmedia.nse_academy` is permanent once the app is created in Play Console.
 5. **Upload key.** The bundle is signed with the same upload key as Drip Emporium (alias `upload`, SHA-256 `41:C3:67:D9:23:47:2C:65:9D:1C:6B:88:31:85:9B:42:3A:9E:47:0C:67:F2:25:41:CF:F3:70:E9:71:A4:9B:81`). Opt in to Play App Signing when you create the release; Google then holds the real app signing key per app, and this key is only the upload key. Keep `~/upload-keystore.jks` and its passwords backed up: losing them means asking Google to reset the upload key.
-6. **Privacy and legal text.** `/privacy`, `/terms` and `/delete-account` are drafted from what the code does today (the privacy policy was updated on 14 November 2026 for the in-app member features). Have them read before launch, and confirm that info@vitaldigitalmedia.net is monitored and that you can honour a deletion request in the time you are comfortable promising.
+6. **Privacy and legal text.** `/privacy`, `/terms` and `/delete-account` are drafted from what the code does today (the privacy and terms pages were updated on 15 November 2026 for Google Play subscriptions, advisers, organisations and notifications). Have them read before launch, and confirm that info@vitaldigitalmedia.net is monitored and that you can honour a deletion request in the time you are comfortable promising.
 
 ## Build
 
 ```bash
 cd nse-academy-mobile
 flutter build appbundle --release        # build/app/outputs/bundle/release/app-release.aab
+                                         # push notifications are built in only if android/app/google-services.json exists (store/PUSH.md)
 ```
 
 Needs `android/key.properties` (gitignored; copy `key.properties.example`). Raise `version:` in `pubspec.yaml` (the number after `+` is the Play versionCode and must grow with every upload).

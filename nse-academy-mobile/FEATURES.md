@@ -26,11 +26,12 @@ policy; see `AppConfig.webUpgradeLinks`).
 | Use a model portfolio as your targets | yes | yes | Premium |
 | Portfolio Watch (daily findings on your holdings, email switch) | yes | yes | Premium |
 | AI stock analysis | yes | yes (on the stock page) | Premium |
-| Subscribe, upgrade, cancel, billing | yes | **no, on purpose** | Play requires Google Play Billing for in-app sales |
-| Ebook store and downloads | yes | **no, on purpose** | Same reason: digital goods |
-| Financial adviser directory, questions, insights | yes | not built | Plan-based monthly question allowance |
-| Adviser workspace (for advisers) | yes | not built | Advisers |
-| Corporate / team seats | yes | not built | Corporate plans |
-| Push notifications | n/a | not built | Alerts arrive in the in-app inbox and by email |
+| Subscribe, upgrade, change length, restore (Profile > Plans) | yes (Paystack) | yes, **Google Play Billing** | Anyone with an account; see `store/BILLING.md`. A plan works on both; a plan paid on one is not sold again on the other |
+| Cancel, refunds | yes | in Google Play | Google owns the subscription it sold |
+| Ebook store and downloads | yes | **no, on purpose** | Digital goods would need Play Billing one-off products; not built |
+| Financial adviser directory, connect, ask questions, read insights | yes | yes | Free account; questions per month by plan (Free 1, Intermediary 2, Premium 5; none for firm members) |
+| Adviser workspace: requests, client questions, publish insights | yes | yes | Approved advisers. Applying to be an adviser, the client list and buy/sell alerts stay on the website |
+| Organisation seats: accept an invitation, see your seat; admin: seats, people, invite, remove | yes | yes | Members of an organisation. Setting one up and paying for the licence stay on the website |
+| Push notifications for alerts, adviser replies, Portfolio Watch | n/a | built, **off until Firebase is connected** | Any member who switches them on; see `store/PUSH.md` |
 
 When the web gains a tier-gated feature, add its row here and a `PlanGate` screen in `lib/features/tools/`.

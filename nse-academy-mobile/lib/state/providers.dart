@@ -236,6 +236,23 @@ FutureProvider<T> _member<T>(Future<T> Function(MemberRepository r) load) => Fut
       return load(ref.watch(memberRepositoryProvider));
     });
 
+final adviserConnectionsProvider = _member((r) => r.adviserConnections());
+final questionAllowanceProvider = _member((r) => r.questionAllowance());
+final myQuestionsProvider = _member((r) => r.myQuestions());
+final questionThreadProvider = FutureProvider.autoDispose.family<QuestionThread, String>((ref, id) {
+  ref.watch(_memberIdProvider);
+  return ref.watch(memberRepositoryProvider).questionThread(id);
+});
+final insightsFeedProvider = _member((r) => r.insightsFeed());
+final adviserDirectoryProvider = FutureProvider.autoDispose.family<AdviserPage, int>((ref, page) => ref.watch(memberRepositoryProvider).advisers(page: page));
+final adviserProvider = FutureProvider.autoDispose.family<Adviser, String>((ref, id) => ref.watch(memberRepositoryProvider).adviser(id));
+final adviserSelfProvider = _member((r) => r.adviserSelf());
+final clientRequestsProvider = _member((r) => r.clientRequests());
+final clientQuestionsProvider = _member((r) => r.clientQuestions());
+final myInsightsProvider = _member((r) => r.myInsights());
+
+final organisationProvider = _member((r) => r.organisation());
+final organisationDashboardProvider = _member((r) => r.organisationDashboard());
 final planStatusProvider = _member((r) => r.planStatus());
 final accountProvider = _member((r) => r.account());
 final digestProvider = _member((r) => r.digestEnabled());

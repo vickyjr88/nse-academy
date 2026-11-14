@@ -13,6 +13,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Push notifications need the Firebase project's config file. Without it the app builds and runs with push switched off.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "net.vitaldigitalmedia.nse_academy"
     compileSdk = flutter.compileSdkVersion

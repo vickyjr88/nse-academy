@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <main className="flex-grow pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-gray-600 leading-relaxed">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-gray-900">Privacy Policy</h1>
-          <p className="text-sm text-gray-400 mb-8">Effective 13 November 2026</p>
+          <p className="text-sm text-gray-400 mb-8">Effective 14 November 2026</p>
 
           <p className="mb-4">
             This policy covers the NSE Academy website (nseacademy.vitaldigitalmedia.net) and the NSE Academy mobile app
@@ -51,9 +51,15 @@ export default function PrivacyPage() {
               We keep the reference and amount of each payment.
             </li>
             <li>
-              <strong className="text-gray-800">Things you create on the website.</strong> Investor-profile quiz answers,
-              lesson progress, and, if you use the portfolio journal, the trades, holdings, dividends and price alerts you
-              enter, plus any connection you make to a financial adviser on the platform.
+              <strong className="text-gray-800">Things you create in your account.</strong> Investor-profile quiz answers
+              and result, lesson progress and, if your plan includes the portfolio journal, the trades, holdings,
+              dividends, target weights and price alerts you enter, plus any connection you make to a financial adviser on
+              the platform. This is the same whether you use the website or the mobile app, because both use your account.
+            </li>
+            <li>
+              <strong className="text-gray-800">CDS statements you import.</strong> If you upload a CDS statement (PDF) to
+              seed your portfolio, we read the holdings from it and keep those holdings, the statement&rsquo;s CDS account
+              number, period and file name. We do not keep the PDF itself.
             </li>
             <li>
               <strong className="text-gray-800">Service records.</strong> When you last signed in or used the service, the
@@ -61,13 +67,15 @@ export default function PrivacyPage() {
               referral link you arrived from.
             </li>
             <li>
-              <strong className="text-gray-800">On your phone only.</strong> The mobile app keeps your reading progress,
-              bookmarks, quiz answers and display settings on your device. They are not sent to us. If you sign in, a
-              session token is kept in the phone&rsquo;s secure storage until you sign out.
+              <strong className="text-gray-800">On your phone.</strong> The mobile app keeps your reading progress,
+              bookmarks, daily-quiz answers and display settings on your device, and they are not sent to us. If you sign
+              in, a session token is kept in the phone&rsquo;s secure storage until you sign out. What you create in your
+              account (above) is stored on our servers so it is there when you sign in on another device.
             </li>
           </ul>
           <p className="mt-4">
-            The mobile app asks for no device permissions beyond internet access. It does not use your location,
+            The mobile app asks for no device permissions beyond internet access. When you choose to import a CDS statement,
+            Android shows its own file chooser and the app receives only the file you pick. It does not use your location,
             contacts, camera, microphone or advertising ID, and it has no advertising or analytics software in it. Like
             any internet service, our servers see your IP address and the app version when the app requests content, and
             keep routine technical logs for security and fault-finding.
@@ -78,8 +86,8 @@ export default function PrivacyPage() {
             <li>To provide your account, plan and learning progress, and to sign you in.</li>
             <li>To take payment and keep the records the law requires.</li>
             <li>
-              To send service messages: receipts, password resets and, for Premium members, the portfolio and price
-              alerts you turned on.
+              To send service messages: receipts, password resets and, for members whose plan includes them, the portfolio
+              and price alerts you turned on.
             </li>
             <li>
               To send the evening market digest and learning emails. The digest is off until you switch it on, and every

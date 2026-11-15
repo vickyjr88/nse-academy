@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AndroidAppLink from "@/components/AndroidAppLink";
 
 export default function PublicFooter() {
   return (
@@ -31,6 +32,7 @@ export default function PublicFooter() {
           <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
           <Link href="/delete-account" className="hover:text-gray-600 transition-colors">Delete account</Link>
+          <AndroidAppLink placement="footer" />
           <Link href="/blog/rss.xml" className="hover:text-gray-600 transition-colors">RSS</Link>
         </div>
       </div>

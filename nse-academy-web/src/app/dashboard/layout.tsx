@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import FeatureTour from "@/components/FeatureTour";
+import AndroidAppLink from "@/components/AndroidAppLink";
 import MarketTicker from "@/components/MarketTicker";
 import { NotificationBell } from "@/components/NotificationBell";
 import { identifyUser, resetIdentity, trackEvent } from "@/lib/analytics";
@@ -159,7 +160,8 @@ export default function DashboardLayout({
           );
         })}
       </nav>
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 space-y-3">
+        <AndroidAppLink placement="dashboard_sidebar" variant="card" />
         <button
           onClick={handleLogout}
           className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"

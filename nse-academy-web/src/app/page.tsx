@@ -5,6 +5,7 @@ import { getDigitalProducts, type DexterProduct } from "@/lib/dexter";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import { TrackedAnchor, TrackedLink } from "@/components/TrackedLink";
+import AndroidAppLink from "@/components/AndroidAppLink";
 import LeadMagnetForm from "@/components/LeadMagnetForm";
 import JsonLd from "@/components/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -171,6 +172,10 @@ export default async function LandingPage() {
             <span aria-hidden>⚡</span>
             <span>Live in minutes</span>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <AndroidAppLink placement="home_hero" variant="pill" />
         </div>
       </section>
 

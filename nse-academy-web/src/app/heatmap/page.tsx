@@ -14,7 +14,18 @@ export const metadata: Metadata = {
   description:
     "See the whole Nairobi Securities Exchange at a glance. Every listed company as a tile sized by market cap and coloured by today's price change, so you can see what moved the market.",
   alternates: { canonical: "/heatmap" },
-  openGraph: { title: "NSE market heatmap - NSE Academy", url: "/heatmap", type: "website", siteName: "NSE Academy" },
+  openGraph: {
+    title: "NSE heatmap: the whole market at a glance",
+    description: "Every NSE-listed company as a tile sized by market cap and coloured by today's price change.",
+    url: "/heatmap",
+    type: "website",
+    siteName: "NSE Academy",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NSE heatmap: the whole market at a glance",
+    description: "Every NSE-listed company as a tile sized by market cap and coloured by today's price change.",
+  },
 };
 
 const tone = (pct: number) => (pct > 0 ? "text-emerald-700" : pct < 0 ? "text-red-600" : "text-gray-600");

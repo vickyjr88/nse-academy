@@ -17,11 +17,10 @@ COPY . .
 # Set environment to production for build
 ENV NODE_ENV=production
 
-# These must be passed as build args to be bundled into the Admin panel
+# The NSE API's address is bundled into the Admin panel only so it can recognise calls to route through Strapi's proxy.
+# Do NOT add the admin key here: everything in the bundle is public. The key is a runtime variable (docker-compose.yml).
 ARG STRAPI_ADMIN_NSE_API_URL
-ARG STRAPI_ADMIN_NSE_KEY
 ENV STRAPI_ADMIN_NSE_API_URL=$STRAPI_ADMIN_NSE_API_URL
-ENV STRAPI_ADMIN_NSE_KEY=$STRAPI_ADMIN_NSE_KEY
 
 # Build the Strapi admin panel and server
 RUN npm run build

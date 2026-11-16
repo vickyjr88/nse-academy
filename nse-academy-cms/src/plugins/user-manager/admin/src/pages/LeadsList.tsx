@@ -108,10 +108,23 @@ export function LeadsList() {
     }
   }
 
-  function handleExportCsv() {
-    const params = new URLSearchParams({ 'x-admin-key': NSE_ADMIN_KEY });
-    if (magnetSlug) params.append('magnetSlug', magnetSlug);
-    window.open(`${NSE_API_URL}/leads/export.csv?${params.toString()}`, '_blank');
+  async function handleExportCsv() {
+    // Fetched (not opened as a link) so the request carries the admin's Strapi login, and the file is saved from memory.
+    try {
+      const qs = magnetSlug ? `?${new URLSearchParams({ magnetSlug })}` : '';
+      const res = await fetch(`${NSE_API_URL}/leads/export.csv${qs}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads${magnetSlug ? `-${magnetSlug}` : ''}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setError(`Could not export: ${e.message}`);
+    }
   }
 
   if (loading && !loaded) {

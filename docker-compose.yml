@@ -77,8 +77,9 @@ services:
       context: ./nse-academy-cms
       dockerfile: Dockerfile
       args:
+        # The admin's JavaScript is public, so no secret may be passed here. The admin key is a runtime variable below,
+        # held by the Strapi server, which forwards the admin pages' calls to the API (see src/plugins/user-manager/server).
         STRAPI_ADMIN_NSE_API_URL: ${NSE_API_URL:-http://localhost:3011}
-        STRAPI_ADMIN_NSE_KEY: ${ADMIN_API_KEY:-}
     restart: unless-stopped
     ports:
       - '1337:1337'
@@ -95,8 +96,9 @@ services:
       JWT_SECRET: ${STRAPI_JWT_SECRET:-changeme}
       TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT:-changeme}
       ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:-changeme}
-      STRAPI_ADMIN_NSE_API_URL: ${NSE_API_URL:-http://localhost:3011}
-      STRAPI_ADMIN_NSE_KEY: ${ADMIN_API_KEY:-}
+      # Where the Strapi server reaches the NSE API (inside the compose network) and the key it sends. Never a build arg.
+      NSE_API_URL: ${NSE_API_INTERNAL_URL:-http://api:3011}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

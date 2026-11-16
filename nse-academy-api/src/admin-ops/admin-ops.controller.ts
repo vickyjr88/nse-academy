@@ -3,6 +3,7 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { AdminOpsService } from './admin-ops.service';
 import { AdminHoldingsService } from './admin-holdings.service';
+import { AdminMetricsService } from './admin-metrics.service';
 import { CreateHoldingDto, UpdateHoldingDto } from './admin-holdings.dto';
 import { UpdateTradeDto } from '../journal/dto/update-trade.dto';
 
@@ -19,6 +20,7 @@ export class AdminOpsController {
   constructor(
     private ops: AdminOpsService,
     private holdings: AdminHoldingsService,
+    private metrics: AdminMetricsService,
   ) {}
 
   /** Runs an edit and hands its before/after to the audit trail, which the interceptor writes when the request ends. */
@@ -26,6 +28,20 @@ export class AdminOpsController {
     const { result, audit } = await run();
     req.audit = audit;
     return result;
+  }
+
+  /** The Overview page: KPIs with their change against the previous period, trends, funnel, and what needs attention. */
+  @Get('metrics/overview')
+  metricsOverview(@Query('days') days?: string) {
+    return this.metrics.overview(int(days, 30));
+  }
+
+  /** A daily series for a dedicated page's chart: signups, leads, contacts, ebooks, referrals, lessons, trades, alerts, questions, profiles, imports. */
+  @Get('metrics/series')
+  async metricsSeries(@Query('metric') metric?: string, @Query('days') days?: string) {
+    const out = await this.metrics.series(metric ?? '', int(days, 30));
+    if (!out) throw new BadRequestException(`Unknown metric "${metric ?? ''}"`);
+    return out;
   }
 
   @Get('payments')

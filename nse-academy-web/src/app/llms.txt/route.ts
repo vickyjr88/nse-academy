@@ -27,6 +27,7 @@ export async function GET() {
     `- [Investor profiler quiz](${abs("/investor-profiler")}): free 10-question quiz that maps risk profile to a learning path`,
     `- [NSE listed companies](${abs("/companies")}): profile, sector, dividend yield and risk rating for each listed company`,
     `- [Daily NSE market report](${abs("/market-report")}): gainers, losers, breadth, value traded and a plain-English story`,
+    `- [NSE heatmap](${abs("/heatmap")}): every listed company sized by market cap and coloured by the day's price change`,
     `- [Compare NSE broker fees](${abs("/brokers-compare")}): brokerage fees across licensed Kenyan stockbrokers`,
     `- [Calculators](${abs("/calculators")}): fee, dividend and return calculators`,
     `- [NSE glossary](${abs("/glossary")}): capital-markets terms explained`,

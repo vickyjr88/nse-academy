@@ -30,6 +30,12 @@ describe('PublicMarketDataController', () => {
     expect(await controller.list()).toBe(quotes);
   });
 
+  it('serves the heatmap from the service', async () => {
+    const heatmap = { tiles: [] };
+    const { controller } = make(null, { heatmap: jest.fn().mockResolvedValue(heatmap) });
+    expect(await controller.heatmap()).toBe(heatmap);
+  });
+
   it('returns a stock\'s daily closes, bounding the window, and 404s without history or for a bad ticker', async () => {
     const getDailyHistory = jest.fn().mockResolvedValue([{ date: '2026-11-04', price: 30 }, { date: '2026-11-05', price: 31 }]);
     const { controller } = make(null, { getDailyHistory });

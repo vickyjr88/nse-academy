@@ -12,6 +12,7 @@ const DEFAULT_LINKS = [
   { label: "Blog", href: "/blog" },
   { label: "Companies", href: "/companies" },
   { label: "Market Report", href: "/market-report" },
+  { label: "Heatmap", href: "/heatmap" },
   { label: "Advisors", href: "/advisors" },
   { label: "Store", href: "/store" },
   { label: "Calculators", href: "/calculators" },

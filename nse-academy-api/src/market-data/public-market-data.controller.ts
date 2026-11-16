@@ -21,6 +21,14 @@ export class PublicMarketDataController {
     return this.marketData.listQuotes();
   }
 
+  /** Declared before ':ticker': "heatmap" is also a well-formed ticker, so the order decides which route answers. */
+  @Get('heatmap')
+  @Header('Cache-Control', 'public, max-age=60, s-maxage=300')
+  @ApiOperation({ summary: 'Every listed company sized by market cap with its day change, for the market heatmap (no login)' })
+  async heatmap() {
+    return this.marketData.heatmap();
+  }
+
   // Declared before ':ticker' only for readability; the paths do not overlap.
   @Get(':ticker/history')
   @Header('Cache-Control', 'public, max-age=300, s-maxage=900')

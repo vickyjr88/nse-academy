@@ -9,6 +9,7 @@ import { AlertsService } from '../alerts/alerts.service';
 import axios from 'axios';
 import { DEFAULT_MAX_PER_HOUR, WINDOW_MS, parseRateLimit, pollDecision } from './poll-guard';
 import { loadDailyCloses } from './price-history';
+import { buildHeatmap } from './heatmap';
 import { cleanName } from '../market-report/market-facts';
 import { parseNumber } from '../reports/report-helpers';
 
@@ -163,6 +164,11 @@ export class MarketDataService {
         updatedAt: r.timestamp,
       }))
       .sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }
+
+  /** The market heatmap: listed companies sized by market cap, coloured by the day's change. */
+  async heatmap() {
+    return buildHeatmap(await this.listQuotes());
   }
 
   /** One close per trading day for a stock, oldest first, as far back as `days` and our records go. */

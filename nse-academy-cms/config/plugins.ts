@@ -19,9 +19,6 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
     // A local plugin's server code (the NSE API proxy) is only loaded when it is resolved explicitly.
     resolve: './src/plugins/user-manager',
   },
-  'analytics-dashboard': {
-    enabled: true,
-  },
 });
 
 export default config;

@@ -245,10 +245,10 @@ export function UserDetail() {
   return (
     <Box padding={8}>
       <Box paddingBottom={2} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Button variant="tertiary" onClick={() => navigate('/plugins/user-manager')}>
+        <Button variant="tertiary" onClick={() => navigate('/plugins/user-manager/members')}>
           ← Back
         </Button>
-        <Button variant="secondary" onClick={() => navigate(`/plugins/user-manager/${id}/portfolio`)}>
+        <Button variant="secondary" onClick={() => navigate(`/plugins/user-manager/members/${id}/portfolio`)}>
           Portfolio &amp; activity
         </Button>
       </Box>

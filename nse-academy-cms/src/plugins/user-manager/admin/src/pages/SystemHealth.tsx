@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Button, Flex, Loader, Table, Tbody, Td, Th, Thead, Tr, Typography } from '@strapi/design-system';
 import { Pill, Stat, adminFetch, kes, when } from './_ops';
@@ -59,6 +60,8 @@ export function SystemHealth() {
         </Box>
         <Button variant="secondary" onClick={load}>Refresh</Button>
       </Flex>
+
+      <Insights kind="health" />
 
       <Flex gap={3} wrap="wrap" paddingBottom={6}>
         <Stat label="Scheduled jobs" value={<span style={{ color: problems.length ? '#b72b1a' : '#2f6846' }}>{problems.length ? `${problems.length} need attention` : 'All on schedule'}</span>} note={`${data.jobs.filter((j) => j.status === 'ok').length} of ${data.jobs.length} ok`} />

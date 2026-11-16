@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -114,6 +115,8 @@ export function AdvisorApprovals() {
         <Typography variant="alpha">Advisor Approvals</Typography>
       </Flex>
 
+      <Insights kind="advisors" />
+
       {error && (
         <Box paddingBottom={4}>
           <Typography textColor="danger600">{error}</Typography>
@@ -170,7 +173,7 @@ export function AdvisorApprovals() {
           {advisors.map((a) => (
             <Tr
               key={a.id}
-              onClick={() => navigate(`/plugins/user-manager/advisor-approvals/${a.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/members/advisors/${a.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td>

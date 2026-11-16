@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -120,13 +121,7 @@ export function LessonProgressList() {
         <Typography variant="alpha">Lesson Progress</Typography>
       </Box>
 
-      {stats && (
-        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <StatCard label="Total Completions" value={stats.totalCompletions} />
-          <StatCard label="Unique Learners" value={stats.uniqueLearners} />
-          <StatCard label="Top Lesson" value={stats.topLessons[0]?.lessonId ?? '—'} />
-        </Box>
-      )}
+      <Insights kind="lessons" />
 
       <Box paddingBottom={4}>
         <Flex gap={4}>
@@ -176,7 +171,7 @@ export function LessonProgressList() {
           {progresses.map((progress) => (
             <Tr
               key={progress.id}
-              onClick={() => navigate(`/plugins/user-manager/lesson-progress/${progress.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/members/lessons/${progress.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography>{progress.user?.name}</Typography></Td>

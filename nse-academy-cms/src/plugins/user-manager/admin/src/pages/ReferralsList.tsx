@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -125,14 +126,7 @@ export function ReferralsList() {
         <Typography variant="alpha">Referrals</Typography>
       </Box>
 
-      {stats && (
-        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <StatCard label="Total Referrals" value={stats.total} />
-          <StatCard label="Completed" value={stats.completed} />
-          <StatCard label="Pending" value={stats.pending} />
-          <StatCard label="Conversion Rate" value={`${stats.conversionRate}%`} />
-        </Box>
-      )}
+      <Insights kind="referrals" />
 
       <Box paddingBottom={4}>
         <Flex gap={4}>
@@ -183,7 +177,7 @@ export function ReferralsList() {
           {referrals.map((ref) => (
             <Tr
               key={ref.id}
-              onClick={() => navigate(`/plugins/user-manager/referrals/${ref.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/members/referrals/${ref.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography>{ref.referrer?.name}</Typography></Td>

@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -117,6 +118,8 @@ export function UsersList() {
         <Typography variant="alpha">Users</Typography>
       </Box>
 
+      <Insights kind="users" />
+
       {/* Filters */}
       <Box paddingBottom={4}>
         <Flex gap={4}>
@@ -192,7 +195,7 @@ export function UsersList() {
                 <Button
                   size="S"
                   variant="secondary"
-                  onClick={() => navigate(`/plugins/user-manager/${user.id}`)}
+                  onClick={() => navigate(`/plugins/user-manager/members/${user.id}`)}
                 >
                   View
                 </Button>

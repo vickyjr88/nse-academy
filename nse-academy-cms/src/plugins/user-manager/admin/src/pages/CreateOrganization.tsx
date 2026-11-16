@@ -146,7 +146,7 @@ export function CreateOrganization() {
         <Box paddingBottom={4}>
           <Alert closeLabel="Close" title="Organization created" variant="success" onClose={() => setSuccess(null)}>
             {success.name} was created.{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/plugins/user-manager/organizations/${success.id}`); }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/plugins/user-manager/members/organizations/${success.id}`); }}>
               View organization
             </a>
           </Alert>

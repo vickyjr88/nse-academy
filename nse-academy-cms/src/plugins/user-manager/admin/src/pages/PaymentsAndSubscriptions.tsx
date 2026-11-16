@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Flex, Loader, SingleSelect, SingleSelectOption, Table, Tbody, Td, Th, Thead, Tr, Typography } from '@strapi/design-system';
@@ -50,12 +51,8 @@ export function PaymentsAndSubscriptions() {
         <Box paddingTop={2}><Typography textColor="neutral600">Every subscription payment recorded by the system, who is paying, and who needs a renewal nudge. The ledger starts when it was introduced; earlier payments are in Paystack.</Typography></Box>
       </Box>
 
-      <Flex gap={3} wrap="wrap" paddingBottom={6}>
-        <Stat label="Recorded revenue" value={kes(payments.totalRevenueKes)} note={`${payments.total} payment${payments.total === 1 ? '' : 's'}`} />
-        <Stat label="Paying members" value={count('premium') + count('intermediary')} note={`${count('premium')} premium, ${count('intermediary')} intermediary`} />
-        <Stat label="MRR (list price)" value={kes(mrr)} note={`${kes(mrr * 12)} a year`} />
-        <Stat label={`Renewing in ${window} days`} value={renewals.total} />
-      </Flex>
+      <Insights kind="revenue" />
+
 
       <Box paddingBottom={6}>
         <Flex justifyContent="space-between" alignItems="center">
@@ -72,7 +69,7 @@ export function PaymentsAndSubscriptions() {
               <Thead><Tr><Th><Typography variant="sigma">Member</Typography></Th><Th><Typography variant="sigma">Plan</Typography></Th><Th><Typography variant="sigma">Ends</Typography></Th><Th><Typography variant="sigma">Days left</Typography></Th></Tr></Thead>
               <Tbody>
                 {renewals.data.map((s) => (
-                  <Tr key={s.userId} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/${s.userId}`)}>
+                  <Tr key={s.userId} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/members/${s.userId}`)}>
                     <Td><Typography fontWeight="bold">{s.name}</Typography><br /><Typography variant="pi" textColor="neutral600">{s.email}</Typography></Td>
                     <Td><Pill kind={s.tier === 'premium' ? 'good' : 'neutral'}>{s.tier}</Pill></Td>
                     <Td><Typography>{day(s.currentPeriodEnd)}</Typography></Td>
@@ -93,7 +90,7 @@ export function PaymentsAndSubscriptions() {
               <Thead><Tr><Th><Typography variant="sigma">When</Typography></Th><Th><Typography variant="sigma">Member</Typography></Th><Th><Typography variant="sigma">Plan</Typography></Th><Th><Typography variant="sigma">Amount</Typography></Th><Th><Typography variant="sigma">Reference</Typography></Th></Tr></Thead>
               <Tbody>
                 {payments.data.map((p) => (
-                  <Tr key={p.reference} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/${p.userId}`)}>
+                  <Tr key={p.reference} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/members/${p.userId}`)}>
                     <Td><Typography>{when(p.appliedAt)}</Typography></Td>
                     <Td><Typography fontWeight="bold">{p.name ?? 'Unknown'}</Typography><br /><Typography variant="pi" textColor="neutral600">{p.email}</Typography></Td>
                     <Td><Typography>{p.plan}, {p.months} month{p.months === 1 ? '' : 's'}</Typography></Td>
@@ -129,7 +126,7 @@ export function PaymentsAndSubscriptions() {
             <Thead><Tr><Th><Typography variant="sigma">Member</Typography></Th><Th><Typography variant="sigma">Plan</Typography></Th><Th><Typography variant="sigma">Status</Typography></Th><Th><Typography variant="sigma">Ends</Typography></Th><Th><Typography variant="sigma">Free months</Typography></Th></Tr></Thead>
             <Tbody>
               {subs.data.map((s) => (
-                <Tr key={s.userId} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/${s.userId}`)}>
+                <Tr key={s.userId} style={{ cursor: 'pointer' }} onClick={() => navigate(`/plugins/user-manager/members/${s.userId}`)}>
                   <Td><Typography fontWeight="bold">{s.name}</Typography><br /><Typography variant="pi" textColor="neutral600">{s.email}</Typography></Td>
                   <Td><Pill kind={s.tier === 'premium' ? 'good' : 'neutral'}>{s.tier}</Pill></Td>
                   <Td><Pill kind={s.status === 'active' ? 'ok' : 'warn'}>{s.status}</Pill></Td>

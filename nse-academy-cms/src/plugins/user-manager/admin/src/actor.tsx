@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '@strapi/strapi/admin';
 import { NSE_API_URL } from './index';
+import { SectionTabs } from './ui/page';
 
 // The NSE API is protected by one shared key. That key must never reach the browser (Strapi's admin JavaScript is public),
 // so every call the pages make to the NSE API is rewritten here to go to Strapi's own `/user-manager/proxy` route instead,
@@ -42,7 +43,12 @@ export function lazyPage(importer: () => Promise<Record<string, any>>, name: str
     const Wrapped = (props: any) => {
       token = useAuth('NSEActor', (s) => s.token) ?? null;
       installFetchPatch();
-      return <Page {...props} />;
+      return (
+        <>
+          <SectionTabs />
+          <Page {...props} />
+        </>
+      );
     };
     return { default: Wrapped };
   });

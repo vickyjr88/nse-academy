@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -125,13 +126,7 @@ export function InvestorProfilesList() {
         <Typography variant="alpha">Investor Profiles</Typography>
       </Box>
 
-      {stats && (
-        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <StatCard label="Total Profiles" value={stats.total} />
-          <StatCard label="Avg. Risk Score" value={`${stats.avgRiskScore} / 100`} />
-          <StatCard label="Most Common Type" value={Object.entries(stats.byType).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'} />
-        </Box>
-      )}
+      <Insights kind="profiles" />
 
       {/* Filters */}
       <Box paddingBottom={4}>
@@ -199,7 +194,7 @@ export function InvestorProfilesList() {
           {profiles.map((profile) => (
             <Tr
               key={profile.id}
-              onClick={() => navigate(`/plugins/user-manager/investor-profiles/${profile.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/members/profiles/${profile.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography>{profile.user?.name}</Typography></Td>

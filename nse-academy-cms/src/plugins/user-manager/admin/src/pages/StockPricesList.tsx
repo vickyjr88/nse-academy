@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -83,6 +84,8 @@ export function StockPricesList() {
         </Box>
       </Box>
 
+      <Insights kind="prices" />
+
       <Box paddingBottom={4} style={{ width: '280px' }}>
         <TextInput
           placeholder="Search by ticker or name..."
@@ -107,7 +110,7 @@ export function StockPricesList() {
           {visible.map((price) => (
             <Tr
               key={price.ticker}
-              onClick={() => navigate(`/plugins/user-manager/stock-prices/${price.ticker}`)}
+              onClick={() => navigate(`/plugins/user-manager/market/${price.ticker}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography fontWeight="bold">{price.ticker}</Typography></Td>

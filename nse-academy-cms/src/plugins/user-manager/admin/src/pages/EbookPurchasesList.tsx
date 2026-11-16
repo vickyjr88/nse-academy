@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -119,14 +120,7 @@ export function EbookPurchasesList() {
         <Typography variant="alpha">Ebook Purchases</Typography>
       </Box>
 
-      {stats && (
-        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <StatCard label="Total Purchases" value={stats.totalPurchases} />
-          <StatCard label="Total Revenue (KES)" value={stats.totalRevenueKes.toLocaleString()} />
-          <StatCard label="Guest Purchases" value={stats.guestPurchases} />
-          <StatCard label="Account Purchases" value={stats.accountPurchases} />
-        </Box>
-      )}
+      <Insights kind="ebooks" />
 
       {/* Filters */}
       <Box paddingBottom={4}>
@@ -167,7 +161,7 @@ export function EbookPurchasesList() {
           {purchases.map((purchase) => (
             <Tr
               key={purchase.id}
-              onClick={() => navigate(`/plugins/user-manager/ebook-purchases/${purchase.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/revenue/ebooks/${purchase.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography>{purchase.user?.name ?? 'Guest'}</Typography></Td>

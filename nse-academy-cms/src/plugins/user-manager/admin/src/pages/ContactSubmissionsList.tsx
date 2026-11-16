@@ -1,3 +1,4 @@
+import { Insights } from '../ui/insights';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -120,14 +121,7 @@ export function ContactSubmissionsList() {
         <Typography variant="alpha">Contact Submissions</Typography>
       </Box>
 
-      {stats && (
-        <Box paddingBottom={4} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <StatCard label="Total Submissions" value={stats.totalSubmissions} />
-          <StatCard label="New" value={stats.new} />
-          <StatCard label="Read" value={stats.read} />
-          <StatCard label="Replied" value={stats.replied} />
-        </Box>
-      )}
+      <Insights kind="inbox" />
 
       <Box paddingBottom={4}>
         <Flex gap={4}>
@@ -179,7 +173,7 @@ export function ContactSubmissionsList() {
           {submissions.map((sub) => (
             <Tr
               key={sub.id}
-              onClick={() => navigate(`/plugins/user-manager/contact-submissions/${sub.id}`)}
+              onClick={() => navigate(`/plugins/user-manager/marketing/inbox/${sub.id}`)}
               style={{ cursor: 'pointer' }}
             >
               <Td><Typography>{sub.name}</Typography></Td>

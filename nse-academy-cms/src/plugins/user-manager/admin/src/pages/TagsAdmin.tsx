@@ -110,7 +110,7 @@ export function TagsAdmin() {
           <Flex justifyContent="space-between" alignItems="center" paddingBottom={3}>
             <Typography variant="beta">{selected.name}</Typography>
             <Flex gap={2}>
-              <Button size="S" variant="secondary" onClick={() => navigate('/plugins/user-manager/compose-email')}>Email this tag</Button>
+              <Button size="S" variant="secondary" onClick={() => navigate('/plugins/user-manager/marketing/email')}>Email this tag</Button>
               <Button size="S" variant="danger-light" onClick={remove}>Delete tag</Button>
             </Flex>
           </Flex>
@@ -137,7 +137,7 @@ export function TagsAdmin() {
                       <Td><Typography fontWeight="bold">{m.name}</Typography><br /><Typography variant="pi" textColor="neutral600">{m.email}</Typography></Td>
                       <Td><Typography>{day(m.addedAt)}</Typography></Td>
                       <Td><Pill kind={m.automated ? 'no-data' : 'neutral'}>{m.automated ? 'automation' : m.addedBy.replace('admin:', '')}</Pill></Td>
-                      <Td><Button size="S" variant="tertiary" onClick={() => navigate(`/plugins/user-manager/${m.userId}`)}>Open</Button></Td>
+                      <Td><Button size="S" variant="tertiary" onClick={() => navigate(`/plugins/user-manager/members/${m.userId}`)}>Open</Button></Td>
                       <Td><Button size="S" variant="danger-light" disabled={busy} onClick={() => removeMember(m)}>Remove</Button></Td>
                     </Tr>
                   ))}

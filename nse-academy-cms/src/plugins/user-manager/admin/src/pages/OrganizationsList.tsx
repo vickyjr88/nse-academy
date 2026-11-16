@@ -104,7 +104,7 @@ export function OrganizationsList() {
     <Box padding={8}>
       <Flex justifyContent="space-between" alignItems="center" paddingBottom={4}>
         <Typography variant="alpha">Organizations</Typography>
-        <Button onClick={() => navigate('/plugins/user-manager/organizations/new')}>
+        <Button onClick={() => navigate('/plugins/user-manager/members/organizations/new')}>
           + Create Organization
         </Button>
       </Flex>
@@ -169,7 +169,7 @@ export function OrganizationsList() {
                 </Typography>
               </Td>
               <Td>
-                <Button size="S" variant="secondary" onClick={() => navigate(`/plugins/user-manager/organizations/${org.id}`)}>
+                <Button size="S" variant="secondary" onClick={() => navigate(`/plugins/user-manager/members/organizations/${org.id}`)}>
                   View
                 </Button>
               </Td>

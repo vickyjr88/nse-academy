@@ -63,7 +63,7 @@ export function UserPortfolio() {
           <Typography variant="alpha">Portfolio &amp; activity</Typography>
           <Box paddingTop={2}><Typography textColor="neutral600">{data.user.name} ({data.user.email}). Portfolio Watch email: {data.user.portfolioWatchEnabled ? 'on' : 'off'}. For support: what they hold, where the cost came from, and what failed.</Typography></Box>
         </Box>
-        <Button variant="tertiary" onClick={() => navigate(`/plugins/user-manager/${id}`)}>Back to user</Button>
+        <Button variant="tertiary" onClick={() => navigate(`/plugins/user-manager/members/${id}`)}>Back to user</Button>
       </Flex>
 
       {message && <Box paddingBottom={4}><Typography textColor={message.bad ? 'danger600' : 'success600'}>{message.text}</Typography></Box>}

@@ -18,7 +18,7 @@ export class TrackController {
   ) {}
 
   private ownHosts(): string[] {
-    const hosts = ['nseacademy.vitaldigitalmedia.net'];
+    const hosts = ['nseacademy.co.ke', 'www.nseacademy.co.ke', 'nseacademy.vitaldigitalmedia.net'];
     for (const key of ['WEB_URL', 'SITE_URL']) {
       try {
         const v = this.config.get<string>(key);

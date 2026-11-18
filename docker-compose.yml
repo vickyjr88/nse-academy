@@ -114,6 +114,8 @@ services:
         # they MUST be passed as build args, runtime env alone is too late.
         NEXT_PUBLIC_API_URL: https://nseacademy-api.vitaldigitalmedia.net
         NEXT_PUBLIC_CMS_URL: https://nseacademy-admin.vitaldigitalmedia.net
+        # The public website address: canonical links, share previews and sitemap. Set SITE_URL in .env to move domains.
+        NEXT_PUBLIC_SITE_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
         NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
         NEXT_PUBLIC_POSTHOG_KEY: ${POSTHOG_KEY:-}
         NEXT_PUBLIC_POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
@@ -132,7 +134,8 @@ services:
       NEXT_PUBLIC_POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
       NEXT_PUBLIC_LEAD_CAPTURE_ENABLED: ${LEAD_CAPTURE_ENABLED:-false}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-changeme}
-      NEXTAUTH_URL: https://nseacademy.vitaldigitalmedia.net
+      NEXTAUTH_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
+      NEXT_PUBLIC_SITE_URL: ${SITE_URL:-https://nseacademy.vitaldigitalmedia.net}
     depends_on:
       - api
       - cms

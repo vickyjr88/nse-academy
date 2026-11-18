@@ -14,6 +14,8 @@ function corsOrigins(): string[] {
   // cross-origin request, not just server-to-server, so its origin has to
   // be allowlisted the same way WEB_URL is.
   const defaults = [
+    'https://nseacademy.co.ke',
+    'https://www.nseacademy.co.ke',
     'https://nseacademy.vitaldigitalmedia.net',
     'https://nseacademy-admin.vitaldigitalmedia.net',
   ];

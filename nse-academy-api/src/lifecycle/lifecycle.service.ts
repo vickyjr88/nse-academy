@@ -25,6 +25,7 @@ export const LIFECYCLE_FLOWS = [
   'renewal-nudge',
   'winback',
   'referral-nudge',
+  'download-mobile-app',
 ] as const;
 export type LifecycleFlow = (typeof LIFECYCLE_FLOWS)[number];
 
@@ -187,7 +188,7 @@ export class LifecycleService {
   private async sendNurtureBatch(
     users: { id: string; email: string; name: string }[],
     flow: LifecycleFlow,
-    sentAtField: 'day1EmailSentAt' | 'day7EmailSentAt' | 'day14EmailSentAt',
+    sentAtField: 'day1EmailSentAt' | 'day7EmailSentAt' | 'day14EmailSentAt' | 'mobileAppPromptSentAt',
     plan: (user: { id: string; email: string; name: string }) => { metadata?: Record<string, unknown>; send: () => Promise<void> },
   ): Promise<{ sent: number; failed: number }> {
     if (users.length === 0) return { sent: 0, failed: 0 };
@@ -618,7 +619,7 @@ export class LifecycleService {
   // catch today's cohort going forward.
   // ---------------------------------------------------------------------
 
-  private readonly TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture'] as const;
+  private readonly TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture', 'download-mobile-app'] as const;
 
   private assertTriggerable(flow: string): asserts flow is (typeof this.TRIGGERABLE_FLOWS)[number] {
     if (!this.TRIGGERABLE_FLOWS.includes(flow as never)) {
@@ -645,8 +646,15 @@ export class LifecycleService {
       });
       return { count };
     }
-    const count = await this.prisma.user.count({ where: { ...this.freeTierWhere(), day14EmailSentAt: null } });
-    return { count };
+    if (flow === 'day14-nurture') {
+      const count = await this.prisma.user.count({ where: { ...this.freeTierWhere(), day14EmailSentAt: null } });
+      return { count };
+    }
+    if (flow === 'download-mobile-app') {
+      const count = await this.prisma.user.count({ where: { mobileAppPromptSentAt: null } });
+      return { count };
+    }
+    return { count: 0 };
   }
 
   /**
@@ -662,7 +670,9 @@ export class LifecycleService {
     this.logger.log(`Manually triggering ${flow} for all eligible existing users`);
     if (flow === 'day1-nurture') return this.runDay1Nurture();
     if (flow === 'day7-nurture') return this.runDay7Nurture();
-    return this.runDay14Nurture();
+    if (flow === 'day14-nurture') return this.runDay14Nurture();
+    if (flow === 'download-mobile-app') return this.runMobileAppPrompt();
+    return { sent: 0, failed: 0 };
   }
 
   // ---------------------------------------------------------------------
@@ -920,6 +930,55 @@ export class LifecycleService {
       });
     } catch (err) {
       this.logger.error(`Failed to send win-back email (variant ${variant}) to ${email}: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Run mobile app download prompt for all users who haven't received it yet
+   */
+  private async runMobileAppPrompt(): Promise<{ sent: number; failed: number }> {
+    const users = await this.prisma.user.findMany({
+      where: { mobileAppPromptSentAt: null },
+      select: { id: true, email: true, name: true },
+    });
+    return this.sendNurtureBatch(users, 'download-mobile-app', 'mobileAppPromptSentAt', (u) => ({
+      send: () => this.sendMobileAppPromptEmail(u.email, u.name),
+    }));
+  }
+
+  /**
+   * Email prompting users to download the mobile app
+   */
+  private async sendMobileAppPromptEmail(email: string, name: string): Promise<void> {
+    const firstName = name.split(' ')[0];
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=net.vitaldigitalmedia.nse_academy';
+    try {
+      await this.brevo.sendTransactional({
+        to: { email, name },
+        subject: 'NSE Academy is now on your phone',
+        htmlContent: renderEmailHtml({
+          eyebrow: 'Download',
+          heading: `Take NSE Academy with you, ${firstName}`,
+          bodyHtml: [
+            'Everything you can do on the web — investor profiler, lessons, trade journal, price alerts — is now in your pocket. Same login, same progress, all synced.',
+            'Download the NSE Academy app from Google Play and pick up where you left off, anytime.',
+          ],
+          button: { label: 'Download from Play Store', url: playStoreUrl },
+          siteUrl: this.webUrl(),
+        }),
+        textContent: renderEmailText({
+          heading: `Take NSE Academy with you, ${firstName}`,
+          bodyText: [
+            'Everything you can do on the web — investor profiler, lessons, trade journal, price alerts — is now in your pocket. Same login, same progress, all synced.',
+            'Download the NSE Academy app from Google Play and pick up where you left off, anytime.',
+          ],
+          button: { label: 'Download from Play Store', url: playStoreUrl },
+          siteUrl: this.webUrl(),
+        }),
+        tags: ['mobile-app-prompt'],
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send mobile app prompt email to ${email}: ${(err as Error).message}`);
     }
   }
 }

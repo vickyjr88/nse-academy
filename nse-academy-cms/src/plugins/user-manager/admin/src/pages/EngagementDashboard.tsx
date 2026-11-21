@@ -68,12 +68,13 @@ const VARIANT_LABELS: Record<string, string> = {
   unknown: 'Unknown (sent before variants existed)',
 };
 
-const TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture'] as const;
+const TRIGGERABLE_FLOWS = ['day1-nurture', 'day7-nurture', 'day14-nurture', 'download-mobile-app'] as const;
 
 const FLOW_LABELS: Record<string, string> = {
   'day1-nurture': 'Day 1 Nurture',
   'day7-nurture': 'Day 7 Nurture',
   'day14-nurture': 'Day 14 Nurture (Intermediary pitch)',
+  'download-mobile-app': 'Download Mobile App',
   'engaged-free-tagging': 'Engaged-Free Tagging (lessons)',
   'active-trader-tagging': 'Active-Trader Tagging (price alerts)',
   'corporate-expiry-warning': 'Corporate Expiry Warning',

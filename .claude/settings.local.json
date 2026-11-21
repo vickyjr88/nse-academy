@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx jest *)",
+      "Bash(node -e ' *)",
+      "Bash(psql -U vickyjunior -d postgres -c \"DROP DATABASE IF EXISTS nse_journal_test;\")",
+      "Bash(psql -U vickyjunior -d postgres -c \"CREATE DATABASE nse_journal_test;\")",
+      "Bash(sleep 5 *)",
+      "Bash(python3 -c \"import json,sys; print\\('alert:', json.load\\(sys.stdin\\)['id']\\)\")",
+      "Bash(curl -s http://localhost:3011/admin/analytics -H \"x-admin-key: test-admin-key\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s http://localhost:3011/admin/broadcast/audience -H \"x-admin-key: test-admin-key\")",
+      "Bash(curl -s \"http://localhost:3011/admin/broadcast/audience?tier=intermediary\" -H \"x-admin-key: test-admin-key\")",
+      "Bash(curl -s \"http://localhost:3011/admin/broadcast/audience?tier=premium\" -H \"x-admin-key: test-admin-key\")",
+      "Bash(curl -s http://localhost:3011/admin/broadcast/audience -w \"\\\\nSTATUS:%{http_code}\\\\n\")",
+      "Bash(curl -s -X POST http://localhost:3011/admin/broadcast/send -H 'x-admin-key: test-admin-key' -H 'Content-Type: application/json' -d '{\"subject\":\"Test announcement\",\"htmlContent\":\"<p>Hello from the test suite</p>\"}' -w '\\\\nSTATUS:%{http_code}\\\\n')",
+      "Bash(curl -s http://localhost:3011/brokers -o /dev/null -w \"STATUS:%{http_code}\\\\n\")",
+      "Bash(curl -s -X POST http://localhost:3011/admin/broadcast/send -H 'x-admin-key: test-admin-key' -H 'Content-Type: application/json' -d '{\"htmlContent\":\"<p>Hello</p>\"}' -w '\\\\nSTATUS:%{http_code}\\\\n')",
+      "Bash(curl -s -X POST http://localhost:3011/admin/broadcast/send -H 'x-admin-key: test-admin-key' -H 'Content-Type: application/json' -d '{\"subject\":\"Test\",\"htmlContent\":\"<p>Hello there</p>\",\"tier\":\"bogus\"}' -w '\\\\nSTATUS:%{http_code}\\\\n')",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "WebSearch",
+      "Bash(curl -s 'https://registry.npmjs.org/insights-strapi')",
+      "Bash(python3 -m json.tool)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm --version)",
+      "Bash(timeout 180 npm install)",
+      "Bash(psql -U vickyjunior -l)",
+      "Bash(npm install *)",
+      "Bash(git push *)",
+      "Bash(curl -s -X POST http://localhost:3011/admin/broadcast/send -H 'x-admin-key: test-admin-key' -H 'Content-Type: application/json' -d '{\"subject\":\"Test broadcast\",\"htmlContent\":\"<p>Testing failure tracking</p>\"}' -w '\\\\nSTATUS:%{http_code}\\\\n')"
+    ]
+  }
+}

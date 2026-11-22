@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 import FormData from 'form-data';
 import * as crypto from 'crypto';
 
@@ -21,7 +21,6 @@ interface XPostResponse {
 
 @Injectable()
 export class XService {
-  private xClient: Map<string, AxiosInstance> = new Map();
   private readonly TWITTER_API_URL = 'https://api.twitter.com/2';
   private readonly TWITTER_UPLOAD_URL = 'https://upload.twitter.com/1.1/media/upload.json';
 
@@ -69,10 +68,9 @@ export class XService {
         };
       }
 
-      const client = this.getXClient(decryptedCreds);
-      const response = await client.post<XPostResponse>('/tweets', postData);
+      const response = await this.xApi<XPostResponse>(decryptedCreds, 'POST', '/tweets', { json: postData });
 
-      const postId = response.data.data.id;
+      const postId = response.data.id;
 
       // Store the post record for future reference
       await (this.prisma as any).socialMediaPost.create({
@@ -139,10 +137,9 @@ export class XService {
         };
       }
 
-      const client = this.getXClient(decryptedCreds);
-      const response = await client.post<XPostResponse>('/tweets', postData);
+      const response = await this.xApi<XPostResponse>(decryptedCreds, 'POST', '/tweets', { json: postData });
 
-      const postId = response.data.data.id;
+      const postId = response.data.id;
 
       // Store the post record
       await (this.prisma as any).socialMediaPost.create({
@@ -259,18 +256,16 @@ export class XService {
       }
 
       const decryptedCreds = this.decryptCredentials(credential);
-      const client = this.getXClient(decryptedCreds);
 
-      // Test with a simple API call
-      await client.get('/tweets/search/recent?query=test&max_results=10');
+      // /users/me works on every X access tier and proves the four keys belong together.
+      const me = await this.xApi<{ data: { username: string } }>(decryptedCreds, 'GET', '/users/me');
 
-      // Update last tested time
       await (this.prisma as any).socialMediaCredential.update({
         where: { id: credentialId },
         data: { lastTestedAt: new Date() },
       });
 
-      return { success: true, message: 'Credentials are valid' };
+      return { success: true, message: `Credentials are valid (signed in as @${me.data.username})` };
     } catch (error) {
       return { success: false, message: `Credential test failed: ${(error as Error).message}` };
     }
@@ -329,77 +324,87 @@ export class XService {
     };
   }
 
-  private getXClient(credentials: XCredentials): AxiosInstance {
-    const key = `${credentials.apiKey}:${credentials.accessToken}`;
-
-    if (this.xClient.has(key)) {
-      return this.xClient.get(key)!;
-    }
-
-    // Create OAuth 1.0a Authorization header
-    const authHeader = this.createOAuthHeader(
-      'POST',
-      `${this.TWITTER_API_URL}/tweets`,
-      credentials,
-    );
-
-    const client = axios.create({
-      baseURL: this.TWITTER_API_URL,
-      headers: {
-        Authorization: authHeader,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.xClient.set(key, client);
-    return client;
+  /** RFC 3986 percent-encoding, which OAuth 1.0a signatures require (encodeURIComponent leaves !'()* unescaped). */
+  private pct(value: string): string {
+    return encodeURIComponent(value).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
   }
 
+  /**
+   * OAuth 1.0a header for one request. It must be built per request: the timestamp and nonce are single-use, and every
+   * query-string parameter has to be part of the signature. JSON and multipart bodies are not.
+   */
   private createOAuthHeader(
     method: string,
     url: string,
     credentials: XCredentials,
+    query: Record<string, string> = {},
   ): string {
-    // OAuth 1.0a header construction for X API
     const oauthParams: Record<string, string> = {
       oauth_consumer_key: credentials.apiKey,
-      oauth_token: credentials.accessToken,
+      oauth_nonce: crypto.randomBytes(16).toString('hex'),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-      oauth_nonce: Math.random().toString(36).substring(2, 15),
+      oauth_token: credentials.accessToken,
       oauth_version: '1.0',
     };
 
-    // Create signature base string
-    const sortedParams = Object.keys(oauthParams)
+    const signedParams = { ...query, ...oauthParams };
+    const paramString = Object.keys(signedParams)
       .sort()
-      .map((key) => `${key}=${encodeURIComponent(oauthParams[key])}`)
+      .map((key) => `${this.pct(key)}=${this.pct(signedParams[key])}`)
       .join('&');
 
-    const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(sortedParams)}`;
+    const baseString = `${method.toUpperCase()}&${this.pct(url)}&${this.pct(paramString)}`;
+    const signingKey = `${this.pct(credentials.apiSecret)}&${this.pct(credentials.accessTokenSecret)}`;
+    oauthParams.oauth_signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64');
 
-    // Create signing key
-    const signingKey = `${encodeURIComponent(credentials.apiSecret)}&${encodeURIComponent(credentials.accessTokenSecret)}`;
-
-    // Create signature
-    const signature = crypto
-      .createHmac('sha1', signingKey)
-      .update(baseString)
-      .digest('base64');
-
-    oauthParams.oauth_signature = signature;
-
-    // Build Authorization header
-    const authHeader = `OAuth ${Object.keys(oauthParams)
+    return `OAuth ${Object.keys(oauthParams)
       .sort()
-      .map((key) => `${key}="${encodeURIComponent(oauthParams[key])}"`)
+      .map((key) => `${this.pct(key)}="${this.pct(oauthParams[key])}"`)
       .join(', ')}`;
+  }
 
-    return authHeader;
+  /** Calls the X API v2 with a freshly signed request. */
+  private async xApi<T>(
+    credentials: XCredentials,
+    method: 'GET' | 'POST',
+    path: string,
+    options: { query?: Record<string, string>; json?: unknown } = {},
+  ): Promise<T> {
+    const url = `${this.TWITTER_API_URL}${path}`;
+    try {
+      const response = await axios.request<T>({
+        method,
+        url,
+        params: options.query,
+        data: options.json,
+        headers: {
+          Authorization: this.createOAuthHeader(method, url, credentials, options.query),
+          ...(options.json ? { 'Content-Type': 'application/json' } : {}),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.describeXError(error));
+    }
+  }
+
+  /** X explains its refusals in the response body; the bare status code alone ("403") does not say why. */
+  private describeXError(error: any): string {
+    const status = error?.response?.status;
+    const body = error?.response?.data;
+    const detail =
+      body?.detail ||
+      body?.errors?.map((e: any) => e.message).join('; ') ||
+      body?.title ||
+      (typeof body === 'string' ? body.slice(0, 200) : '') ||
+      error?.message;
+    return status ? `X API ${status}: ${detail}` : String(detail);
   }
 
   private async uploadMedia(credentials: XCredentials, mediaUrls: string[]): Promise<string[]> {
     const mediaIds: string[] = [];
+    let lastError = '';
 
     for (const url of mediaUrls.slice(0, 4)) {
       // X allows max 4 media per tweet
@@ -410,28 +415,24 @@ export class XService {
         const form = new FormData();
         form.append('media_data', mediaData.toString('base64'));
 
-        const authHeader = this.createOAuthHeader(
-          'POST',
-          this.TWITTER_UPLOAD_URL,
-          credentials,
-        );
-
-        const uploadResponse = await axios.post<{ media_id_string: string }>(
-          this.TWITTER_UPLOAD_URL,
-          form,
-          {
-            headers: {
-              ...form.getHeaders(),
-              Authorization: authHeader,
-            },
+        const uploadResponse = await axios.post<{ media_id_string: string }>(this.TWITTER_UPLOAD_URL, form, {
+          headers: {
+            ...form.getHeaders(),
+            Authorization: this.createOAuthHeader('POST', this.TWITTER_UPLOAD_URL, credentials),
           },
-        );
+        });
 
         mediaIds.push(uploadResponse.data.media_id_string);
       } catch (error) {
-        console.error(`Failed to upload media from ${url}:`, error.message);
-        // Continue with other media if one fails
+        lastError = this.describeXError(error);
+        console.error(`Failed to upload media from ${url}: ${lastError}`);
+        // One bad image does not stop the others.
       }
+    }
+
+    // Posting the text alone would silently drop the report's images, so make the failure visible instead.
+    if (mediaUrls.length > 0 && mediaIds.length === 0) {
+      throw new Error(`None of the ${Math.min(mediaUrls.length, 4)} images could be uploaded (${lastError})`);
     }
 
     return mediaIds;

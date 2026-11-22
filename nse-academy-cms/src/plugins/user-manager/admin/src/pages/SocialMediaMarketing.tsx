@@ -7,27 +7,20 @@ import {
   CardHeader,
   Divider,
   Flex,
-  Icon,
   Link,
   Loader,
-  Stack,
   Table,
   Tbody,
   Td,
-  Text,
   Th,
   Thead,
   Tr,
   Typography,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   TextInput,
   Textarea,
   Alert,
 } from '@strapi/design-system';
-import { Check, ExternalLink, Refresh, Trash, Plus } from '@strapi/icons';
+import { Check, ExternalLink, Trash, Plus } from '@strapi/icons';
 import styled from 'styled-components';
 import { NSE_API_URL, NSE_ADMIN_KEY } from '../index';
 
@@ -191,15 +184,19 @@ const SocialMediaMarketingPage: React.FC = () => {
 
   return (
     <Box padding={8}>
-      <Stack size={6}>
+      <Box marginBottom={6}>
         <Typography variant="alpha">X (Twitter) Auto-Posting</Typography>
-        
-        {notification && (
+      </Box>
+      
+      {notification && (
+        <Box marginBottom={6}>
           <Alert closeLabel="Close" title={notification.type === 'success' ? 'Success' : 'Error'} variant={notification.type as any}>
             {notification.message}
           </Alert>
-        )}
+        </Box>
+      )}
 
+      <Box marginBottom={6}>
         <Card>
           <CardHeader>
             <Flex justifyContent="space-between" alignItems="center">
@@ -212,7 +209,7 @@ const SocialMediaMarketingPage: React.FC = () => {
           <Divider />
           <CardBody>
             {credentials.length === 0 ? (
-              <Text>No X credentials configured yet.</Text>
+              <Typography>No X credentials configured yet.</Typography>
             ) : (
               <Table>
                 <Thead>
@@ -230,10 +227,10 @@ const SocialMediaMarketingPage: React.FC = () => {
                         {cred.isActive ? (
                           <Flex gap={2}>
                             <Check />
-                            <Text>Active</Text>
+                            <Typography>Active</Typography>
                           </Flex>
                         ) : (
-                          <Text>Inactive</Text>
+                          <Typography>Inactive</Typography>
                         )}
                       </Td>
                       <Td>
@@ -242,7 +239,6 @@ const SocialMediaMarketingPage: React.FC = () => {
                             variant="tertiary"
                             size="S"
                             onClick={() => handleTestCredential(cred.id)}
-                            startIcon={<Refresh />}
                           >
                             Test
                           </Button>
@@ -263,7 +259,9 @@ const SocialMediaMarketingPage: React.FC = () => {
             )}
           </CardBody>
         </Card>
+      </Box>
 
+      <Box marginBottom={6}>
         <Card>
           <CardHeader>
             <Flex justifyContent="space-between" alignItems="center">
@@ -278,7 +276,7 @@ const SocialMediaMarketingPage: React.FC = () => {
           <Divider />
           <CardBody>
             {posts.length === 0 ? (
-              <Text>No posts yet.</Text>
+              <Typography>No posts yet.</Typography>
             ) : (
               <Table>
                 <Thead>
@@ -313,109 +311,131 @@ const SocialMediaMarketingPage: React.FC = () => {
             )}
           </CardBody>
         </Card>
-      </Stack>
+      </Box>
 
       {showAddModal && (
-        <Modal onClose={() => setShowAddModal(false)} labelledBy="add-credential-modal">
-          <ModalHeader>
-            <Typography variant="beta" id="add-credential-modal">
-              Add X Credential
-            </Typography>
-          </ModalHeader>
-          <ModalBody>
-            <Stack size={4}>
-              <TextInput
-                label="Account Name"
-                name="accountName"
-                value={formData.accountName}
-                onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                placeholder="e.g., NSE Academy"
-              />
-              <TextInput
-                label="API Key"
-                name="apiKey"
-                value={formData.apiKey}
-                onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                type="password"
-              />
-              <TextInput
-                label="API Secret"
-                name="apiSecret"
-                value={formData.apiSecret}
-                onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                type="password"
-              />
-              <TextInput
-                label="Access Token"
-                name="accessToken"
-                value={formData.accessToken}
-                onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-                type="password"
-              />
-              <TextInput
-                label="Access Token Secret"
-                name="accessTokenSecret"
-                value={formData.accessTokenSecret}
-                onChange={(e) => setFormData({ ...formData, accessTokenSecret: e.target.value })}
-                type="password"
-              />
-            </Stack>
-          </ModalBody>
-          <ModalFooter
-            startActions={<Button onClick={() => setShowAddModal(false)}>Cancel</Button>}
-            endActions={<Button onClick={handleAddCredential}>Save</Button>}
-          />
-        </Modal>
+        <Box marginBottom={6}>
+          <Card>
+            <CardHeader>
+              <Flex justifyContent="space-between" alignItems="center">
+                <Typography variant="beta">Add X Credential</Typography>
+                <Button variant="tertiary" onClick={() => setShowAddModal(false)}>Close</Button>
+              </Flex>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="Account Name"
+                  name="accountName"
+                  value={formData.accountName}
+                  onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                  placeholder="e.g., NSE Academy"
+                />
+              </Box>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="API Key"
+                  name="apiKey"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  type="password"
+                />
+              </Box>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="API Secret"
+                  name="apiSecret"
+                  value={formData.apiSecret}
+                  onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                  type="password"
+                />
+              </Box>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="Access Token"
+                  name="accessToken"
+                  value={formData.accessToken}
+                  onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
+                  type="password"
+                />
+              </Box>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="Access Token Secret"
+                  name="accessTokenSecret"
+                  value={formData.accessTokenSecret}
+                  onChange={(e) => setFormData({ ...formData, accessTokenSecret: e.target.value })}
+                  type="password"
+                />
+              </Box>
+              <Flex gap={3}>
+                <Button onClick={() => setShowAddModal(false)} variant="tertiary">Cancel</Button>
+                <Button onClick={handleAddCredential}>Save</Button>
+              </Flex>
+            </CardBody>
+          </Card>
+        </Box>
       )}
 
       {showPostModal && credentials.length > 0 && (
-        <Modal onClose={() => setShowPostModal(false)} labelledBy="post-modal">
-          <ModalHeader>
-            <Typography variant="beta" id="post-modal">
-              Post to X
-            </Typography>
-          </ModalHeader>
-          <ModalBody>
-            <Stack size={4}>
-              <TextInput
-                label="Select Account"
-                name="credentialId"
-                value={postData.credentialId}
-                onChange={(e) => setPostData({ ...postData, credentialId: e.target.value })}
-                as="select"
-              >
-                <option value="">Choose an account...</option>
-                {credentials.map((cred: any) => (
-                  <option key={cred.id} value={cred.id}>
-                    {cred.accountName}
-                  </option>
-                ))}
-              </TextInput>
-              <Textarea
-                label="Post Content"
-                name="content"
-                value={postData.content}
-                onChange={(e) => setPostData({ ...postData, content: e.target.value })}
-                placeholder="Write your post (max 280 characters)"
-                maxLength={280}
-              />
-              <TextInput
-                label="Media URLs (comma-separated)"
-                name="mediaUrls"
-                value={postData.mediaUrls}
-                onChange={(e) => setPostData({ ...postData, mediaUrls: e.target.value })}
-                placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
-              />
-            </Stack>
-          </ModalBody>
-          <ModalFooter
-            startActions={<Button onClick={() => setShowPostModal(false)}>Cancel</Button>}
-            endActions={<Button onClick={handlePostToX}>Post</Button>}
-          />
-        </Modal>
+        <Box marginBottom={6}>
+          <Card>
+            <CardHeader>
+              <Flex justifyContent="space-between" alignItems="center">
+                <Typography variant="beta">Post to X</Typography>
+                <Button variant="tertiary" onClick={() => setShowPostModal(false)}>Close</Button>
+              </Flex>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <Box marginBottom={4}>
+                <label>
+                  <Typography variant="pi" fontWeight="bold" marginBottom={2}>Select Account</Typography>
+                  <select 
+                    value={postData.credentialId}
+                    onChange={(e) => setPostData({ ...postData, credentialId: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #e0e0e0' }}
+                  >
+                    <option value="">Choose an account...</option>
+                    {credentials.map((cred: any) => (
+                      <option key={cred.id} value={cred.id}>
+                        {cred.accountName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </Box>
+              <Box marginBottom={4}>
+                <Textarea
+                  label="Post Content"
+                  name="content"
+                  value={postData.content}
+                  onChange={(e) => setPostData({ ...postData, content: e.target.value })}
+                  placeholder="Write your post (max 280 characters)"
+                  maxLength={280}
+                />
+              </Box>
+              <Box marginBottom={4}>
+                <TextInput
+                  label="Media URLs (comma-separated)"
+                  name="mediaUrls"
+                  value={postData.mediaUrls}
+                  onChange={(e) => setPostData({ ...postData, mediaUrls: e.target.value })}
+                  placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+                />
+              </Box>
+              <Flex gap={3}>
+                <Button onClick={() => setShowPostModal(false)} variant="tertiary">Cancel</Button>
+                <Button onClick={handlePostToX}>Post</Button>
+              </Flex>
+            </CardBody>
+          </Card>
+        </Box>
       )}
     </Box>
   );
 };
 
 export default SocialMediaMarketingPage;
+

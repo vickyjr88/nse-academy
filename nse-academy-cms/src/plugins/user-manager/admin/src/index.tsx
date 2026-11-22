@@ -55,6 +55,7 @@ const ROUTES: Route[] = [
   { path: 'marketing/reports', page: () => import('./pages/CampaignReports'), name: 'CampaignReports' },
   { path: 'marketing/automation', page: () => import('./pages/EngagementDashboard'), name: 'EngagementDashboard' },
   { path: 'marketing/tags', page: () => import('./pages/TagsAdmin'), name: 'TagsAdmin' },
+  { path: 'marketing/social', page: () => import('./pages/SocialMediaMarketing'), name: 'SocialMediaMarketing' },
 
   { path: 'market', page: () => import('./pages/StockPricesList'), name: 'StockPricesList' },
   { path: 'market/:ticker', page: () => import('./pages/StockPriceDetail'), name: 'StockPriceDetail' },

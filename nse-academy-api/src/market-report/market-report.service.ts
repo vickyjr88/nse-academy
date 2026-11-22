@@ -16,6 +16,16 @@ import { Lesson, Narrative, fillUrl } from './narrative';
 
 export const CARD_COUNT = 5;
 
+/** Host that serves /market-report/:date/card/:n. SITE_URL is the public site. */
+export function reportSiteUrl(get: (key: string) => string | undefined): string {
+  return (get('SITE_URL') || get('WEB_URL') || 'https://nseacademy.vitaldigitalmedia.net').replace(/\/$/, '');
+}
+
+export function publicCardUrls(siteUrl: string, sessionDate: string): string[] {
+  const base = siteUrl.replace(/\/$/, '');
+  return Array.from({ length: CARD_COUNT }, (_, i) => `${base}/market-report/${sessionDate}/card/${i + 1}`);
+}
+
 export interface PublicMarketReport {
   sessionYmd: string;
   label: string;
@@ -128,6 +138,7 @@ export class MarketReportService {
       social: narrative.social as unknown as Prisma.InputJsonValue,
       aiGenerated,
       aiModel,
+      cardImageUrls: publicCardUrls(reportSiteUrl((key) => this.config.get<string>(key)), ymd),
     };
     const report = await this.prisma.marketReport.upsert({
       where: { sessionDate: ymd },
@@ -229,8 +240,7 @@ export class MarketReportService {
       { ...(row.story as unknown as Narrative), social: row.social as unknown as Narrative['social'] } as Narrative,
       r.url,
     ).social;
-    const base = this.siteUrl();
-    const cardLinks = Array.from({ length: CARD_COUNT }, (_, i) => `${base}/market-report/${r.sessionYmd}/card/${i + 1}`);
+    const cardLinks = publicCardUrls(this.siteUrl(), r.sessionYmd);
 
     const scenes = dataTable(
       [{ header: '#' }, { header: 'On screen' }, { header: 'Voiceover' }],

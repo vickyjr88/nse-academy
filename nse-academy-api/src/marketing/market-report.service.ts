@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicCardUrls, reportSiteUrl } from '../market-report/market-report.service';
 
 interface MarketReportData {
   title: string;
@@ -24,7 +26,7 @@ export class MarketReportService {
   private readonly logger = new Logger(MarketReportService.name);
   private readonly REPORT_BASE_URL = 'https://nseacademy.vitaldigitalmedia.net/market-report';
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private config: ConfigService) {}
 
   /**
    * Fetch and parse market report for a specific date from the website
@@ -233,13 +235,19 @@ export class MarketReportService {
       throw new BadRequestException(`Report not found for date ${sessionDate}`);
     }
 
-    if (report.cardImageUrls.length === 0) {
-      throw new BadRequestException(
-        `No card images available for report ${sessionDate}. Report may not be published yet.`,
-      );
+    if (report.status !== 'published') {
+      throw new BadRequestException(`Report ${sessionDate} is not published yet.`);
     }
 
-    return report;
+    // Cards are drawn on request by the public site. The column is only a cache,
+    // and older reports were saved before anything wrote it.
+    if (report.cardImageUrls.length > 0) return report;
+
+    const cardImageUrls = publicCardUrls(reportSiteUrl((key) => this.config.get<string>(key)), sessionDate);
+    await this.prisma.marketReport.update({ where: { sessionDate }, data: { cardImageUrls } }).catch((err) => {
+      this.logger.warn(`Could not store card URLs for ${sessionDate}: ${(err as Error).message}`);
+    });
+    return { ...report, cardImageUrls };
   }
 
   /**

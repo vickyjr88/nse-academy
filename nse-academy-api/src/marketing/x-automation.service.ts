@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
+import { publicCardUrls, reportSiteUrl } from '../market-report/market-report.service';
 import { eatDayBounds, PriceRow } from '../reports/report-helpers';
 import { XService } from './x.service';
 import { XComposeService } from './x-compose';
@@ -343,8 +344,14 @@ export class XAutomationService implements OnModuleInit {
   }
 
   private async cardUrls(ymd: string): Promise<string[]> {
-    const report = await this.prisma.marketReport.findUnique({ where: { sessionDate: ymd }, select: { cardImageUrls: true } });
-    return (report?.cardImageUrls ?? []).slice(0, 4);
+    const report = await this.prisma.marketReport.findUnique({
+      where: { sessionDate: ymd },
+      select: { cardImageUrls: true, status: true },
+    });
+    if (!report || report.status !== 'published') return [];
+    const stored = report.cardImageUrls ?? [];
+    const urls = stored.length > 0 ? stored : publicCardUrls(reportSiteUrl((key) => this.configService.get<string>(key)), ymd);
+    return urls.slice(0, 4);
   }
 
   private async credentialId(config: AutomationConfig): Promise<string | null> {

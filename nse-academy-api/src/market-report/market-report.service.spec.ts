@@ -62,6 +62,9 @@ describe('MarketReportService.generate', () => {
     const r = await service.generate({ date: '2026-11-04' });
     expect(factsSvc.build).toHaveBeenCalledWith('2026-11-04');
     expect(prisma.marketReport.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.marketReport.upsert.mock.calls[0][0].create.cardImageUrls[0]).toBe(
+      'https://site.test/market-report/2026-11-04/card/1',
+    );
     expect(r.created).toBe(true);
     expect(r.report.status).toBe('published');
   });

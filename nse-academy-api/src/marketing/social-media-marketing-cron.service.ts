@@ -23,7 +23,7 @@ export class SocialMediaMarketingCronService {
    * This runs after the daily report has been published
    * Reports must have card images stored before this runs
    */
-  @Cron('0 8:30 * * *', { timeZone: 'Africa/Nairobi' })
+  @Cron('30 8 * * *', { timeZone: 'Africa/Nairobi' })
   async postDailyReportToX(): Promise<void> {
     if (!this.xService || !this.marketReportService) {
       this.logger.warn('XService or MarketReportService not available, skipping X posting cron');

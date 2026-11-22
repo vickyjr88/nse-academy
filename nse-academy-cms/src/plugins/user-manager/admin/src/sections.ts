@@ -68,7 +68,6 @@ export const SECTIONS: Section[] = [
       { id: 'reports', label: 'Email reports', path: 'marketing/reports' },
       { id: 'automation', label: 'Lifecycle emails', path: 'marketing/automation' },
       { id: 'tags', label: 'Tags', path: 'marketing/tags' },
-      { id: 'social', label: 'Social media', path: 'marketing/social' },
     ],
   },
   {

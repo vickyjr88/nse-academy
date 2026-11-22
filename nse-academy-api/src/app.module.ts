@@ -43,7 +43,6 @@ import { PushModule } from './push/push.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { BrevoWebhookModule } from './brevo-webhook/brevo-webhook.module';
-import { MarketingModule } from './marketing/marketing.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -97,7 +96,6 @@ import { AppService } from './app.service';
     BroadcastModule,
     LifecycleModule,
     BrevoWebhookModule,
-    MarketingModule,
   ],
   controllers: [AppController],
   providers: [

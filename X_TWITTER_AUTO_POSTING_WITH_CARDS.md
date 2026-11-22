@@ -19,16 +19,16 @@ The NSE Academy X auto-posting system now automatically posts daily market repor
 
 When a daily market report is generated and published at:
 ```
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD
+https://nseacademy.co.ke/market-report/YYYY-MM-DD
 ```
 
 The report contains 5 card images at:
 ```
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/1
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/2
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/3
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/4
-https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/5
+https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/1
+https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/2
+https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/3
+https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/4
+https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/5
 ```
 
 **Flow:**
@@ -120,11 +120,11 @@ GET /marketing/report/2026-11-20
   "sessionDate": "2026-11-20",
   "xPosted": false,
   "cardImageUrls": [
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/1",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/2",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/3",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/4",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/5"
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/1",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/2",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/3",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/4",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/5"
   ],
   "xPostId": null,
   "xError": null
@@ -206,7 +206,7 @@ ORDER BY sessionDate DESC;
 **Issue: "No card images available"**
 - Report exists but card images haven't been generated yet
 - Wait for card generation to complete
-- Or manually check URL: `https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/1`
+- Or manually check URL: `https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/1`
 
 **Issue: "X credential is not active"**
 - Check if credential is disabled in admin UI
@@ -265,7 +265,7 @@ Adjust by modifying `src/marketing/social-media-marketing-cron.service.ts`
 **Image Format:**
 - Format: PNG
 - Size: 1080 x 1920 pixels (vertical for stories/reels)
-- Served from: `nseacademy.vitaldigitalmedia.net`
+- Served from: `nseacademy.co.ke`
 
 **Download & Upload Process:**
 1. Fetch card image from public URL

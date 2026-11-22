@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { publicCardUrls, reportSiteUrl } from '../market-report/market-report.service';
+import { reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
 
 interface MarketReportData {
   title: string;
@@ -24,7 +24,9 @@ interface MarketReportData {
 @Injectable()
 export class MarketReportService {
   private readonly logger = new Logger(MarketReportService.name);
-  private readonly REPORT_BASE_URL = 'https://nseacademy.vitaldigitalmedia.net/market-report';
+  private reportBaseUrl(): string {
+    return `${reportSiteUrl((key) => this.config.get<string>(key))}/market-report`;
+  }
 
   constructor(private prisma: PrismaService, private config: ConfigService) {}
 
@@ -33,7 +35,7 @@ export class MarketReportService {
    * Date format: YYYY-MM-DD (e.g., 2026-11-20)
    */
   async fetchReportByDate(date: string): Promise<MarketReportData> {
-    const url = `${this.REPORT_BASE_URL}/${date}`;
+    const url = `${this.reportBaseUrl()}/${date}`;
 
     try {
       const response = await axios.get(url);
@@ -171,7 +173,7 @@ export class MarketReportService {
   private extractCardImageUrls(date: string): string[] {
     const urls: string[] = [];
     for (let i = 1; i <= 5; i++) {
-      urls.push(`${this.REPORT_BASE_URL}/${date}/card/${i}`);
+      urls.push(`${this.reportBaseUrl()}/${date}/card/${i}`);
     }
     return urls;
   }
@@ -215,7 +217,7 @@ export class MarketReportService {
    */
   async verifyReportExists(date: string): Promise<boolean> {
     try {
-      const url = `${this.REPORT_BASE_URL}/${date}`;
+      const url = `${this.reportBaseUrl()}/${date}`;
       const response = await axios.head(url);
       return response.status === 200;
     } catch {
@@ -239,14 +241,15 @@ export class MarketReportService {
       throw new BadRequestException(`Report ${sessionDate} is not published yet.`);
     }
 
-    // Cards are drawn on request by the public site. The column is only a cache,
-    // and older reports were saved before anything wrote it.
-    if (report.cardImageUrls.length > 0) return report;
-
-    const cardImageUrls = publicCardUrls(reportSiteUrl((key) => this.config.get<string>(key)), sessionDate);
-    await this.prisma.marketReport.update({ where: { sessionDate }, data: { cardImageUrls } }).catch((err) => {
-      this.logger.warn(`Could not store card URLs for ${sessionDate}: ${(err as Error).message}`);
-    });
+    // Cards are drawn on request by the public site. The column is only a cache.
+    // Empty lists and URLs saved against the old host are rebuilt.
+    const site = reportSiteUrl((key) => this.config.get<string>(key));
+    const cardImageUrls = resolveCardUrls(report.cardImageUrls, site, sessionDate);
+    if (cardImageUrls.join() !== report.cardImageUrls.join()) {
+      await this.prisma.marketReport.update({ where: { sessionDate }, data: { cardImageUrls } }).catch((err) => {
+        this.logger.warn(`Could not store card URLs for ${sessionDate}: ${(err as Error).message}`);
+      });
+    }
     return { ...report, cardImageUrls };
   }
 

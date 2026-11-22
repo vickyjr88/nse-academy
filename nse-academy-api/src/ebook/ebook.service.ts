@@ -22,6 +22,7 @@ import {
 import { InitializePurchaseDto } from './dto/initialize-purchase.dto';
 import { Prisma } from '@prisma/client';
 import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
+import { publicSiteUrl } from '../site-url';
 
 const DEXTER_DOWNLOAD_BASE =
   'https://dexter-api.vitaldigitalmedia.net/api/external/download';
@@ -65,9 +66,7 @@ export class EbookService {
 
   private webUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

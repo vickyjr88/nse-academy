@@ -4,8 +4,7 @@ import { getArticles, CATEGORIES } from "@/lib/cms";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ShareArticle from "@/components/ShareArticle";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
+import { SITE_URL } from "@/lib/seo";
 
 // ---------------------------------------------------------------------------
 // SEO

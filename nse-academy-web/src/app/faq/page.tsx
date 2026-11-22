@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import FaqClient, { type FaqCategory } from "./FaqClient";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import { SITE_URL } from "@/lib/seo";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -16,11 +17,11 @@ export const metadata: Metadata = {
     title: "NSE Academy FAQ - Everything You Need to Know",
     description: "Comprehensive answers about NSE Academy, pricing, investor profiling, courses, and Nairobi Stock Exchange investing.",
     type: "website",
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/faq`,
+    url: `${SITE_URL}/faq`,
     siteName: "NSE Academy",
   },
   twitter: { card: "summary", title: "NSE Academy FAQ", description: "Answers to all your questions about NSE Academy." },
-  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/faq` },
+  alternates: { canonical: `${SITE_URL}/faq` },
 };
 
 // ---------------------------------------------------------------------------

@@ -13,12 +13,25 @@ import { MarketFacts } from './market-facts';
 import { MarketFactsService } from './market-facts.service';
 import { NarrativeService } from './narrative.service';
 import { Lesson, Narrative, fillUrl } from './narrative';
+import { isLegacyPublicHost, publicSiteUrl } from '../site-url';
 
 export const CARD_COUNT = 5;
 
 /** Host that serves /market-report/:date/card/:n. SITE_URL is the public site. */
 export function reportSiteUrl(get: (key: string) => string | undefined): string {
-  return (get('SITE_URL') || get('WEB_URL') || 'https://nseacademy.vitaldigitalmedia.net').replace(/\/$/, '');
+  return publicSiteUrl(get);
+}
+
+/** Stored card URLs from the old host are discarded. The public site draws the cards. */
+export function resolveCardUrls(stored: string[], siteUrl: string, sessionDate: string): string[] {
+  const stale = stored.length === 0 || stored.some((url) => {
+    try {
+      return isLegacyPublicHost(new URL(url).hostname);
+    } catch {
+      return true;
+    }
+  });
+  return stale ? publicCardUrls(siteUrl, sessionDate) : stored;
 }
 
 export function publicCardUrls(siteUrl: string, sessionDate: string): string[] {
@@ -153,7 +166,7 @@ export class MarketReportService {
   // ------------------------------------------------------------- public reads
 
   private siteUrl(): string {
-    return (this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net').replace(/\/$/, '');
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   async listPublic(limit = 30): Promise<PublicMarketReportSummary[]> {

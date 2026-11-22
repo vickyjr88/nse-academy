@@ -4,6 +4,7 @@ import PublicFooter from "@/components/PublicFooter";
 import { TrackedLink } from "@/components/TrackedLink";
 import LeadMagnetForm from "@/components/LeadMagnetForm";
 import { getLeadMagnet } from "@/lib/cms";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Investor Profiler Quiz | NSE Academy",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     title: "Investor Profiler Quiz | NSE Academy",
     description: "Discover your true investor type with our free 10-question quiz.",
     type: "website",
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/investor-profiler`,
+    url: `${SITE_URL}/investor-profiler`,
   },
 };
 
@@ -30,7 +31,7 @@ export default async function InvestorProfilerPage() {
     "@type": "WebPage",
     "name": "Investor Profiler Quiz",
     "description": "Discover your true investor type with our free 10-question quiz. Get a personalized learning path and stock recommendations for the Nairobi Securities Exchange.",
-    "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/investor-profiler`,
+    "url": `${SITE_URL}/investor-profiler`,
     "mainEntity": {
       "@type": "SoftwareApplication",
       "name": "NSE Investor Profiler",

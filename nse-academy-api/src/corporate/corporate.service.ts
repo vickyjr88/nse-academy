@@ -12,6 +12,7 @@ import { BrevoService } from '../brevo/brevo.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
+import { publicSiteUrl } from '../site-url';
 
 type CorporatePlan = 'starter' | 'team' | 'sacco';
 
@@ -44,9 +45,7 @@ export class CorporateService {
 
   private webUrl(): string {
     return (
-      this.configService.get<string>('WEB_URL') ||
-      this.configService.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.configService.get<string>(key))
     );
   }
 

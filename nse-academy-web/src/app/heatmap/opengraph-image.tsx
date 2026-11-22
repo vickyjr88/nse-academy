@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_HOST } from "@/lib/seo";
 import { fmtChange, getHeatmap, heatColor, squarify } from "@/lib/heatmap";
 
 export const alt = "NSE heatmap: every listed company sized by market cap and coloured by today's price change - NSE Academy";
@@ -59,7 +60,7 @@ export default async function Image() {
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", fontSize: 24, color: "#6ee7b7" }}>nseacademy.vitaldigitalmedia.net</div>
+            <div style={{ display: "flex", fontSize: 24, color: "#6ee7b7" }}>{SITE_HOST}</div>
           )}
         </div>
 

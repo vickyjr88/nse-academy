@@ -16,6 +16,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { publicSiteUrl } from '../site-url';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -40,11 +41,7 @@ export class AuthService {
   }
 
   private webUrl(): string {
-    return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
-    );
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   async register(dto: RegisterDto) {

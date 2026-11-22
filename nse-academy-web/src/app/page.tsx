@@ -8,7 +8,7 @@ import { TrackedAnchor, TrackedLink } from "@/components/TrackedLink";
 import AndroidAppLink from "@/components/AndroidAppLink";
 import LeadMagnetForm from "@/components/LeadMagnetForm";
 import JsonLd from "@/components/JsonLd";
-import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
+import { organizationJsonLd, websiteJsonLd, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -21,9 +21,7 @@ export const metadata: Metadata = {
     description:
       "Personalised stock picks, deep-dive research, and portfolio tracking for Kenyan investors.",
     type: "website",
-    url:
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://nseacademy.vitaldigitalmedia.net",
+    url: SITE_URL,
     siteName: "NSE Academy",
   },
   twitter: {
@@ -32,9 +30,7 @@ export const metadata: Metadata = {
     description: "Personalised NSE research and portfolio tracking for Kenyan investors.",
   },
   alternates: {
-    canonical:
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://nseacademy.vitaldigitalmedia.net",
+    canonical: SITE_URL,
     types: { "application/rss+xml": "/blog/rss.xml" },
   },
 };

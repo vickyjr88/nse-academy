@@ -14,6 +14,7 @@ import { PostMessageDto } from './dto/post-message.dto';
 import { PublishInsightDto } from './dto/publish-insight.dto';
 import { SendAlertDto } from './dto/send-alert.dto';
 import { ADVISOR_QUESTION_ALLOWANCE, allowanceTier, nairobiMonthWindow } from './advisor-allowance';
+import { publicSiteUrl } from '../site-url';
 
 const NOTIFICATION_EYEBROWS: Record<string, string> = {
   ADVISOR_QUERY: 'New Message',
@@ -45,9 +46,7 @@ export class FinancialAdvisorService {
 
   private webUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

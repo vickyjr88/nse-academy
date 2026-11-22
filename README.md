@@ -6,7 +6,7 @@ The official learning and analysis platform for the Nairobi Securities Exchange 
 
 > Personalized NSE investor education - discover your investor type, get a matched learning path, and build your Nairobi Stock Exchange portfolio with confidence.
 
-**Domain:** https://nseacademy.vitaldigitalmedia.net  
+**Domain:** https://nseacademy.co.ke  
 **Owner:** Victor Karanja / Infinity Digital Works
 
 ---
@@ -144,7 +144,7 @@ See `.env.example` / `.env.local.example` in each sub-repo for required variable
 - [x] **Phase 2** - Investor Profiler quiz engine + UI
 - [x] **Phase 3** - Content seeding from ebook (13 chapters → Strapi) + `/learn` + `/glossary` pages
 - [x] **Phase 4** - Stock Advisor + Paystack payments (3-tier: Free / Intermediary KSh 100 / Premium KSh 500)
-- [x] **Phase 5** - Polish + deploy to nseacademy.vitaldigitalmedia.net
+- [x] **Phase 5** - Polish + deploy to nseacademy.co.ke
 
 ---
 

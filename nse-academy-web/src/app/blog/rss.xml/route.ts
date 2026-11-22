@@ -1,6 +1,5 @@
 import { getArticles } from "@/lib/cms";
-
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+import { SITE_URL } from "@/lib/seo";
 
 export async function GET() {
   const { articles } = await getArticles({ limit: 50 });

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { assignVariant } from './ab-variant.util';
+import { publicSiteUrl } from '../site-url';
 
 /**
  * Every engagement flow a user can move through. Kept as a single source
@@ -71,9 +72,7 @@ export class LifecycleService {
 
   private webUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

@@ -9,6 +9,7 @@ import { Lead, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { publicSiteUrl } from '../site-url';
 
 export interface CaptureLeadInput {
   email: string;
@@ -41,9 +42,7 @@ export class LeadsService {
       'BREVO_LEAD_MAGNET_TEMPLATE_ID',
     );
     this.brevoTemplateId = templateIdRaw ? Number(templateIdRaw) : undefined;
-    this.siteUrl =
-      this.config.get<string>('SITE_URL') ??
-      'https://nseacademy.vitaldigitalmedia.net';
+    this.siteUrl = publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   /**

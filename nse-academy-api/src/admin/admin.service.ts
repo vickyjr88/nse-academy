@@ -12,6 +12,7 @@ import { JournalService } from '../journal/journal.service';
 import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpsertLicenseDto } from './dto/upsert-license.dto';
+import { publicSiteUrl } from '../site-url';
 
 type MonthRow = { month: string };
 type GrowthRow = MonthRow & { count: bigint };
@@ -489,9 +490,7 @@ export class AdminService {
 
   private webUrl(): string {
     return (
-      this.configService.get<string>('WEB_URL') ||
-      this.configService.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.configService.get<string>(key))
     );
   }
 

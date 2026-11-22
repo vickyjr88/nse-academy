@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { MarketReportService } from './market-report.service';
+import { MarketReportService, resolveCardUrls } from './market-report.service';
 import { buildFacts } from './market-facts';
 import { URL_PLACEHOLDER, templateNarrative } from './narrative';
 
@@ -119,6 +119,38 @@ describe('MarketReportService.generate', () => {
     expect(mail.subject).toContain('Wed 4 Nov');
     expect(mail.rawHtml).toContain('WhatsApp channel');
     expect(mail.rawHtml).toContain('https://site.test/market-report/2026-11-04/card/1');
+  });
+});
+
+describe('resolveCardUrls', () => {
+  const site = 'https://nseacademy.co.ke';
+  const fresh = [
+    `${site}/market-report/2026-11-04/card/1`,
+    `${site}/market-report/2026-11-04/card/2`,
+  ];
+
+  it('rebuilds an empty cache', () => {
+    const urls = resolveCardUrls([], site, '2026-11-04');
+    expect(urls).toHaveLength(5);
+    expect(urls[0]).toBe(`${site}/market-report/2026-11-04/card/1`);
+  });
+
+  it('rebuilds URLs that point at the old host', () => {
+    const urls = resolveCardUrls(
+      ['https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-04/card/1'],
+      site,
+      '2026-11-04',
+    );
+    expect(urls.every((url) => url.startsWith(site))).toBe(true);
+  });
+
+  it('rebuilds a malformed URL rather than trusting it', () => {
+    const urls = resolveCardUrls(['not a url'], site, '2026-11-04');
+    expect(urls[0]).toBe(`${site}/market-report/2026-11-04/card/1`);
+  });
+
+  it('keeps a cache that already points at the public site', () => {
+    expect(resolveCardUrls(fresh, site, '2026-11-04')).toBe(fresh);
   });
 });
 

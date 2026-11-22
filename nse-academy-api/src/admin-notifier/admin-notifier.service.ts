@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BrevoService } from '../brevo/brevo.service';
 import { EmailButton, escapeHtml, renderEmailHtml, renderEmailText } from '../brevo/email-template';
+import { publicSiteUrl } from '../site-url';
 
 export const DEFAULT_ADMIN_NOTIFY_EMAIL = 'info@vitaldigitalmedia.net';
 
@@ -53,9 +54,7 @@ export class AdminNotifierService {
 
   siteUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

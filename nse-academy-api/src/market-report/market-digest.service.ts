@@ -9,6 +9,7 @@ import { loadDailyCloses } from '../market-data/price-history';
 import { eatDayBounds } from '../reports/report-helpers';
 import { MarketReportService } from './market-report.service';
 import { DigestReport, buildDigestPortfolio, digestToken, renderDigest, verifyDigestToken } from './digest';
+import { publicSiteUrl } from '../site-url';
 
 export interface DigestRun {
   session: string | null;
@@ -32,7 +33,7 @@ export class MarketDigestService {
   ) {}
 
   private webUrl(): string {
-    return this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net';
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   private secret(): string {

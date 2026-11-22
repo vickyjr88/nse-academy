@@ -9,6 +9,7 @@ import { MarketReportService } from './market-report.service';
 import { XAutomationService } from './x-automation.service';
 import { XStreamService } from './x-stream.service';
 import { fillReportPost } from './x-slot';
+import { publicSiteUrl } from '../site-url';
 
 // Keys copied from the X console often carry a trailing space or newline, which makes X answer 401.
 const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
@@ -139,7 +140,7 @@ export class MarketingController {
   @ApiResponse({ status: 200, description: 'Report posted to X successfully' })
   async postReportToX(@Body() dto: PostReportToXDto) {
     const report = await this.marketReportService.getReportForXPosting(dto.reportDate);
-    const site = this.config.get<string>('SITE_URL') || this.config.get<string>('WEB_URL') || 'https://nseacademy.co.ke';
+    const site = publicSiteUrl((key) => this.config.get<string>(key));
     const verified = fillReportPost((report.social as { xPost?: string } | null)?.xPost, dto.reportDate, site);
     const fallback = this.marketReportService.createXPosts({
       title: '',

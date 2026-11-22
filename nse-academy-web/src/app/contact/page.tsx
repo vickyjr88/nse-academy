@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ContactClient from "./ContactClient";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Contact Us - NSE Academy",
@@ -11,10 +12,10 @@ export const metadata: Metadata = {
     title: "Contact NSE Academy",
     description: "Have a question or want to explore corporate licensing? We'd love to hear from you.",
     type: "website",
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net"}/contact`,
+    url: `${SITE_URL}/contact`,
     siteName: "NSE Academy",
   },
-  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net"}/contact` },
+  alternates: { canonical: `${SITE_URL}/contact` },
 };
 
 export default function ContactPage() {

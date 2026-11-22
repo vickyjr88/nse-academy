@@ -3,6 +3,7 @@ import Link from "next/link";
 import CalculatorsClient from "./CalculatorsClient";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import { SITE_URL } from "@/lib/seo";
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     description:
       "Calculate broker fees, dividend yield, compound growth, DCA returns and dividend income targets for NSE investments.",
     type: "website",
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/calculators`,
+    url: `${SITE_URL}/calculators`,
     siteName: "NSE Academy",
   },
   twitter: {
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
     title: "NSE Investment Calculators | NSE Academy",
     description: "Free calculators for Kenyan NSE investors - fees, dividends, compounding, DCA.",
   },
-  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'}/calculators` },
+  alternates: { canonical: `${SITE_URL}/calculators` },
 };
 
 // ---------------------------------------------------------------------------

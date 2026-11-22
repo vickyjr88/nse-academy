@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { CreateAlertDto } from './dto/create-alert.dto';
+import { publicSiteUrl } from '../site-url';
 
 interface NewNotification {
   userId: string;
@@ -27,9 +28,7 @@ export class AlertsService {
 
   private webUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

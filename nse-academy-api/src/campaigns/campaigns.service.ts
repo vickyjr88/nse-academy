@@ -6,6 +6,7 @@ import { BroadcastService } from '../broadcast/broadcast.service';
 import { loadDailyCloses } from '../market-data/price-history';
 import { EXAMPLE_POSITIONS, PublicExample, buildExampleWatch, toPublicExample } from './example-watch';
 import { Audience, buildSubscriptionEmail, subscriptionSubject } from './subscription-email';
+import { publicSiteUrl } from '../site-url';
 
 export const AUDIENCES: Audience[] = ['free', 'intermediary', 'premium'];
 
@@ -24,7 +25,7 @@ export class CampaignsService {
   ) {}
 
   private siteUrl(): string {
-    return this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net';
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   /** The example portfolio for the public website, on the latest real closes. 404 when the price history is incomplete. */

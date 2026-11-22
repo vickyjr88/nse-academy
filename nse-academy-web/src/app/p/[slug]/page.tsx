@@ -4,6 +4,7 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import InvestorCard from "@/components/InvestorCard";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/seo";
 
 interface PublicProfile {
   type: string;
@@ -23,7 +24,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
+  return SITE_URL;
 }
 
 async function fetchProfile(slug: string): Promise<PublicProfile | null> {

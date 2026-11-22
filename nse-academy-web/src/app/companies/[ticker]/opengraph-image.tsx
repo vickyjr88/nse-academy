@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_HOST } from "@/lib/seo";
 import { getStockProfileByTicker } from "@/lib/cms";
 import { getMarketQuote } from "@/lib/market-quote";
 
@@ -42,7 +43,7 @@ export default async function Image({ params }: { params: Promise<{ ticker: stri
               </span>
             </div>
           ) : null}
-          <span style={{ fontSize: 24, color: "#6ee7b7" }}>nseacademy.vitaldigitalmedia.net</span>
+          <span style={{ fontSize: 24, color: "#6ee7b7" }}>{SITE_HOST}</span>
         </div>
       </div>
     ),

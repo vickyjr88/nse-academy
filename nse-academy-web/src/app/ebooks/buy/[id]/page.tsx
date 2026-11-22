@@ -7,10 +7,11 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CheckoutPanel from "@/components/checkout/CheckoutPanel";
 import { STOREFRONT_URL, type DexterProduct } from "@/lib/ebook";
+import { SITE_URL } from "@/lib/seo";
 
 function ProductJsonLd({ product }: { product: DexterProduct | null }) {
   if (!product) return null;
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+  const siteUrl = SITE_URL;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",

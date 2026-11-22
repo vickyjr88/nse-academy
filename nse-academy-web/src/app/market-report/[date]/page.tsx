@@ -15,10 +15,9 @@ import {
   getMarketReport,
   listMarketReports,
 } from "@/lib/market-report";
+import { SITE_URL } from "@/lib/seo";
 
 export const revalidate = 300;
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
 
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;

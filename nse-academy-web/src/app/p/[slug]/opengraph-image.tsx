@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_HOST } from "@/lib/seo";
 
 export const runtime = "edge";
 export const alt = "NSE Academy - Shared Investor Profile";
@@ -210,10 +211,10 @@ export default async function Image({ params }: { params: { slug: string } }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             Take the free 10-question quiz at
             <span style={{ color: "white", fontWeight: 600, marginLeft: 6 }}>
-              nseacademy.vitaldigitalmedia.net
+              {SITE_HOST}
             </span>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.4)" }}>nseacademy.vdm.net/investor-profiler</div>
+          <div style={{ color: "rgba(255,255,255,0.4)" }}>{SITE_HOST}/investor-profiler</div>
         </div>
       </div>
     ),

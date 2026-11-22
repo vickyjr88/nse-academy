@@ -20,7 +20,7 @@ The system consists of four main containers:
   - [Docker Compose V2](https://docs.docker.com/compose/install/)
 - **Reverse Proxy:** Nginx (with SSL via Let's Encrypt).
 - **Domains:**
-  - `nseacademy.vitaldigitalmedia.net` (Frontend)
+  - `nseacademy.co.ke` (Frontend)
   - `api.nseacademy.vitaldigitalmedia.net` (Backend API)
   - `cms.nseacademy.vitaldigitalmedia.net` (Strapi CMS)
 
@@ -39,8 +39,8 @@ NEXT_PUBLIC_API_URL=https://nseacademy-api.vitaldigitalmedia.net
 NEXT_PUBLIC_CMS_URL=https://cms.nseacademy.vitaldigitalmedia.net
 CMS_INTERNAL_URL=http://cms:1337
 API_INTERNAL_URL=http://api:3011
-NEXTAUTH_URL=https://nseacademy.vitaldigitalmedia.net
-WEB_URL=https://nseacademy.vitaldigitalmedia.net
+NEXTAUTH_URL=https://nseacademy.co.ke
+WEB_URL=https://nseacademy.co.ke
 
 # --- DATABASE ---
 POSTGRES_USER=postgres
@@ -125,16 +125,16 @@ Create `/etc/nginx/sites-available/nseacademy` and link it to `sites-enabled`.
 # --- NSE ACADEMY WEB ---
 server {
     listen 80;
-    server_name nseacademy.vitaldigitalmedia.net;
+    server_name nseacademy.co.ke www.nseacademy.co.ke;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name nseacademy.vitaldigitalmedia.net;
+    server_name nseacademy.co.ke www.nseacademy.co.ke;
 
-    ssl_certificate /etc/letsencrypt/live/nseacademy.vitaldigitalmedia.net/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/nseacademy.vitaldigitalmedia.net/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/nseacademy.co.ke/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nseacademy.co.ke/privkey.pem;
 
     location / {
         proxy_pass http://localhost:3010;

@@ -8,6 +8,7 @@ import {
   fmtPrice,
   getMarketReport,
 } from "@/lib/market-report";
+import { SITE_HOST } from "@/lib/seo";
 
 // 9:16 story/reel cards for Instagram, TikTok, YouTube Shorts and WhatsApp Status.
 // GET /market-report/2026-11-04/card/1 ... /card/5
@@ -153,7 +154,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ date: s
   if (!report) return new Response("Not found", { status: 404 });
 
   // Host + section only: the dated address wraps mid-word on a phone-width card, and the CTA points at the report list anyway.
-  const shortUrl = "nseacademy.vitaldigitalmedia.net/market-report";
+  const shortUrl = `${SITE_HOST}/market-report`;
   return new ImageResponse(<Frame step={n} url={shortUrl}>{slideBody(n, report)}</Frame>, {
     width: W,
     height: H,

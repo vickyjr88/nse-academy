@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { publicSiteUrl } from '../site-url';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -59,10 +60,7 @@ export class OpenRouterService {
       .split(',')
       .map((m) => m.trim())
       .filter(Boolean);
-    this.siteUrl =
-      this.config.get<string>('WEB_URL') ??
-      this.config.get<string>('SITE_URL') ??
-      'https://nseacademy.vitaldigitalmedia.net';
+    this.siteUrl = publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   /** Primary first, then fallbacks, capped at what OpenRouter accepts - extra entries are ignored rather than failing every request. */

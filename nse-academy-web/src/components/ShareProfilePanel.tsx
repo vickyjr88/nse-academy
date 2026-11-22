@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { trackEvent } from '@/lib/analytics';
+import { SITE_URL } from '@/lib/seo';
 
 interface ShareProfilePanelProps {
   initialIsPublic?: boolean;
@@ -24,7 +25,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 function siteUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin;
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net';
+  return SITE_URL;
 }
 
 export default function ShareProfilePanel({

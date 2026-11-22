@@ -12,6 +12,7 @@ import { PaystackService } from '../paystack/paystack.service';
 import { TIER_LEVEL, computeEffectiveTier } from '../auth/effective-tier.util';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { AdminNotifierService } from '../admin-notifier/admin-notifier.service';
+import { publicSiteUrl } from '../site-url';
 
 export type SubscriptionPlan = 'intermediary' | 'premium';
 export type BillingMonths = 1 | 3 | 6 | 12;
@@ -110,11 +111,7 @@ export class PaymentsService {
   }
 
   private webUrl(): string {
-    return (
-      this.configService.get<string>('WEB_URL') ||
-      this.configService.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
-    );
+    return publicSiteUrl((key) => this.configService.get<string>(key));
   }
 
   async initializeTransaction(
@@ -153,7 +150,7 @@ export class PaymentsService {
     const json = await this.paystack.initializeTransaction({
       email,
       amountKobo: computeAmountKobo(plan, months),
-      callbackUrl: `${this.configService.get('WEB_URL', 'https://nseacademy.vitaldigitalmedia.net')}/payment/callback`,
+      callbackUrl: `${this.webUrl()}/payment/callback`,
       metadata: { type: 'subscription', userId, plan, months },
     });
     if (!json.status) {

@@ -7,7 +7,7 @@ class AppConfig {
   static const apiBase = String.fromEnvironment('API_URL', defaultValue: 'https://nseacademy-api.vitaldigitalmedia.net');
 
   /// The website, for links the app hands off to (upgrading, the full market report).
-  static const siteBase = String.fromEnvironment('SITE_URL', defaultValue: 'https://nseacademy.vitaldigitalmedia.net');
+  static const siteBase = String.fromEnvironment('SITE_URL', defaultValue: 'https://nseacademy.co.ke');
 
   /// Whether the app may point members at the website's pricing page. Off for the Google Play build: Play's payments
   /// policy does not allow an app to steer users to a purchase outside Google Play, so the Play build only tells a member

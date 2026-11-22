@@ -9,6 +9,7 @@ import ShareArticle from "@/components/ShareArticle";
 import { TrackedLink } from "@/components/TrackedLink";
 import { getArticleBySlug, getAllArticleSlugs, getArticles } from "@/lib/cms";
 import { getDigitalProducts } from "@/lib/dexter";
+import { SITE_URL } from "@/lib/seo";
 
 // ---------------------------------------------------------------------------
 // Static generation
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const article = await getArticleBySlug(slug);
   if (!article) return { title: "Article Not Found | NSE Academy" };
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+  const siteUrl = SITE_URL;
   const canonicalUrl = `${siteUrl}/blog/${article.slug}`;
   const ogImage =
     article.og_image_url ||
@@ -76,7 +77,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 function ArticleJsonLd({ article }: { article: Awaited<ReturnType<typeof getArticleBySlug>> }) {
   if (!article) return null;
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+  const siteUrl = SITE_URL;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -153,7 +154,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const featuredEbook =
     ebooks.find((b) => /complete\s+investor/i.test(b.name)) ?? ebooks[0] ?? null;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net";
+  const siteUrl = SITE_URL;
   const shareUrl = `${siteUrl}/blog/${article.slug}`;
   const shareExcerpt =
     article.excerpt ?? article.body.slice(0, 160).replace(/[#*\n]/g, " ").trim();

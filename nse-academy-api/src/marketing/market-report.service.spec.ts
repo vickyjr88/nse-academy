@@ -25,11 +25,11 @@ describe('getReportForXPosting', () => {
     const { service, prisma } = make(published);
     const report = await service.getReportForXPosting('2026-11-19');
     expect(report.cardImageUrls).toEqual([
-      'https://nseacademy.example/market-report/2026-11-19/card/1',
-      'https://nseacademy.example/market-report/2026-11-19/card/2',
-      'https://nseacademy.example/market-report/2026-11-19/card/3',
-      'https://nseacademy.example/market-report/2026-11-19/card/4',
-      'https://nseacademy.example/market-report/2026-11-19/card/5',
+      'https://nseacademy.co.ke/market-report/2026-11-19/card/1',
+      'https://nseacademy.co.ke/market-report/2026-11-19/card/2',
+      'https://nseacademy.co.ke/market-report/2026-11-19/card/3',
+      'https://nseacademy.co.ke/market-report/2026-11-19/card/4',
+      'https://nseacademy.co.ke/market-report/2026-11-19/card/5',
     ]);
     expect(prisma.marketReport.update).toHaveBeenCalledWith({
       where: { sessionDate: '2026-11-19' },
@@ -43,6 +43,23 @@ describe('getReportForXPosting', () => {
     const report = await service.getReportForXPosting('2026-11-19');
     expect(report.cardImageUrls).toEqual(stored);
     expect(prisma.marketReport.update).not.toHaveBeenCalled();
+  });
+
+  it('rebuilds card urls saved against the old host', async () => {
+    const stored = [
+      'https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-19/card/1',
+      'https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-19/card/2',
+      'https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-19/card/3',
+      'https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-19/card/4',
+      'https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-19/card/5',
+    ];
+    const { service, prisma } = make({ ...published, cardImageUrls: stored });
+    const report = await service.getReportForXPosting('2026-11-19');
+    expect(report.cardImageUrls.every((url) => url.startsWith('https://nseacademy.co.ke/'))).toBe(true);
+    expect(prisma.marketReport.update).toHaveBeenCalledWith({
+      where: { sessionDate: '2026-11-19' },
+      data: { cardImageUrls: report.cardImageUrls },
+    });
   });
 
   it('rejects a missing report and an unpublished one', async () => {

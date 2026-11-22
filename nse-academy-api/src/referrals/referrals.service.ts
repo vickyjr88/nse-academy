@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BrevoService } from '../brevo/brevo.service';
 import { renderEmailHtml, renderEmailText } from '../brevo/email-template';
 import { LifecycleService } from '../lifecycle/lifecycle.service';
+import { publicSiteUrl } from '../site-url';
 
 const FREE_MONTHS_REWARD = 1;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -27,9 +28,7 @@ export class ReferralsService {
 
   private webUrl(): string {
     return (
-      this.config.get<string>('WEB_URL') ||
-      this.config.get<string>('SITE_URL') ||
-      'https://nseacademy.vitaldigitalmedia.net'
+      publicSiteUrl((key) => this.config.get<string>(key))
     );
   }
 

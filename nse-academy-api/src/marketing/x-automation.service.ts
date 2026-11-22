@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
-import { publicCardUrls, reportSiteUrl } from '../market-report/market-report.service';
+import { reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
 import { eatDayBounds, PriceRow } from '../reports/report-helpers';
 import { XService } from './x.service';
 import { XComposeService } from './x-compose';
@@ -334,7 +334,7 @@ export class XAutomationService implements OnModuleInit {
   }
 
   private siteUrl(): string {
-    return this.configService.get<string>('SITE_URL') || this.configService.get<string>('WEB_URL') || 'https://nseacademy.co.ke';
+    return reportSiteUrl((key) => this.configService.get<string>(key));
   }
 
   private async reportText(ymd: string): Promise<string | null> {
@@ -349,9 +349,8 @@ export class XAutomationService implements OnModuleInit {
       select: { cardImageUrls: true, status: true },
     });
     if (!report || report.status !== 'published') return [];
-    const stored = report.cardImageUrls ?? [];
-    const urls = stored.length > 0 ? stored : publicCardUrls(reportSiteUrl((key) => this.configService.get<string>(key)), ymd);
-    return urls.slice(0, 4);
+    const site = reportSiteUrl((key) => this.configService.get<string>(key));
+    return resolveCardUrls(report.cardImageUrls ?? [], site, ymd).slice(0, 4);
   }
 
   private async credentialId(config: AutomationConfig): Promise<string | null> {

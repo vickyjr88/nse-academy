@@ -1,7 +1,28 @@
 // Shared SEO / structured-data helpers. Every page that emits JSON-LD or a canonical goes through here
 // so the site name, URL and publisher stay identical across the whole site.
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nseacademy.vitaldigitalmedia.net").replace(/\/$/, "");
+export const SITE_HOST = "nseacademy.co.ke";
+export const PUBLIC_SITE_URL = `https://${SITE_HOST}`;
+
+const LEGACY_HOSTS = new Set([
+  "nseacademy.vitaldigitalmedia.net",
+  "www.nseacademy.vitaldigitalmedia.net",
+  "nseacademy.vdm.net",
+]);
+
+/** Public origin. A build still pointed at the old host is rewritten to nseacademy.co.ke. */
+export function canonicalSiteUrl(raw?: string): string {
+  const value = (raw || PUBLIC_SITE_URL).trim().replace(/\/$/, "");
+  try {
+    const url = new URL(value);
+    if (LEGACY_HOSTS.has(url.hostname)) return PUBLIC_SITE_URL;
+    return url.origin;
+  } catch {
+    return PUBLIC_SITE_URL;
+  }
+}
+
+export const SITE_URL = canonicalSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 export const SITE_NAME = "NSE Academy";
 export const WHATSAPP_CHANNEL = "https://whatsapp.com/channel/0029Vb7NzBL7YSdAiq5Tiv07";
 

@@ -4,7 +4,7 @@ import { Pill, adminFetch, when } from './_ops';
 
 interface Report { sessionDate: string; status: string; aiGenerated: boolean; aiModel: string | null; headline: string; publishedAt: string | null }
 
-const SITE = 'https://nseacademy.vitaldigitalmedia.net';
+const SITE = 'https://nseacademy.co.ke';
 
 export function MarketReportsAdmin() {
   const [rows, setRows] = useState<Report[]>([]);

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import { SITE_NAME } from "@/lib/seo";
+import { SITE_HOST, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - NSE Academy",
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <p className="text-sm text-gray-400 mb-8">Effective 15 November 2026</p>
 
           <p className="mb-4">
-            This policy covers the NSE Academy website (nseacademy.vitaldigitalmedia.net) and the NSE Academy mobile app
+            This policy covers the NSE Academy website ({SITE_HOST}) and the NSE Academy mobile app
             for Android. NSE Academy is built and run by Infinity Digital Works (&ldquo;we&rdquo;, &ldquo;us&rdquo;), a
             Nairobi-based company, and we are the controller of the personal data described here. We handle it in line
             with the Kenya Data Protection Act, 2019.

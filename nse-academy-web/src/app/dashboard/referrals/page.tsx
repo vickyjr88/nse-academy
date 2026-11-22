@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { SITE_URL } from "@/lib/seo";
 
 interface ReferralItem {
   id: string;
@@ -21,10 +22,8 @@ interface Stats {
   referrals: ReferralItem[];
 }
 
-const SITE_URL =
-  typeof window !== "undefined"
-    ? window.location.origin
-    : (process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net');
+const SHARE_BASE_URL =
+  typeof window !== "undefined" ? window.location.origin : SITE_URL;
 
 export default function ReferralsPage() {
   const router = useRouter();
@@ -47,7 +46,7 @@ export default function ReferralsPage() {
 
   function copyLink() {
     if (!stats) return;
-    const link = `${SITE_URL}/auth/register?ref=${stats.referralCode}`;
+    const link = `${SHARE_BASE_URL}/auth/register?ref=${stats.referralCode}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       trackEvent("referral_link_copied", {
@@ -59,7 +58,7 @@ export default function ReferralsPage() {
 
   function shareWhatsApp() {
     if (!stats) return;
-    const link = `${SITE_URL}/auth/register?ref=${stats.referralCode}`;
+    const link = `${SHARE_BASE_URL}/auth/register?ref=${stats.referralCode}`;
     const text = encodeURIComponent(
       `Join me on NSE Academy - the best way to learn how to invest on the Nairobi Securities Exchange. Sign up free and we both get 1 month free when you subscribe! 🎁\n\n${link}`
     );
@@ -72,7 +71,7 @@ export default function ReferralsPage() {
 
   if (loading) return <div className="py-20 text-center text-gray-400">Loading referrals…</div>;
 
-  const referralLink = stats ? `${SITE_URL}/auth/register?ref=${stats.referralCode}` : "";
+  const referralLink = stats ? `${SHARE_BASE_URL}/auth/register?ref=${stats.referralCode}` : "";
 
   return (
     <div className="max-w-4xl mx-auto">

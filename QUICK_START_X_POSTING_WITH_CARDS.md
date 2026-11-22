@@ -49,8 +49,8 @@ Navigate to: https://nseacademy-admin.vitaldigitalmedia.net/admin/plugins/user-m
 The system is now ready to auto-post.
 
 **How it works:**
-- Market reports are published to: `https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD`
-- Card images are at: `https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/1-5`
+- Market reports are published to: `https://nseacademy.co.ke/market-report/YYYY-MM-DD`
+- Card images are at: `https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/1-5`
 - Cron job runs at **8:30 AM Nairobi time** every day
 - Posts are automatically sent to your X account with card images
 
@@ -88,7 +88,7 @@ You can manually post any report by:
 | Issue | Solution |
 |-------|----------|
 | "Credentials are invalid" | Regenerate X API tokens and re-add in admin UI |
-| "No card images available" | Check report URL is published: https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/1 |
+| "No card images available" | Check report URL is published: https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/1 |
 | Posts not showing at 8:30 AM | Check server timezone is Africa/Nairobi; check MarketReport table has cardImageUrls |
 | Connection timeout | X API may be down; check https://status.twitter.com |
 

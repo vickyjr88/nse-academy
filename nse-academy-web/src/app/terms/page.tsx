@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import { SITE_NAME } from "@/lib/seo";
+import { SITE_HOST, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Terms of Service - NSE Academy",
@@ -28,7 +28,7 @@ export default function TermsPage() {
           <p className="text-sm text-gray-400 mb-8">Effective 15 November 2026</p>
 
           <p className="mb-4">
-            These terms govern your use of the NSE Academy website (nseacademy.vitaldigitalmedia.net) and the NSE
+            These terms govern your use of the NSE Academy website ({SITE_HOST}) and the NSE
             Academy mobile app. NSE Academy is run by Infinity Digital Works (&ldquo;we&rdquo;, &ldquo;us&rdquo;), Nairobi,
             Kenya. By creating an account or using the service you agree to them. If you do not agree, please do not use
             it. How we handle personal data is set out in our{" "}

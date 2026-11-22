@@ -5,6 +5,7 @@ import './globals.css';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import PageViewTracker from '@/components/PageViewTracker';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { SITE_URL } from '@/lib/seo';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://nseacademy.vitaldigitalmedia.net'),
+  metadataBase: new URL(SITE_URL),
   title: 'NSE Academy - Master the Nairobi Securities Exchange',
   description: 'Learn how to invest in the Nairobi Securities Exchange with professional courses, real-time analytics, and expert stock analysis.',
   verification: {

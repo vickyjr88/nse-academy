@@ -72,7 +72,7 @@ For each credential:
 ## 🔧 Technical Details
 
 ### Image Handling
-- Downloads from: `https://nseacademy.vitaldigitalmedia.net/market-report/YYYY-MM-DD/card/{1-5}`
+- Downloads from: `https://nseacademy.co.ke/market-report/YYYY-MM-DD/card/{1-5}`
 - Format: PNG, 1080x1920 pixels (vertical cards)
 - Posts up to 4 images per X post (X API limit)
 - Encodes as base64 for X media upload
@@ -119,11 +119,11 @@ CREATE INDEX "MarketReport_lastXAttemptAt_idx" ON "MarketReport"("lastXAttemptAt
   "xError": null,
   "lastXAttemptAt": "2026-11-20T08:35:12.345Z",
   "cardImageUrls": [
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/1",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/2",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/3",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/4",
-    "https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-20/card/5"
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/1",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/2",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/3",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/4",
+    "https://nseacademy.co.ke/market-report/2026-11-20/card/5"
   ]
 }
 ```

@@ -11,8 +11,8 @@ Everything to paste into Play Console for the first release. Character limits ar
 | App category | Education |
 | Tags | Education, Finance (pick from Play's list) |
 | Email | info@vitaldigitalmedia.net |
-| Website | https://nseacademy.vitaldigitalmedia.net |
-| Privacy policy URL | https://nseacademy.vitaldigitalmedia.net/privacy |
+| Website | https://nseacademy.co.ke |
+| Privacy policy URL | https://nseacademy.co.ke/privacy |
 | Default language | English (United Kingdom) |
 
 ### Full description (4000)
@@ -87,7 +87,7 @@ The screenshots are real captures of the app, framed with a caption. Screens 1 t
 
 | Question | Answer |
 |---|---|
-| Privacy policy | https://nseacademy.vitaldigitalmedia.net/privacy |
+| Privacy policy | https://nseacademy.co.ke/privacy |
 | Ads | No, the app contains no ads |
 | App access | Much of the app works with no sign-in. The investor profile needs a free account, and the portfolio journal, alerts, allocation, rebalancing, Portfolio Watch and AI analysis need paid plans: **give the reviewer a Premium test account** (see "Before you submit") and tell them to open the Tools tab. Plans are Google Play subscriptions (Profile > Plans); the reviewer does not need to buy anything |
 | Target audience | 18 and over (investing on the NSE requires an adult; the app is not designed for children) |
@@ -96,7 +96,7 @@ The screenshots are real captures of the app, framed with a caption. Screens 1 t
 | Health / COVID-19 | Not applicable |
 | Content rating (IARC) | Category "Reference, News or Educational". Answer No to violence, sexuality, language, controlled substances, gambling, user-generated content, and sharing of location. Expected result: Everyone / PEGI 3 |
 | Financial features declaration | The app does not trade, hold money, lend, or move money. Its only payments are Google Play subscriptions to its own Intermediary and Premium plans. It has a portfolio journal where the member types in their own trades, shows educational content and delayed prices, and lets members message independent advisers (messages only; no money passes through the app). If the form offers an investment-tracking or personal-finance option, that is the closest fit; do not claim brokerage, trading or advice. **Check this yourself against the options Play shows.** |
-| Account deletion URL (Data safety) | https://nseacademy.vitaldigitalmedia.net/delete-account |
+| Account deletion URL (Data safety) | https://nseacademy.co.ke/delete-account |
 
 ### Data safety form
 

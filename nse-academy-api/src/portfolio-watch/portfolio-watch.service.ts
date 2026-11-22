@@ -11,6 +11,7 @@ import { escapeHtml, renderEmailHtml, renderEmailText } from '../brevo/email-tem
 import { dataTable, sectionHeading, signedPct, statRows } from '../brevo/email-blocks';
 import { boundsForYmd, eatDayBounds } from '../reports/report-helpers';
 import { loadDailyCloses } from '../market-data/price-history';
+import { publicSiteUrl } from '../site-url';
 import {
   WatchItem,
   WatchResult,
@@ -47,7 +48,7 @@ export class PortfolioWatchService {
   ) {}
 
   private webUrl(): string {
-    return this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net';
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   /** 16:30 Nairobi, Monday-Friday: the NSE has closed at 15:00 and the closing snapshot is in. */

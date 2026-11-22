@@ -10,6 +10,7 @@ import { boundsForYmd } from '../reports/report-helpers';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { AllocationService } from './allocation.service';
 import { periodPerformance, previousQuarter, renderReview } from './review';
+import { publicSiteUrl } from '../site-url';
 
 export type ReviewStatus = 'sent' | 'dry-run' | 'no-holdings' | 'already-sent';
 
@@ -38,7 +39,7 @@ export class PortfolioReviewService {
   ) {}
 
   private webUrl(): string {
-    return this.config.get<string>('WEB_URL') || this.config.get<string>('SITE_URL') || 'https://nseacademy.vitaldigitalmedia.net';
+    return publicSiteUrl((key) => this.config.get<string>(key));
   }
 
   /** 09:00 Nairobi on weekdays in January, April, July and October. Only the first week does anything, and a member is never sent the same quarter twice. */

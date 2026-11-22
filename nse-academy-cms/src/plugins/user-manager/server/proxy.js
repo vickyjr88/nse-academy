@@ -10,7 +10,7 @@
  */
 
 // Only the parts of the NSE API the admin uses. Anything else is refused, so this cannot be turned into a general relay.
-const ALLOWED = /^(admin|leads|contact|market-data\/sync)(\/|$)/;
+const ALLOWED = /^(admin|leads|contact|market-data\/sync|marketing\/(x|report))(\/|$)/;
 
 function isAllowedPath(path) {
   if (!path || path.includes('..') || path.includes('\\') || path.includes('//') || /[\u0000-\u001f]/.test(path)) return false;

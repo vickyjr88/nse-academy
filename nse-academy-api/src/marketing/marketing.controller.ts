@@ -1,27 +1,29 @@
 import { Controller, Post, Get, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { XService } from './x.service';
 import { MarketReportService } from './market-report.service';
 
+// The global ValidationPipe uses whitelist: true, which strips every property that has no validator decorator.
 class StoreXCredentialsDto {
-  accountName: string;
-  apiKey: string;
-  apiSecret: string;
-  accessToken: string;
-  accessTokenSecret: string;
+  @IsString() @IsNotEmpty() accountName: string;
+  @IsString() @IsNotEmpty() apiKey: string;
+  @IsString() @IsNotEmpty() apiSecret: string;
+  @IsString() @IsNotEmpty() accessToken: string;
+  @IsString() @IsNotEmpty() accessTokenSecret: string;
 }
 
 class PostToXDto {
-  credentialId: string;
-  content: string;
-  mediaUrls?: string[];
-  reportId?: string;
+  @IsString() @IsNotEmpty() credentialId: string;
+  @IsString() @IsNotEmpty() content: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) mediaUrls?: string[];
+  @IsOptional() @IsString() reportId?: string;
 }
 
 class PostReportToXDto {
-  credentialId: string;
-  reportDate: string; // YYYY-MM-DD format
+  @IsString() @IsNotEmpty() credentialId: string;
+  @IsDateString() reportDate: string; // YYYY-MM-DD format
 }
 
 @ApiTags('marketing')

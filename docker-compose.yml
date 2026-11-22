@@ -49,6 +49,8 @@ services:
       OPENROUTER_FALLBACK_MODELS: ${OPENROUTER_FALLBACK_MODELS:-nvidia/nemotron-3.5-super-vl:free,openrouter/free}
       MARKET_REPORT_MODEL: ${MARKET_REPORT_MODEL:-anthropic/claude-haiku-5.5}
       MARKET_REPORT_FALLBACK_MODELS: ${MARKET_REPORT_FALLBACK_MODELS:-openai/gpt-6-luna,deepseek/deepseek-v4-flash}
+      X_POST_MODEL: ${X_POST_MODEL:-openrouter/free}
+      X_POST_FALLBACK_MODELS: ${X_POST_FALLBACK_MODELS:-nvidia/nemotron-3-ultra-550b-a55b:free}
       # The AI stock advice (Premium Research page). Empty = inherit OPENROUTER_MODEL and its fallbacks.
       STOCK_ADVICE_MODEL: ${STOCK_ADVICE_MODEL:-}
       STOCK_ADVICE_FALLBACK_MODELS: ${STOCK_ADVICE_FALLBACK_MODELS:-}

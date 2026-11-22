@@ -875,6 +875,8 @@ model SocialMediaCredential {
   accessToken     String   // Encrypted access token
   accessTokenSecret String? // Encrypted access token secret (for X OAuth 1.1)
   refreshToken    String?  // Encrypted refresh token (for OAuth 2.0)
+  // App-only bearer for read endpoints (filtered stream, recent search). Posting still uses the OAuth 1.0a keys.
+  bearerToken     String?
   isActive        Boolean  @default(true)
   lastTestedAt    DateTime?
   createdAt       DateTime @default(now())
@@ -896,6 +898,7 @@ model SocialMediaPost {
   externalPostId      String                // Platform's post ID (tweet ID for X)
   content             String                // The text content posted
   mediaUrls           String[]              @default([]) // URLs of attached media
+  quoteTweetId       String?               // When set, publishing quotes this post instead of standing alone
   status              String                @default("published") // draft | published | failed
   error               String?               // Error message if status is failed
   publishedAt         DateTime
@@ -906,4 +909,54 @@ model SocialMediaPost {
   @@index([credentialId, platform])
   @@index([reportId])
   @@index([publishedAt])
+}
+
+// One row. The admin edits this from the X page. Missing row means the defaults, which are off.
+model XAutomationConfig {
+  id        String   @id @default("default")
+  config    Json
+  updatedAt DateTime @updatedAt
+}
+
+// One attempt per slot per Nairobi day. The unique key is what stops a second process posting the same hour.
+model XSlotRun {
+  id           String   @id @default(cuid())
+  sessionDate  String
+  slotId       String
+  status       String // claimed | posted | draft | skipped | failed
+  template     String
+  content      String   @default("")
+  fingerprint  String?
+  lessonIndex  Int?
+  postId       String?
+  reason       String?
+  createdAt    DateTime @default(now())
+
+  @@unique([sessionDate, slotId])
+  @@index([sessionDate])
+}
+
+// A post delivered by the filtered stream or by the morning recent-search backfill.
+model XStreamItem {
+  id          String   @id @default(cuid())
+  externalId  String   @unique
+  text        String
+  ruleTag     String?
+  draftPostId String?
+  receivedAt  DateTime @default(now())
+
+  @@index([receivedAt])
+}
+
+// Read spend. `bucket` is a Nairobi day (YYYY-MM-DD) or a month (`m:YYYY-MM`).
+model XReadSpend {
+  bucket String @id
+  posts  Int    @default(0)
+  usd    Float  @default(0)
+}
+
+// Highest tweet id already seen, so a restart does not buy the same recent-search page twice.
+model XStreamCursor {
+  id      String  @id @default("default")
+  sinceId String?
 }

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
 import axios from 'axios';
@@ -37,7 +37,9 @@ export class XService {
     content: string,
     mediaUrls?: string[],
     reportId?: string,
+    opts?: { reportType?: string; quoteTweetId?: string },
   ): Promise<{ postId: string; url: string }> {
+    const reportType = opts?.reportType ?? 'daily';
     try {
       const credential = await (this.prisma as any).socialMediaCredential.findUnique({
         where: { id: credentialId },
@@ -60,28 +62,19 @@ export class XService {
         mediaIds = await this.uploadMedia(decryptedCreds, mediaUrls);
       }
 
-      // Create the post
-      const postData: any = { text: content };
-      if (mediaIds.length > 0) {
-        postData.media = {
-          media_ids: mediaIds,
-        };
-      }
-
-      const response = await this.xApi<XPostResponse>(decryptedCreds, 'POST', '/tweets', { json: postData });
-
-      const postId = response.data.id;
+      const postId = await this.sendTweet(decryptedCreds, content, mediaIds, opts?.quoteTweetId);
 
       // Store the post record for future reference
       await (this.prisma as any).socialMediaPost.create({
         data: {
           credentialId,
           platform: 'x',
-          reportType: 'daily',
+          reportType,
           reportId,
           externalPostId: postId,
           content,
           mediaUrls: mediaUrls || [],
+          quoteTweetId: opts?.quoteTweetId,
           status: 'published',
           publishedAt: new Date(),
         },
@@ -92,7 +85,7 @@ export class XService {
         url: `https://twitter.com/i/web/status/${postId}`,
       };
     } catch (error) {
-      await this.logFailedPost(credentialId, content, mediaUrls, (error as Error).message, reportId);
+      await this.logFailedPost(credentialId, content, mediaUrls, (error as Error).message, reportId, reportType);
       throw new InternalServerErrorException(`Failed to post to X: ${(error as Error).message}`);
     }
   }
@@ -129,17 +122,7 @@ export class XService {
         mediaIds = await this.uploadMedia(decryptedCreds, cardImageUrls.slice(0, 4));
       }
 
-      // Create the main post
-      const postData: any = { text: reportContent };
-      if (mediaIds.length > 0) {
-        postData.media = {
-          media_ids: mediaIds,
-        };
-      }
-
-      const response = await this.xApi<XPostResponse>(decryptedCreds, 'POST', '/tweets', { json: postData });
-
-      const postId = response.data.id;
+      const postId = await this.sendTweet(decryptedCreds, reportContent, mediaIds);
 
       // Store the post record
       await (this.prisma as any).socialMediaPost.create({
@@ -174,7 +157,8 @@ export class XService {
   }
 
   /**
-   * Resend a previously published post to X
+   * Publish a draft in place, or resend a published post as a new post.
+   * A draft that quotes a stream item keeps that quote.
    */
   async resendPost(postId: string): Promise<{ postId: string; url: string }> {
     try {
@@ -187,22 +171,66 @@ export class XService {
         throw new BadRequestException('Post not found');
       }
 
+      if (post.status === 'draft') return this.publishDraft(post);
       if (post.status !== 'published') {
-        throw new BadRequestException('Only published posts can be resent');
+        throw new BadRequestException('Only drafts and published posts can be sent');
       }
 
-      // Resend the post
-      const result = await this.postToX(
-        post.credentialId,
-        post.content,
-        post.mediaUrls,
-        post.reportId,
-      );
-
-      return result;
+      return await this.postToX(post.credentialId, post.content, post.mediaUrls, post.reportId, {
+        reportType: post.reportType,
+        quoteTweetId: post.quoteTweetId ?? undefined,
+      });
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to resend post: ${error.message}`);
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException(`Failed to resend post: ${(error as Error).message}`);
     }
+  }
+
+  /** Stores a post locally. Nothing is sent to X until the draft is published. */
+  async saveDraft(input: {
+    credentialId: string;
+    content: string;
+    reportType: string;
+    reportId?: string;
+    mediaUrls?: string[];
+    quoteTweetId?: string;
+  }): Promise<{ id: string }> {
+    const row = await (this.prisma as any).socialMediaPost.create({
+      data: {
+        credentialId: input.credentialId,
+        platform: 'x',
+        reportType: input.reportType,
+        reportId: input.reportId,
+        externalPostId: `draft_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+        content: input.content,
+        mediaUrls: input.mediaUrls ?? [],
+        quoteTweetId: input.quoteTweetId,
+        status: 'draft',
+        publishedAt: new Date(),
+      },
+    });
+    return { id: row.id };
+  }
+
+  private async publishDraft(post: any): Promise<{ postId: string; url: string }> {
+    const credential = post.credential;
+    if (!credential?.isActive) throw new BadRequestException('X credential is not active');
+    const decrypted = this.decryptCredentials(credential);
+    const mediaIds = post.mediaUrls?.length ? await this.uploadMedia(decrypted, post.mediaUrls) : [];
+    const tweetId = await this.sendTweet(decrypted, post.content, mediaIds, post.quoteTweetId ?? undefined);
+    await (this.prisma as any).socialMediaPost.update({
+      where: { id: post.id },
+      data: { status: 'published', externalPostId: tweetId, publishedAt: new Date(), error: null },
+    });
+    return { postId: tweetId, url: `https://twitter.com/i/web/status/${tweetId}` };
+  }
+
+  private async sendTweet(credentials: XCredentials, content: string, mediaIds: string[], quoteTweetId?: string): Promise<string> {
+    const postData: Record<string, unknown> = { text: content };
+    if (mediaIds.length > 0) postData.media = { media_ids: mediaIds };
+    if (quoteTweetId) postData.quote_tweet_id = quoteTweetId;
+    const response = await this.xApi<XPostResponse>(credentials, 'POST', '/tweets', { json: postData });
+    return response.data.id;
   }
 
   /**
@@ -210,13 +238,14 @@ export class XService {
    */
   async storeCredentials(
     accountName: string,
-    credentials: XCredentials,
+    credentials: XCredentials & { bearerToken?: string },
   ): Promise<{ id: string }> {
     const encryptedCreds = {
       apiKey: this.encryption.encrypt(credentials.apiKey),
       apiSecret: this.encryption.encrypt(credentials.apiSecret),
       accessToken: this.encryption.encrypt(credentials.accessToken),
       accessTokenSecret: this.encryption.encrypt(credentials.accessTokenSecret),
+      ...(credentials.bearerToken?.trim() ? { bearerToken: this.encryption.encrypt(credentials.bearerToken.trim()) } : {}),
     };
 
     const credential = await (this.prisma as any).socialMediaCredential.upsert({
@@ -275,7 +304,7 @@ export class XService {
    * Get all active X credentials
    */
   async getActiveCredentials() {
-    return (this.prisma as any).socialMediaCredential.findMany({
+    const rows = await (this.prisma as any).socialMediaCredential.findMany({
       where: {
         platform: 'x',
         isActive: true,
@@ -285,8 +314,10 @@ export class XService {
         accountName: true,
         lastTestedAt: true,
         createdAt: true,
+        bearerToken: true,
       },
     });
+    return rows.map(({ bearerToken, ...rest }: { bearerToken: string | null }) => ({ ...rest, hasBearer: Boolean(bearerToken) }));
   }
 
   /**
@@ -295,7 +326,7 @@ export class XService {
    */
   async updateCredential(
     credentialId: string,
-    changes: Partial<XCredentials> & { accountName?: string },
+    changes: Partial<XCredentials> & { accountName?: string; bearerToken?: string },
   ): Promise<{ id: string }> {
     const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
     if (!existing) throw new NotFoundException('X account not found');
@@ -306,7 +337,9 @@ export class XService {
       const value = changes[field]?.trim();
       if (value) data[field] = this.encryption.encrypt(value);
     }
-    if (Object.keys(data).some((k) => k !== 'accountName')) data.lastTestedAt = null;
+    if (changes.bearerToken?.trim()) data.bearerToken = this.encryption.encrypt(changes.bearerToken.trim());
+    // A bearer token is not part of the OAuth 1.0a posting keys, so it does not invalidate the last posting test.
+    if (Object.keys(data).some((k) => k !== 'accountName' && k !== 'bearerToken')) data.lastTestedAt = null;
     if (Object.keys(data).length === 0) return { id: credentialId };
 
     try {
@@ -482,19 +515,52 @@ export class XService {
     return mediaIds;
   }
 
+  /** App-only token for the filtered stream and recent search. Posting does not use this. */
+  async bearerTokenFor(credentialId: string): Promise<string> {
+    const credential = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
+    if (!credential?.bearerToken) throw new BadRequestException('This X account has no bearer token for reads');
+    return this.encryption.decrypt(credential.bearerToken);
+  }
+
+  async bearerRequest<T>(
+    credentialId: string,
+    method: 'GET' | 'POST',
+    path: string,
+    options: { query?: Record<string, string>; json?: unknown } = {},
+  ): Promise<T> {
+    const token = await this.bearerTokenFor(credentialId);
+    const url = `${this.TWITTER_API_URL}${path}`;
+    try {
+      const response = await axios.request<T>({
+        method,
+        url,
+        params: options.query,
+        data: options.json,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(options.json ? { 'Content-Type': 'application/json' } : {}),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.describeXError(error));
+    }
+  }
+
   private async logFailedPost(
     credentialId: string,
     content: string,
     mediaUrls: string[] | undefined,
     error: string,
     reportId?: string,
+    reportType = 'daily',
   ): Promise<void> {
     try {
       await (this.prisma as any).socialMediaPost.create({
         data: {
           credentialId,
           platform: 'x',
-          reportType: 'daily',
+          reportType,
           reportId,
           externalPostId: `failed_${Date.now()}`,
           content,

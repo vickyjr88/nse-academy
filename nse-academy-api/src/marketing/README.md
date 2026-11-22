@@ -5,7 +5,7 @@ This module enables automated posting of daily/weekly reports to X (Twitter) and
 ## Features
 
 - **Encrypted API Credentials**: X API keys and secrets are encrypted at rest using AES-256-GCM
-- **Automated Daily Posting**: Cron job automatically posts daily reports to X at 8:30 AM Nairobi time
+- **Hourly posting**: Configurable slots through the Nairobi session, in draft or live mode. See `X_AUTOMATION.md`. The old 08:30 cron has been removed.
 - **Media Support**: Attach images to posts from report attachments or media URLs
 - **Manual Resend**: Resend previously published reports to X from the admin UI
 - **Post History**: Track all published posts with timestamps and status
@@ -201,17 +201,9 @@ Make sure your app has `Read and write` permissions.
 5. Click **Save Credentials**
 6. Click **Test** to verify they work
 
-### 3. Configure Automatic Daily Posting
+### 3. Hourly posting
 
-The system automatically posts daily reports at 8:30 AM Nairobi time (5:30 AM UTC).
-
-The cron job:
-- Looks for today's published daily report
-- Formats it for X (280 char limit)
-- Attaches report images as media
-- Posts to your configured X account
-
-To disable automatic posting, comment out the cron decorator in `social-media-cron.service.ts`.
+The first boot seeds a live weekday schedule (09:00–16:00 Nairobi, stream off). Change it on the X admin page; a restart will not overwrite that edit. See `X_AUTOMATION.md`.
 
 ### 4. Manual Posting
 

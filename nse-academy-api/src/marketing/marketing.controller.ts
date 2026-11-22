@@ -1,10 +1,14 @@
 import { Controller, Post, Get, Put, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ConfigService } from '@nestjs/config';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { XService } from './x.service';
 import { MarketReportService } from './market-report.service';
+import { XAutomationService } from './x-automation.service';
+import { XStreamService } from './x-stream.service';
+import { fillReportPost } from './x-slot';
 
 // Keys copied from the X console often carry a trailing space or newline, which makes X answer 401.
 const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
@@ -16,6 +20,7 @@ class StoreXCredentialsDto {
   @trim() @IsString() @IsNotEmpty() apiSecret: string;
   @trim() @IsString() @IsNotEmpty() accessToken: string;
   @trim() @IsString() @IsNotEmpty() accessTokenSecret: string;
+  @trim() @IsOptional() @IsString() bearerToken?: string;
 }
 
 class UpdateXCredentialsDto {
@@ -24,6 +29,42 @@ class UpdateXCredentialsDto {
   @trim() @IsOptional() @IsString() apiSecret?: string;
   @trim() @IsOptional() @IsString() accessToken?: string;
   @trim() @IsOptional() @IsString() accessTokenSecret?: string;
+  @trim() @IsOptional() @IsString() bearerToken?: string;
+}
+
+class SlotDto {
+  @IsString() @IsNotEmpty() id: string;
+  @IsBoolean() enabled: boolean;
+  @IsOptional() @IsInt() @Min(0) @Max(23) hour?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(1439) atMinute?: number;
+  @IsString() @IsNotEmpty() template: string;
+}
+
+class StreamRuleDto {
+  @IsString() @IsNotEmpty() tag: string;
+  @IsString() @IsNotEmpty() value: string;
+}
+
+class AutomationConfigDto {
+  @IsBoolean() enabled: boolean;
+  @IsIn(['draft', 'live']) mode: 'draft' | 'live';
+  @IsOptional() @IsString() credentialId?: string | null;
+  @IsArray() @IsInt({ each: true }) days: number[];
+  @IsInt() @Min(0) @Max(1439) startMinute: number;
+  @IsInt() @Min(0) @Max(1439) endMinute: number;
+  @IsInt() @Min(0) @Max(24) maxPostsPerDay: number;
+  @IsInt() @Min(0) minGapMinutes: number;
+  @IsBoolean() skipIfUnchanged: boolean;
+  @IsBoolean() aiCompose: boolean;
+  @IsNumber() @Min(0) @Max(20) moverThresholdPct: number;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => SlotDto) slots: SlotDto[];
+  @IsArray() @IsString({ each: true }) lessons: string[];
+  @IsArray() @IsString({ each: true }) spotlightTickers: string[];
+  @IsBoolean() streamEnabled: boolean;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => StreamRuleDto) streamRules: StreamRuleDto[];
+  @IsInt() @Min(0) streamDailyPostCap: number;
+  @IsNumber() @Min(0) streamMonthlyUsdCap: number;
+  @IsNumber() @Min(0) streamUnitUsd: number;
 }
 
 class PostToXDto {
@@ -44,6 +85,9 @@ export class MarketingController {
   constructor(
     private xService: XService,
     private marketReportService: MarketReportService,
+    private automation: XAutomationService,
+    private stream: XStreamService,
+    private config: ConfigService,
   ) {}
 
   @Post('x/credentials')
@@ -58,6 +102,7 @@ export class MarketingController {
       apiSecret: dto.apiSecret,
       accessToken: dto.accessToken,
       accessTokenSecret: dto.accessTokenSecret,
+      bearerToken: dto.bearerToken,
     });
   }
 
@@ -94,9 +139,9 @@ export class MarketingController {
   @ApiResponse({ status: 200, description: 'Report posted to X successfully' })
   async postReportToX(@Body() dto: PostReportToXDto) {
     const report = await this.marketReportService.getReportForXPosting(dto.reportDate);
-    
-    // Create post content
-    const posts = this.marketReportService.createXPosts({
+    const site = this.config.get<string>('SITE_URL') || this.config.get<string>('WEB_URL') || 'https://nseacademy.co.ke';
+    const verified = fillReportPost((report.social as { xPost?: string } | null)?.xPost, dto.reportDate, site);
+    const fallback = this.marketReportService.createXPosts({
       title: '',
       date: dto.reportDate,
       summary: '',
@@ -107,7 +152,7 @@ export class MarketingController {
 
     const result = await this.xService.postReportToX(
       dto.credentialId,
-      posts[0],
+      verified ?? fallback[0],
       report.cardImageUrls,
       dto.reportDate,
     );
@@ -193,6 +238,39 @@ export class MarketingController {
   @ApiResponse({ status: 200, description: 'List of published posts for credential' })
   async getCredentialPostHistory(@Param('credentialId') credentialId: string) {
     return this.xService.getPostHistory(credentialId);
+  }
+
+  @Get('x/automation')
+  @UseGuards(AdminAuthGuard)
+  @ApiOperation({ summary: 'Hourly posting config, today\'s slots, and read spend' })
+  async getAutomation() {
+    const view = await this.automation.view();
+    return { ...view, streamConnected: this.stream.isConnected() };
+  }
+
+  @Put('x/automation')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Save the hourly posting and stream config' })
+  async saveAutomation(@Body() dto: AutomationConfigDto) {
+    const config = await this.automation.saveConfig(dto);
+    const view = await this.automation.view();
+    return { ...view, config, streamConnected: this.stream.isConnected() };
+  }
+
+  @Get('x/automation/preview')
+  @UseGuards(AdminAuthGuard)
+  @ApiOperation({ summary: 'Render today\'s slots against current prices without posting' })
+  previewAutomation() {
+    return this.automation.preview();
+  }
+
+  @Post('x/automation/run')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Run the slot that is due this minute, in the saved mode' })
+  runAutomation() {
+    return this.automation.runOnce(new Date());
   }
 
   @Get('report/:reportDate')

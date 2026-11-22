@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Button, Flex, Loader, Table, Tbody, Td, Th, Thead, Tr, Typography } from '@strapi/design-system';
 import { Pill, adminFetch, day, when, LTextInput, LTextarea } from './_ops';
 import { Card, CardHead } from '../ui/primitives';
+import { XAutomationPanel } from './XAutomationPanel';
 
-interface Credential { id: string; accountName: string; lastTestedAt: string | null; createdAt: string }
+interface Credential { id: string; accountName: string; lastTestedAt: string | null; createdAt: string; hasBearer?: boolean }
 interface Post {
   id: string;
   externalPostId: string;
@@ -16,7 +17,7 @@ interface Post {
   credential?: { accountName: string };
 }
 
-const EMPTY_CREDENTIAL = { accountName: '', apiKey: '', apiSecret: '', accessToken: '', accessTokenSecret: '' };
+const EMPTY_CREDENTIAL = { accountName: '', apiKey: '', apiSecret: '', accessToken: '', accessTokenSecret: '', bearerToken: '' };
 const KEY_FIELDS: ['apiKey' | 'apiSecret' | 'accessToken' | 'accessTokenSecret', string][] = [
   ['apiKey', 'API key'],
   ['apiSecret', 'API secret'],
@@ -137,10 +138,10 @@ export function SocialMediaMarketing() {
     return `Posted to X: ${r.url}`;
   });
 
-  const resend = (p: Post) => window.confirm('Post this again to X? It will appear as a new post.') &&
+  const resend = (p: Post) => window.confirm(p.status === 'draft' ? 'Publish this draft to X now?' : 'Post this again to X? It will appear as a new post.') &&
     run(`resend-${p.id}`, async () => {
       const r = await adminFetch<{ url: string }>(`/marketing/x/resend/${p.id}`, { method: 'POST' });
-      return `Resent to X: ${r.url}`;
+      return p.status === 'draft' ? `Published to X: ${r.url}` : `Resent to X: ${r.url}`;
     });
 
   const accountSelect = (value: string, onChange: (id: string) => void) => (
@@ -157,7 +158,7 @@ export function SocialMediaMarketing() {
 
   const credentialComplete = editingId
     ? credentialForm.accountName.trim() !== ''
-    : Object.values(credentialForm).every((v) => v.trim());
+    : (['accountName', 'apiKey', 'apiSecret', 'accessToken', 'accessTokenSecret'] as const).every((field) => credentialForm[field].trim());
   const reportReady = reportForm.credentialId && /^\d{4}-\d{2}-\d{2}$/.test(reportForm.reportDate);
 
   return (
@@ -165,7 +166,7 @@ export function SocialMediaMarketing() {
       <Box paddingBottom={2}><Typography variant="alpha">Social media: X (Twitter)</Typography></Box>
       <Box paddingBottom={6}>
         <Typography textColor="neutral600">
-          The daily market report is posted to X automatically at 08:30 Nairobi time, with its story cards attached. Use this page to connect an account, post a report again, or resend an earlier post.
+          Hourly slots post on weekdays through the window below. The starter setup posts live and leaves the stream off. Change any of it here; a restart keeps your edit.
         </Typography>
       </Box>
 
@@ -190,7 +191,7 @@ export function SocialMediaMarketing() {
               <Tbody>
                 {credentials.map((c) => (
                   <Tr key={c.id}>
-                    <Td><Typography fontWeight="bold">{c.accountName}</Typography></Td>
+                    <Td><Typography fontWeight="bold">{c.accountName}</Typography>{c.hasBearer ? <Typography textColor="neutral600"> · bearer saved</Typography> : null}</Td>
                     <Td><Typography>{when(c.lastTestedAt)}</Typography></Td>
                     <Td>
                       <Flex gap={2}>
@@ -213,6 +214,7 @@ export function SocialMediaMarketing() {
               </Box>
               <Flex direction="column" alignItems="stretch" gap={3}>
                 <LTextInput label="Account name" name="accountName" placeholder="e.g. NSE Academy" value={credentialForm.accountName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, accountName: e.target.value })} />
+                <LTextInput label="Bearer token (reads only, optional)" name="bearerToken" type="password" autoComplete="off" placeholder={editingId ? 'Unchanged' : 'For the stream and recent search'} value={credentialForm.bearerToken} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, bearerToken: e.target.value })} />
                 {KEY_FIELDS.map(([field, label]) => (
                   <LTextInput
                     key={field}
@@ -232,9 +234,11 @@ export function SocialMediaMarketing() {
         </Card>
       </Box>
 
+      <XAutomationPanel accounts={credentials} />
+
       <Box paddingBottom={6}>
         <Card>
-          <CardHead title="Post a market report" hint="Posts that day's summary with its story cards. Use a past date to publish an older report again." />
+          <CardHead title="Post a market report" hint="Posts that day's verified X sentence, with its story cards. Use a past date to publish an older report again." />
           {credentials.length === 0 ? <Typography textColor="neutral600">Connect an account first.</Typography> : (
             <Flex gap={3} alignItems="flex-end" wrap="wrap">
               <Box style={{ minWidth: 220 }}>{accountSelect(reportForm.credentialId, (id) => setReportForm({ ...reportForm, credentialId: id }))}</Box>
@@ -282,14 +286,14 @@ export function SocialMediaMarketing() {
                     {p.status === 'failed' && p.error ? <><br /><Typography variant="pi" textColor="danger600">{p.error}</Typography></> : null}
                   </Td>
                   <Td><Typography>{p.mediaUrls?.length ?? 0}</Typography></Td>
-                  <Td><Pill kind={p.status === 'published' ? 'good' : 'bad'}>{p.status}</Pill></Td>
+                  <Td><Pill kind={p.status === 'published' ? 'good' : p.status === 'failed' ? 'bad' : 'neutral'}>{p.status}</Pill></Td>
                   <Td>
                     <Flex gap={2}>
                       {p.status === 'published' && (
-                        <>
-                          <Button size="S" variant="tertiary" onClick={() => window.open(`https://x.com/i/status/${p.externalPostId}`, '_blank', 'noopener,noreferrer')}>View</Button>
-                          <Button size="S" variant="secondary" loading={busy === `resend-${p.id}`} disabled={!!busy} onClick={() => resend(p)}>Resend</Button>
-                        </>
+                        <Button size="S" variant="tertiary" onClick={() => window.open(`https://x.com/i/status/${p.externalPostId}`, '_blank', 'noopener,noreferrer')}>View</Button>
+                      )}
+                      {(p.status === 'published' || p.status === 'draft') && (
+                        <Button size="S" variant="secondary" loading={busy === `resend-${p.id}`} disabled={!!busy} onClick={() => resend(p)}>{p.status === 'draft' ? 'Publish' : 'Resend'}</Button>
                       )}
                       <Button size="S" variant="danger-light" loading={busy === `delpost-${p.id}`} disabled={!!busy} onClick={() => deletePost(p)}>Delete</Button>
                     </Flex>

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AiCallRecord {
-  feature: 'advisor' | 'market-report';
+  feature: 'advisor' | 'market-report' | 'x-post';
   model?: string | null;
   ok: boolean;
   verified?: boolean | null;

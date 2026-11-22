@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
 import axios from 'axios';
@@ -290,13 +290,54 @@ export class XService {
   }
 
   /**
-   * Disable a credential
+   * Edit an account. Only the fields that are provided change, so a rotated access token can be saved without retyping the
+   * API key. Changing any key clears the "last tested" mark because the new keys have not been checked yet.
    */
-  async disableCredential(credentialId: string): Promise<void> {
-    await (this.prisma as any).socialMediaCredential.update({
-      where: { id: credentialId },
-      data: { isActive: false },
-    });
+  async updateCredential(
+    credentialId: string,
+    changes: Partial<XCredentials> & { accountName?: string },
+  ): Promise<{ id: string }> {
+    const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
+    if (!existing) throw new NotFoundException('X account not found');
+
+    const data: Record<string, unknown> = {};
+    if (changes.accountName?.trim()) data.accountName = changes.accountName.trim();
+    for (const field of ['apiKey', 'apiSecret', 'accessToken', 'accessTokenSecret'] as const) {
+      const value = changes[field]?.trim();
+      if (value) data[field] = this.encryption.encrypt(value);
+    }
+    if (Object.keys(data).some((k) => k !== 'accountName')) data.lastTestedAt = null;
+    if (Object.keys(data).length === 0) return { id: credentialId };
+
+    try {
+      await (this.prisma as any).socialMediaCredential.update({ where: { id: credentialId }, data });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        throw new BadRequestException('Another X account already uses that name');
+      }
+      throw error;
+    }
+    return { id: credentialId };
+  }
+
+  /** Delete an account. Its post history goes with it (the database cascades). */
+  async deleteCredential(credentialId: string): Promise<void> {
+    const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
+    if (!existing) throw new NotFoundException('X account not found');
+    await (this.prisma as any).socialMediaCredential.delete({ where: { id: credentialId } });
+  }
+
+  /** Remove one entry from the post history. The post on X itself is not touched. */
+  async deletePost(postId: string): Promise<void> {
+    const existing = await (this.prisma as any).socialMediaPost.findUnique({ where: { id: postId } });
+    if (!existing) throw new NotFoundException('Post not found');
+    await (this.prisma as any).socialMediaPost.delete({ where: { id: postId } });
+  }
+
+  /** Remove every failed attempt from the post history. */
+  async clearFailedPosts(): Promise<{ deleted: number }> {
+    const result = await (this.prisma as any).socialMediaPost.deleteMany({ where: { platform: 'x', status: 'failed' } });
+    return { deleted: result.count };
   }
 
   /**

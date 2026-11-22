@@ -17,6 +17,12 @@ interface Post {
 }
 
 const EMPTY_CREDENTIAL = { accountName: '', apiKey: '', apiSecret: '', accessToken: '', accessTokenSecret: '' };
+const KEY_FIELDS: ['apiKey' | 'apiSecret' | 'accessToken' | 'accessTokenSecret', string][] = [
+  ['apiKey', 'API key'],
+  ['apiSecret', 'API secret'],
+  ['accessToken', 'Access token'],
+  ['accessTokenSecret', 'Access token secret'],
+];
 const selectStyle: React.CSSProperties = { width: '100%', padding: '8px', borderRadius: 4, border: '1px solid #8e8ea9', background: 'transparent', color: 'inherit' };
 
 export function SocialMediaMarketing() {
@@ -27,6 +33,7 @@ export function SocialMediaMarketing() {
   const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [credentialForm, setCredentialForm] = useState(EMPTY_CREDENTIAL);
   const [reportForm, setReportForm] = useState({ credentialId: '', reportDate: '' });
   const [postForm, setPostForm] = useState({ credentialId: '', content: '', mediaUrls: '' });
@@ -66,11 +73,29 @@ export function SocialMediaMarketing() {
   }
 
   const saveCredential = () => run('save', async () => {
+    if (editingId) {
+      // Blank key fields mean "keep the stored value".
+      const changes = Object.fromEntries(Object.entries(credentialForm).filter(([, v]) => v.trim()));
+      await adminFetch(`/marketing/x/credentials/${editingId}`, { method: 'PUT', body: JSON.stringify(changes) });
+      closeForm();
+      return 'X account updated. Press Test to check the keys.';
+    }
     await adminFetch('/marketing/x/credentials', { method: 'POST', body: JSON.stringify(credentialForm) });
-    setCredentialForm(EMPTY_CREDENTIAL);
-    setShowAdd(false);
+    closeForm();
     return 'X account saved. The keys are stored encrypted.';
   });
+
+  function closeForm() {
+    setCredentialForm(EMPTY_CREDENTIAL);
+    setEditingId(null);
+    setShowAdd(false);
+  }
+
+  function openEdit(c: Credential) {
+    setCredentialForm({ ...EMPTY_CREDENTIAL, accountName: c.accountName });
+    setEditingId(c.id);
+    setShowAdd(true);
+  }
 
   const testCredential = (c: Credential) => run(`test-${c.id}`, async () => {
     const r = await adminFetch<{ success: boolean; message: string }>(`/marketing/x/test/${c.id}`, { method: 'POST' });
@@ -78,10 +103,23 @@ export function SocialMediaMarketing() {
     return `${c.accountName}: ${r.message}`;
   });
 
-  const disableCredential = (c: Credential) => window.confirm(`Disable "${c.accountName}"? Nothing will be posted to it until it is added again.`) &&
-    run(`disable-${c.id}`, async () => {
+  const deleteCredential = (c: Credential) => window.confirm(`Delete "${c.accountName}"? Its stored keys and its post history here are removed. Posts already on X stay there.`) &&
+    run(`delete-${c.id}`, async () => {
       await adminFetch(`/marketing/x/credentials/${c.id}`, { method: 'DELETE' });
-      return `${c.accountName} disabled.`;
+      if (editingId === c.id) closeForm();
+      return `${c.accountName} deleted.`;
+    });
+
+  const deletePost = (p: Post) => window.confirm('Remove this entry from the history? The post on X, if there is one, is not deleted.') &&
+    run(`delpost-${p.id}`, async () => {
+      await adminFetch(`/marketing/x/posts/${p.id}`, { method: 'DELETE' });
+      return 'Removed from the history.';
+    });
+
+  const clearFailed = () => window.confirm('Remove every failed attempt from the history?') &&
+    run('clear-failed', async () => {
+      const r = await adminFetch<{ deleted: number }>('/marketing/x/failed-posts', { method: 'DELETE' });
+      return `Removed ${r.deleted} failed attempt${r.deleted === 1 ? '' : 's'}.`;
     });
 
   const postReport = () => run('report', async () => {
@@ -117,7 +155,9 @@ export function SocialMediaMarketing() {
 
   if (loading) return <Box padding={8}><Loader>Loading X posting…</Loader></Box>;
 
-  const credentialComplete = Object.values(credentialForm).every((v) => v.trim());
+  const credentialComplete = editingId
+    ? credentialForm.accountName.trim() !== ''
+    : Object.values(credentialForm).every((v) => v.trim());
   const reportReady = reportForm.credentialId && /^\d{4}-\d{2}-\d{2}$/.test(reportForm.reportDate);
 
   return (
@@ -140,7 +180,7 @@ export function SocialMediaMarketing() {
           <CardHead
             title="Accounts"
             hint="API keys and secrets are encrypted before they are stored and are never shown again."
-            right={<Button size="S" variant={showAdd ? 'tertiary' : 'default'} onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : 'Add account'}</Button>}
+            right={<Button size="S" variant={showAdd ? 'tertiary' : 'default'} onClick={() => (showAdd ? closeForm() : setShowAdd(true))}>{showAdd ? 'Cancel' : 'Add account'}</Button>}
           />
           {credentials.length === 0 ? (
             <Typography textColor="neutral600">No X account connected yet.</Typography>
@@ -155,7 +195,8 @@ export function SocialMediaMarketing() {
                     <Td>
                       <Flex gap={2}>
                         <Button size="S" variant="secondary" loading={busy === `test-${c.id}`} onClick={() => testCredential(c)}>Test</Button>
-                        <Button size="S" variant="danger-light" disabled={!!busy} onClick={() => disableCredential(c)}>Disable</Button>
+                        <Button size="S" variant="tertiary" disabled={!!busy} onClick={() => openEdit(c)}>Edit</Button>
+                        <Button size="S" variant="danger-light" loading={busy === `delete-${c.id}`} disabled={!!busy} onClick={() => deleteCredential(c)}>Delete</Button>
                       </Flex>
                     </Td>
                   </Tr>
@@ -166,13 +207,25 @@ export function SocialMediaMarketing() {
 
           {showAdd && (
             <Box paddingTop={5}>
+              <Box paddingBottom={3}>
+                <Typography variant="delta">{editingId ? 'Edit account' : 'Add account'}</Typography>
+                {editingId && <Box><Typography textColor="neutral600">Leave a key blank to keep the one already stored. Enter only the values that changed.</Typography></Box>}
+              </Box>
               <Flex direction="column" alignItems="stretch" gap={3}>
                 <LTextInput label="Account name" name="accountName" placeholder="e.g. NSE Academy" value={credentialForm.accountName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, accountName: e.target.value })} />
-                <LTextInput label="API key" name="apiKey" type="password" autoComplete="off" value={credentialForm.apiKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, apiKey: e.target.value })} />
-                <LTextInput label="API secret" name="apiSecret" type="password" autoComplete="off" value={credentialForm.apiSecret} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, apiSecret: e.target.value })} />
-                <LTextInput label="Access token" name="accessToken" type="password" autoComplete="off" value={credentialForm.accessToken} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, accessToken: e.target.value })} />
-                <LTextInput label="Access token secret" name="accessTokenSecret" type="password" autoComplete="off" value={credentialForm.accessTokenSecret} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, accessTokenSecret: e.target.value })} />
-                <Box><Button disabled={!credentialComplete} loading={busy === 'save'} onClick={saveCredential}>Save account</Button></Box>
+                {KEY_FIELDS.map(([field, label]) => (
+                  <LTextInput
+                    key={field}
+                    label={label}
+                    name={field}
+                    type="password"
+                    autoComplete="off"
+                    placeholder={editingId ? 'Unchanged' : undefined}
+                    value={credentialForm[field]}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCredentialForm({ ...credentialForm, [field]: e.target.value })}
+                  />
+                ))}
+                <Box><Button disabled={!credentialComplete} loading={busy === 'save'} onClick={saveCredential}>{editingId ? 'Save changes' : 'Save account'}</Button></Box>
               </Flex>
             </Box>
           )}
@@ -207,7 +260,11 @@ export function SocialMediaMarketing() {
       </Box>
 
       <Card>
-        <CardHead title="Post history" hint="The latest 50 posts. Resend publishes the same text and images again as a new post." />
+        <CardHead
+          title="Post history"
+          hint="The latest 50 posts. Resend publishes the same text and images again as a new post. Delete only removes the entry here; it does not delete the post on X."
+          right={posts.some((p) => p.status === 'failed') ? <Button size="S" variant="danger-light" loading={busy === 'clear-failed'} disabled={!!busy} onClick={clearFailed}>Clear failed</Button> : undefined}
+        />
         {posts.length === 0 ? <Typography textColor="neutral600">Nothing has been posted yet.</Typography> : (
           <Table colCount={6} rowCount={posts.length + 1}>
             <Thead>
@@ -234,6 +291,7 @@ export function SocialMediaMarketing() {
                           <Button size="S" variant="secondary" loading={busy === `resend-${p.id}`} disabled={!!busy} onClick={() => resend(p)}>Resend</Button>
                         </>
                       )}
+                      <Button size="S" variant="danger-light" loading={busy === `delpost-${p.id}`} disabled={!!busy} onClick={() => deletePost(p)}>Delete</Button>
                     </Flex>
                   </Td>
                 </Tr>

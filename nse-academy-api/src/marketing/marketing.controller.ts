@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
+import { Controller, Post, Get, Put, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -16,6 +16,14 @@ class StoreXCredentialsDto {
   @trim() @IsString() @IsNotEmpty() apiSecret: string;
   @trim() @IsString() @IsNotEmpty() accessToken: string;
   @trim() @IsString() @IsNotEmpty() accessTokenSecret: string;
+}
+
+class UpdateXCredentialsDto {
+  @trim() @IsOptional() @IsString() accountName?: string;
+  @trim() @IsOptional() @IsString() apiKey?: string;
+  @trim() @IsOptional() @IsString() apiSecret?: string;
+  @trim() @IsOptional() @IsString() accessToken?: string;
+  @trim() @IsOptional() @IsString() accessTokenSecret?: string;
 }
 
 class PostToXDto {
@@ -120,15 +128,44 @@ export class MarketingController {
     return this.xService.resendPost(postId);
   }
 
+  @Put('x/credentials/:credentialId')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Edit an X account; only the fields provided are changed' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Account updated' })
+  async updateXCredentials(@Param('credentialId') credentialId: string, @Body() dto: UpdateXCredentialsDto) {
+    return this.xService.updateCredential(credentialId, dto);
+  }
+
   @Delete('x/credentials/:credentialId')
   @UseGuards(AdminAuthGuard)
   @HttpCode(200)
-  @ApiOperation({ summary: 'Disable X API credentials' })
+  @ApiOperation({ summary: 'Delete an X account and its post history' })
   @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Credentials disabled successfully' })
+  @ApiResponse({ status: 200, description: 'Account deleted' })
   async deleteXCredentials(@Param('credentialId') credentialId: string) {
-    await this.xService.disableCredential(credentialId);
-    return { success: true, message: 'Credential disabled' };
+    await this.xService.deleteCredential(credentialId);
+    return { success: true, message: 'Account deleted' };
+  }
+
+  @Delete('x/failed-posts')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Remove every failed attempt from the post history' })
+  @ApiBearerAuth()
+  async clearFailedPosts() {
+    return this.xService.clearFailedPosts();
+  }
+
+  @Delete('x/posts/:postId')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Remove one entry from the post history (the post on X is not deleted)' })
+  @ApiBearerAuth()
+  async deletePost(@Param('postId') postId: string) {
+    await this.xService.deletePost(postId);
+    return { success: true };
   }
 
   @Get('x/credentials')

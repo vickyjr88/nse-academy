@@ -41,3 +41,33 @@ describe('XService OAuth 1.0a signing', () => {
     expect(nonce(first)).not.toEqual(nonce(second));
   });
 });
+
+describe('XService.updateCredential', () => {
+  const update = jest.fn().mockResolvedValue({});
+  const prisma = { socialMediaCredential: { findUnique: jest.fn().mockResolvedValue({ id: 'c1' }), update } };
+  const encryption = { encrypt: (v: string) => `enc(${v})` };
+  const service = new XService(prisma as any, encryption as any);
+
+  beforeEach(() => update.mockClear());
+
+  it('re-encrypts only the keys that were provided and clears the last-tested mark', async () => {
+    await service.updateCredential('c1', { accessToken: ' new ', accessTokenSecret: '', apiKey: undefined });
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'c1' },
+      data: { accessToken: 'enc(new)', lastTestedAt: null },
+    });
+  });
+
+  it('keeps the last-tested mark when only the name changes', async () => {
+    await service.updateCredential('c1', { accountName: 'Renamed' });
+
+    expect(update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { accountName: 'Renamed' } });
+  });
+
+  it('turns a duplicate name into a 400', async () => {
+    update.mockRejectedValueOnce({ code: 'P2002' });
+
+    await expect(service.updateCredential('c1', { accountName: 'Taken' })).rejects.toThrow('already uses that name');
+  });
+});

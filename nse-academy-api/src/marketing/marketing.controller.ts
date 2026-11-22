@@ -1,17 +1,21 @@
 import { Controller, Post, Get, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { XService } from './x.service';
 import { MarketReportService } from './market-report.service';
 
+// Keys copied from the X console often carry a trailing space or newline, which makes X answer 401.
+const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
+
 // The global ValidationPipe uses whitelist: true, which strips every property that has no validator decorator.
 class StoreXCredentialsDto {
-  @IsString() @IsNotEmpty() accountName: string;
-  @IsString() @IsNotEmpty() apiKey: string;
-  @IsString() @IsNotEmpty() apiSecret: string;
-  @IsString() @IsNotEmpty() accessToken: string;
-  @IsString() @IsNotEmpty() accessTokenSecret: string;
+  @trim() @IsString() @IsNotEmpty() accountName: string;
+  @trim() @IsString() @IsNotEmpty() apiKey: string;
+  @trim() @IsString() @IsNotEmpty() apiSecret: string;
+  @trim() @IsString() @IsNotEmpty() accessToken: string;
+  @trim() @IsString() @IsNotEmpty() accessTokenSecret: string;
 }
 
 class PostToXDto {

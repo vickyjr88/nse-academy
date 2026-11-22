@@ -399,7 +399,10 @@ export class XService {
       body?.title ||
       (typeof body === 'string' ? body.slice(0, 200) : '') ||
       error?.message;
-    return status ? `X API ${status}: ${detail}` : String(detail);
+    const message = status ? `X API ${status}: ${detail}` : String(detail);
+    return status === 401
+      ? `${message}. X did not recognise the keys. Check that the API key/secret and the access token/secret are from the same app and were not regenerated since, and that none is a Bearer Token or an OAuth 2.0 Client ID/Secret.`
+      : message;
   }
 
   private async uploadMedia(credentials: XCredentials, mediaUrls: string[]): Promise<string[]> {

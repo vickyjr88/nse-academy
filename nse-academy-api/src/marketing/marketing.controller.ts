@@ -1,6 +1,6 @@
-import { Controller, Post, Get, Param, Body, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, HttpCode, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { XService } from './x.service';
 import { MarketReportService } from './market-report.service';
 
@@ -33,7 +33,7 @@ export class MarketingController {
   ) {}
 
   @Post('x/credentials')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Store or update X API credentials' })
   @ApiBearerAuth()
@@ -48,7 +48,7 @@ export class MarketingController {
   }
 
   @Post('x/test/:credentialId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Test X API credentials' })
   @ApiBearerAuth()
@@ -58,7 +58,7 @@ export class MarketingController {
   }
 
   @Post('x/post')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Post content to X' })
   @ApiBearerAuth()
@@ -73,7 +73,7 @@ export class MarketingController {
   }
 
   @Post('x/report')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Post market report to X with card images' })
   @ApiBearerAuth()
@@ -105,7 +105,7 @@ export class MarketingController {
   }
 
   @Post('x/resend/:postId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Resend a previously published post to X' })
   @ApiBearerAuth()
@@ -114,8 +114,19 @@ export class MarketingController {
     return this.xService.resendPost(postId);
   }
 
+  @Delete('x/credentials/:credentialId')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Disable X API credentials' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Credentials disabled successfully' })
+  async deleteXCredentials(@Param('credentialId') credentialId: string) {
+    await this.xService.disableCredential(credentialId);
+    return { success: true, message: 'Credential disabled' };
+  }
+
   @Get('x/credentials')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Get all active X credentials' })
   @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'List of active credentials' })
@@ -124,7 +135,7 @@ export class MarketingController {
   }
 
   @Get('x/posts')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Get X posts history' })
   @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'List of published posts' })
@@ -133,7 +144,7 @@ export class MarketingController {
   }
 
   @Get('x/posts/:credentialId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Get X posts history for specific credential' })
   @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'List of published posts for credential' })

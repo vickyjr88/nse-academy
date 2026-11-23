@@ -82,14 +82,39 @@ automatically. An app that has not passed TikTok's audit can only post as
 
 ## Admin screen
 
-- **Accounts**: one list for every platform, Add/Edit/Test/Delete.
-- **Hourly posting → Platforms**: enable a platform, pick its account, and set
-  the suffix and hashtags. TikTok also has a privacy level. The X account field
-  at the top is kept for the stream and older configs.
-- **Post something else**: choose any account, write the text, add image links.
-  Instagram and TikTok refuse a post without an image.
-- **Post history**: filter by platform, open the post where the platform returned
-  a URL, resend, delete an entry, clear failed attempts.
+Social media, in five tabs. The tab and its filters are in the address
+(`?tab=history&status=failed`), so a link from one tab to another lands in place.
+
+- **Overview**: posts published, success rate, failures and platforms connected,
+  each against the previous period; posts per day; a card per platform; and a
+  "needs your attention" list (a token that ended or ends within a week, an
+  account never tested, failed posts, hourly posting off or in draft mode, a
+  platform switched on for hourly posting with no active account).
+- **Accounts**: one list for every platform with a health badge. Add, Edit,
+  Test, **Pause/Resume** (keeps the account, stops it posting) and Delete.
+- **Post**: *Post a market report* sends one report to any set of accounts, each
+  with its own copy and cards, and shows the result per platform. *Write a post*
+  does the same for your own text, with the shortest limit of the chosen
+  platforms and a warning when Instagram or TikTok have no image.
+- **Hourly posting**: the platform targets, slots and stream settings.
+- **History**: filter by platform, status and text; "Load older posts" pages back
+  through everything; resend, publish a draft, delete an entry, clear failed.
+
+Endpoints behind it (all admin-key guarded, all reached through the Strapi
+proxy, which allows every `marketing/` route):
+
+| Route | Purpose |
+| --- | --- |
+| `GET /marketing/accounts?includePaused=true` | Accounts with `isActive` and `health` (`ok`, `untested`, `expiring`, `expired`, `paused`) |
+| `PUT /marketing/accounts/:id` `{ isActive }` | Pause or resume; also edits keys as before |
+| `GET /marketing/posts?platform&status&q&before&limit` | History, newest first; `before` is the last post's time |
+| `GET /marketing/summary?days=14` | Per-day and per-platform counts plus the previous period |
+| `POST /marketing/report/post` `{ reportDate, targets }` | One report to many accounts; a failure on one does not stop the rest |
+
+Token health: Threads tokens and TikTok tokens that have a refresh token renew
+themselves, so an end date alone is not a warning for them; they only show
+"Token ended" if the renewal has failed for more than two days. Every other
+token warns a week before it ends.
 
 ## Environment
 

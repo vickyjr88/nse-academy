@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
+import { publicCardUrls, reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
 
 interface MarketReportData {
   title: string;
@@ -251,6 +251,13 @@ export class MarketReportService {
       });
     }
     return { ...report, cardImageUrls };
+  }
+
+  /** The report's cards in both shapes: vertical story cards, and the 4:5 feed cards Instagram accepts. */
+  async getCardSet(sessionDate: string): Promise<{ story: string[]; feed: string[] }> {
+    const report = await this.getReportForXPosting(sessionDate);
+    const site = reportSiteUrl((key) => this.config.get<string>(key));
+    return { story: report.cardImageUrls, feed: publicCardUrls(site, sessionDate).map((url) => `${url}?format=feed`) };
   }
 
   /**

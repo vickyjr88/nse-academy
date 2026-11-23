@@ -151,6 +151,31 @@ export class SocialPostService {
     }
   }
 
+  /**
+   * Try a failed post again with the text and images it had. A failed row is a record of an attempt, so it is replaced by
+   * the outcome: the new published post on success, or the new failure (with its fresh reason) if it fails again. That
+   * keeps one history entry per post instead of one more for every retry. If the account is paused or gone, nothing
+   * was attempted, so the old entry stays.
+   */
+  private async retryFailed(
+    post: { id: string; credentialId: string; reportType: string; reportId: string | null; content: string; mediaUrls?: string[] | null },
+    platform: SocialPlatform,
+  ): Promise<{ postId: string; url?: string }> {
+    const removeOld = () => this.prisma.socialMediaPost.delete({ where: { id: post.id } }).catch(() => undefined);
+    try {
+      const result = await this.publish(platform, post.credentialId, post.content, post.mediaUrls ?? [], {
+        reportType: post.reportType,
+        reportId: post.reportId ?? undefined,
+      });
+      await removeOld();
+      return result;
+    } catch (error) {
+      // publish() logs a new failed row for any attempt that reached the platform and throws a 500 for it.
+      if (error instanceof InternalServerErrorException) await removeOld();
+      throw error;
+    }
+  }
+
   /** Manual and resent posts publish the stored text as-is; no default suffix or hashtags are added. */
   private plainTarget(platform: SocialPlatform): PlatformTarget {
     return { platform, enabled: true, credentialId: null, suffix: '', hashtags: '', tiktokPrivacy: 'SELF_ONLY' };
@@ -214,6 +239,7 @@ export class SocialPostService {
     const post = await this.prisma.socialMediaPost.findUnique({ where: { id: postId } });
     if (!post) throw new BadRequestException('Post not found');
     const platform = post.platform as SocialPlatform;
+    if (post.status === 'failed') return this.retryFailed(post, platform);
     if (platform === 'x') return this.xService.resendPost(postId);
 
     if (post.status === 'draft') {

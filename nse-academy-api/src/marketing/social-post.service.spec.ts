@@ -31,6 +31,7 @@ function setup() {
     socialMediaPost: {
       create: jest.fn().mockResolvedValue({ id: 'post-1' }),
       update: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn(),
     },
   };
@@ -89,6 +90,60 @@ describe('SocialPostService', () => {
     expect(prisma.socialMediaPost.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'draft-1' }, data: expect.objectContaining({ status: 'published', externalPostId: 'ig-1' }) }),
     );
+  });
+
+  describe('retrying a failed post', () => {
+    const failed = {
+      id: 'failed-1',
+      credentialId: 'cred-1',
+      platform: 'instagram',
+      reportType: 'daily',
+      reportId: '2026-11-20',
+      content: 'Wrap text',
+      mediaUrls: ['https://example.com/card/1'],
+      status: 'failed',
+      error: 'token expired',
+    };
+
+    it('publishes the stored text again and replaces the failed entry', async () => {
+      const { service, prisma, meta } = setup();
+      prisma.socialMediaPost.findUnique.mockResolvedValue(failed);
+      const result = await service.resendPost('failed-1');
+      expect(result).toEqual({ postId: 'ig-1', url: 'https://instagram.com/p/abc' });
+      expect(meta.publishInstagram).toHaveBeenCalledWith(expect.anything(), 'Wrap text', ['https://example.com/card/1']);
+      expect(prisma.socialMediaPost.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'published', reportId: '2026-11-20' }) }));
+      expect(prisma.socialMediaPost.delete).toHaveBeenCalledWith({ where: { id: 'failed-1' } });
+    });
+
+    it('swaps the old failure for the new one when it fails again, so retries do not pile up', async () => {
+      const { service, prisma, meta } = setup();
+      prisma.socialMediaPost.findUnique.mockResolvedValue(failed);
+      meta.publishInstagram.mockRejectedValue(new Error('still expired'));
+      await expect(service.resendPost('failed-1')).rejects.toThrow('still expired');
+      expect(prisma.socialMediaPost.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'failed', error: 'still expired' }) }));
+      expect(prisma.socialMediaPost.delete).toHaveBeenCalledWith({ where: { id: 'failed-1' } });
+    });
+
+    it('keeps the old entry when the account is paused, because nothing was attempted', async () => {
+      const { service, prisma, meta, row } = setup();
+      prisma.socialMediaPost.findUnique.mockResolvedValue(failed);
+      (row as any).isActive = false;
+      await expect(service.resendPost('failed-1')).rejects.toThrow('not active');
+      expect(meta.publishInstagram).not.toHaveBeenCalled();
+      expect(prisma.socialMediaPost.delete).not.toHaveBeenCalled();
+    });
+
+    it('retries an X post through the X path as well', async () => {
+      const { service, prisma, xService } = setup();
+      prisma.socialMediaPost.findUnique.mockResolvedValue({ ...failed, platform: 'x', mediaUrls: [] });
+      prisma.socialMediaCredential.findUnique.mockResolvedValue({ id: 'cred-1', platform: 'x', accountName: 'NSE', apiKey: 'k', apiSecret: 's', accessToken: 't', accessTokenSecret: 'ts', isActive: true });
+      xService.postToX.mockResolvedValue({ postId: 'tw-1', url: 'https://x.com/i/status/tw-1' });
+      const result = await service.resendPost('failed-1');
+      expect(result).toEqual({ postId: 'tw-1', url: 'https://x.com/i/status/tw-1' });
+      expect(xService.postToX).toHaveBeenCalledWith('cred-1', 'Wrap text', [], '2026-11-20', { reportType: 'daily' });
+      expect(xService.resendPost).not.toHaveBeenCalled();
+      expect(prisma.socialMediaPost.delete).toHaveBeenCalledWith({ where: { id: 'failed-1' } });
+    });
   });
 
   it('posts manual text as typed, without the configured suffix or hashtags', async () => {

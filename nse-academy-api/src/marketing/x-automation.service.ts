@@ -9,6 +9,7 @@ import { eatDayBounds, PriceRow } from '../reports/report-helpers';
 import { XService } from './x.service';
 import { XComposeService } from './x-compose';
 import { SocialPostService, Delivery } from './social-post.service';
+import { mediaForPlatform } from './platform-copy';
 import {
   AutomationConfig,
   DEFAULT_CONFIG,
@@ -282,11 +283,7 @@ export class XAutomationService implements OnModuleInit {
   }
 
   private mediaFor(platform: SocialPlatform, cards: { story: string[]; feed: string[] }): string[] {
-    if (platform === 'x') return cards.story.slice(0, 4);
-    if (platform === 'facebook' || platform === 'threads') return cards.story.slice(0, 1);
-    if (platform === 'instagram') return cards.feed.slice(0, 10);
-    if (platform === 'tiktok') return cards.story.slice(0, 35);
-    return [];
+    return mediaForPlatform(platform, cards);
   }
 
   /** Inserts the idempotency row. False when another process already owns this slot today. */

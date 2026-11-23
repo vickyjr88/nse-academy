@@ -4,6 +4,7 @@ import { EncryptionService } from './encryption.service';
 import axios from 'axios';
 import FormData from 'form-data';
 import * as crypto from 'crypto';
+import { HistoryFilters, PostRow, historyWhere } from './social-stats';
 
 interface XCredentials {
   apiKey: string;
@@ -312,11 +313,11 @@ export class XService {
   }
 
   /** Active accounts for one platform, or every platform when none is named. */
-  async getActiveCredentials(platform?: string) {
+  async getActiveCredentials(platform?: string, includePaused = false) {
     const rows = await (this.prisma as any).socialMediaCredential.findMany({
       where: {
         ...(platform ? { platform } : {}),
-        isActive: true,
+        ...(includePaused ? {} : { isActive: true }),
       },
       orderBy: [{ platform: 'asc' }, { createdAt: 'asc' }],
       select: {
@@ -327,6 +328,7 @@ export class XService {
         expiresAt: true,
         lastTestedAt: true,
         createdAt: true,
+        isActive: true,
         bearerToken: true,
         refreshToken: true,
       },
@@ -355,6 +357,7 @@ export class XService {
       refreshToken?: string;
       externalId?: string;
       expiresAt?: Date | null;
+      isActive?: boolean;
     },
   ): Promise<{ id: string }> {
     const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
@@ -364,6 +367,7 @@ export class XService {
     if (changes.accountName?.trim()) data.accountName = changes.accountName.trim();
     if (changes.externalId !== undefined) data.externalId = changes.externalId.trim() || null;
     if (changes.expiresAt !== undefined) data.expiresAt = changes.expiresAt;
+    if (typeof changes.isActive === 'boolean') data.isActive = changes.isActive;
     for (const field of ['apiKey', 'apiSecret', 'accessToken', 'accessTokenSecret', 'refreshToken'] as const) {
 
       const value = changes[field]?.trim();
@@ -371,7 +375,7 @@ export class XService {
     }
     if (changes.bearerToken?.trim()) data.bearerToken = this.encryption.encrypt(changes.bearerToken.trim());
     // A bearer token is not part of the OAuth 1.0a posting keys, so it does not invalidate the last posting test.
-    if (Object.keys(data).some((k) => !['accountName', 'bearerToken', 'externalId', 'expiresAt'].includes(k))) data.lastTestedAt = null;
+    if (Object.keys(data).some((k) => !['accountName', 'bearerToken', 'externalId', 'expiresAt', 'isActive'].includes(k))) data.lastTestedAt = null;
     if (Object.keys(data).length === 0) return { id: credentialId };
 
     try {
@@ -410,12 +414,9 @@ export class XService {
   /**
    * Get posts history across platforms, or for one account/platform.
    */
-  async getPostHistory(credentialId?: string, limit = 50, platform?: string) {
+  async getPostHistory(credentialId?: string, limit = 50, platform?: string, filters: Omit<HistoryFilters, 'platform' | 'credentialId'> = {}) {
     return (this.prisma as any).socialMediaPost.findMany({
-      where: {
-        ...(credentialId ? { credentialId } : {}),
-        ...(platform ? { platform } : {}),
-      },
+      where: historyWhere({ ...filters, credentialId, platform }),
       orderBy: { publishedAt: 'desc' },
       take: limit,
       include: {
@@ -423,6 +424,16 @@ export class XService {
           select: { accountName: true },
         },
       },
+    });
+  }
+
+  /** Just enough of each post since a date to count them. */
+  async postRowsSince(since: Date): Promise<PostRow[]> {
+    return (this.prisma as any).socialMediaPost.findMany({
+      where: { publishedAt: { gte: since } },
+      select: { platform: true, status: true, publishedAt: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 20000,
     });
   }
 

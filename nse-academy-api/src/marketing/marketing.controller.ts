@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Put, Param, Body, UseGuards, HttpCode, Delete, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -10,6 +12,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   ValidateIf,
@@ -25,7 +28,9 @@ import { XStreamService } from './x-stream.service';
 import { SocialPostService } from './social-post.service';
 import { fillReportPost } from './x-slot';
 import { publicSiteUrl } from '../site-url';
-import { SOCIAL_PLATFORMS, TIKTOK_PRIVACY_LEVELS } from './x-automation.config';
+import { DEFAULT_PLATFORMS, SOCIAL_PLATFORMS, TIKTOK_PRIVACY_LEVELS } from './x-automation.config';
+import { mediaForPlatform } from './platform-copy';
+import { accountHealth, summarizePosts } from './social-stats';
 
 // Keys copied from the X console often carry a trailing space or newline, which makes X answer 401.
 const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
@@ -72,6 +77,8 @@ class UpdateSocialCredentialsDto {
   @trim() @IsOptional() @IsString() refreshToken?: string;
   @trim() @IsOptional() @IsString() bearerToken?: string;
   @IsOptional() @IsDateString() expiresAt?: string;
+  /** False pauses the account: the hourly slots and the pickers skip it, and nothing is deleted. */
+  @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
 class PlatformTargetDto {
@@ -132,6 +139,16 @@ class PostToXDto {
   @IsString() @IsNotEmpty() content: string;
   @IsOptional() @IsArray() @IsString({ each: true }) mediaUrls?: string[];
   @IsOptional() @IsString() reportId?: string;
+}
+
+class ReportTargetDto {
+  @IsIn(SOCIAL_PLATFORMS) platform: (typeof SOCIAL_PLATFORMS)[number];
+  @IsString() @IsNotEmpty() credentialId: string;
+}
+
+class PostReportDto {
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) reportDate: string;
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(10) @ValidateNested({ each: true }) @Type(() => ReportTargetDto) targets: ReportTargetDto[];
 }
 
 class PostReportToXDto {
@@ -200,28 +217,29 @@ export class MarketingController {
   @ApiResponse({ status: 200, description: 'Report posted to X successfully' })
   async postReportToX(@Body() dto: PostReportToXDto) {
     const report = await this.marketReportService.getReportForXPosting(dto.reportDate);
-    const site = publicSiteUrl((key) => this.config.get<string>(key));
-    const verified = fillReportPost((report.social as { xPost?: string } | null)?.xPost, dto.reportDate, site);
-    const fallback = this.marketReportService.createXPosts({
-      title: '',
-      date: dto.reportDate,
-      summary: '',
-      keyStats: { stocksUp: 0, stocksDown: 0, valueTraded: '', stocksTraded: 0 },
-      topMovers: { gainers: [], losers: [] },
-      cardImageUrls: report.cardImageUrls,
-    });
+    const text = this.reportPostText(report, dto.reportDate);
 
-    const result = await this.xService.postReportToX(
-      dto.credentialId,
-      verified ?? fallback[0],
-      report.cardImageUrls,
-      dto.reportDate,
-    );
+    const result = await this.xService.postReportToX(dto.credentialId, text, report.cardImageUrls, dto.reportDate);
 
     // Mark report as posted
     await this.marketReportService.markAsPostedToX(dto.reportDate, result.postId);
 
     return result;
+  }
+
+  /** The verified X sentence for a report, or the plain fallback when the report has none. */
+  private reportPostText(report: { social?: unknown; cardImageUrls: string[] }, reportDate: string): string {
+    const site = publicSiteUrl((key) => this.config.get<string>(key));
+    const verified = fillReportPost((report.social as { xPost?: string } | null)?.xPost, reportDate, site);
+    if (verified) return verified;
+    return this.marketReportService.createXPosts({
+      title: '',
+      date: reportDate,
+      summary: '',
+      keyStats: { stocksUp: 0, stocksDown: 0, valueTraded: '', stocksTraded: 0 },
+      topMovers: { gainers: [], losers: [] },
+      cardImageUrls: report.cardImageUrls,
+    })[0];
   }
 
   @Post('x/resend/:postId')
@@ -293,10 +311,18 @@ export class MarketingController {
 
   @Get('accounts')
   @UseGuards(AdminAuthGuard)
-  @ApiOperation({ summary: 'Active accounts, optionally for one platform' })
+  @ApiOperation({ summary: 'Accounts with their health, optionally for one platform. Paused accounts only with includePaused=true' })
   @ApiBearerAuth()
-  async getAccounts(@Query('platform') platform?: string) {
-    return this.xService.getActiveCredentials(platform);
+  async getAccounts(@Query('platform') platform?: string, @Query('includePaused') includePaused?: string) {
+    const rows = await this.xService.getActiveCredentials(platform, includePaused === 'true');
+    const now = new Date();
+    return rows.map((a: any) => ({
+      ...a,
+      health: accountHealth(
+        { platform: a.platform, isActive: a.isActive, expiresAt: a.expiresAt, lastTestedAt: a.lastTestedAt, hasRefreshToken: a.hasRefreshToken },
+        now,
+      ),
+    }));
   }
 
   @Post('accounts')
@@ -365,10 +391,70 @@ export class MarketingController {
 
   @Get('posts')
   @UseGuards(AdminAuthGuard)
-  @ApiOperation({ summary: 'Post history across platforms' })
+  @ApiOperation({ summary: 'Post history across platforms. Filter by platform, status or text; pass the last post time as "before" for the next page' })
   @ApiBearerAuth()
-  async getPlatformPosts(@Query('platform') platform?: string) {
-    return this.xService.getPostHistory(undefined, 50, platform);
+  async getPlatformPosts(
+    @Query('platform') platform?: string,
+    @Query('status') status?: string,
+    @Query('before') before?: string,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const n = Math.min(Math.max(parseInt(limit ?? '50', 10) || 50, 1), 200);
+    return this.xService.getPostHistory(undefined, n, platform, { status, before, q });
+  }
+
+  @Get('summary')
+  @UseGuards(AdminAuthGuard)
+  @ApiOperation({ summary: 'Posts per day and per platform for the last N days, with the previous period for comparison' })
+  @ApiBearerAuth()
+  async summary(@Query('days') days?: string) {
+    const d = Math.min(Math.max(parseInt(days ?? '14', 10) || 14, 3), 90);
+    const now = new Date();
+    const rows = await this.xService.postRowsSince(new Date(now.getTime() - (2 * d + 1) * 86_400_000));
+    return summarizePosts(rows, now, d, SOCIAL_PLATFORMS as unknown as string[]);
+  }
+
+  @Post('report/post')
+  @UseGuards(AdminAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Post one market report to several accounts at once; each platform gets its own copy and cards, and one failure does not stop the others' })
+  @ApiBearerAuth()
+  async postReportToPlatforms(@Body() dto: PostReportDto) {
+    const report = await this.marketReportService.getReportForXPosting(dto.reportDate);
+    const text = this.reportPostText(report, dto.reportDate);
+    const cards = await this.marketReportService.getCardSet(dto.reportDate);
+    const saved = (await this.automation.view()).config.platforms;
+
+    const seen = new Set<string>();
+    const results: { platform: string; credentialId: string; status: 'posted' | 'skipped' | 'failed'; url?: string; postId?: string; reason?: string }[] = [];
+    for (const t of dto.targets) {
+      if (seen.has(t.credentialId)) continue;
+      seen.add(t.credentialId);
+      // The saved suffix and hashtags apply, so a report reads the same here as in the hourly posts.
+      const target = saved.find((p) => p.platform === t.platform) ?? DEFAULT_PLATFORMS.find((p) => p.platform === t.platform)!;
+      try {
+        const d = await this.social.publishTarget({ ...target, platform: t.platform }, text, mediaForPlatform(t.platform, cards), t.credentialId, {
+          reportType: 'daily',
+          reportId: dto.reportDate,
+          mode: 'live',
+        });
+        if (d.status === 'posted' && t.platform === 'x' && d.postId) {
+          await this.marketReportService.markAsPostedToX(dto.reportDate, d.postId).catch(() => undefined);
+        }
+        results.push({
+          platform: t.platform,
+          credentialId: t.credentialId,
+          status: d.status === 'posted' ? 'posted' : 'skipped',
+          url: d.url,
+          postId: d.postId,
+          reason: d.reason,
+        });
+      } catch (e) {
+        results.push({ platform: t.platform, credentialId: t.credentialId, status: 'failed', reason: (e as Error).message });
+      }
+    }
+    return { reportDate: dto.reportDate, results };
   }
 
   @Delete('posts/:postId')

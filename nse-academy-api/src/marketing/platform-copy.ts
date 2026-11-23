@@ -6,6 +6,22 @@
  */
 import { PlatformTarget, SocialPlatform } from './x-automation.config';
 
+export interface CardSet {
+  /** The vertical 9:16 story cards. */
+  story: string[];
+  /** The same cards at 4:5, which is what Instagram's feed accepts. */
+  feed: string[];
+}
+
+/** Which of a report's cards each platform takes, and how many. */
+export function mediaForPlatform(platform: SocialPlatform, cards: CardSet): string[] {
+  if (platform === 'x') return cards.story.slice(0, 4);
+  if (platform === 'facebook' || platform === 'threads') return cards.story.slice(0, 1);
+  if (platform === 'instagram') return cards.feed.slice(0, 10);
+  if (platform === 'tiktok') return cards.story.slice(0, 35);
+  return [];
+}
+
 export const PLATFORM_TEXT_LIMIT: Record<SocialPlatform, number> = {
   // The X account is verified, so it can post long-form instead of the old 280 characters.
   x: 4000,

@@ -17,6 +17,63 @@ export const SLOT_TEMPLATES = [
 
 export type SlotTemplate = (typeof SLOT_TEMPLATES)[number];
 
+/** Every place a slot can be published. X is the copy source; the others receive the same story. */
+export const SOCIAL_PLATFORMS = ['x', 'facebook', 'instagram', 'threads', 'tiktok'] as const;
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
+
+/** These platforms cannot publish without an image. A slot with no cards is skipped, not failed. */
+export const MEDIA_ONLY_PLATFORMS: SocialPlatform[] = ['instagram', 'tiktok'];
+
+export const TIKTOK_PRIVACY_LEVELS = [
+  'PUBLIC_TO_EVERYONE',
+  'MUTUAL_FOLLOW_FRIENDS',
+  'FOLLOWER_OF_CREATOR',
+  'SELF_ONLY',
+] as const;
+export type TikTokPrivacy = (typeof TIKTOK_PRIVACY_LEVELS)[number];
+
+export interface PlatformTarget {
+  platform: SocialPlatform;
+  enabled: boolean;
+  /** The account to use. Empty means the oldest active account on that platform. */
+  credentialId: string | null;
+  /** Appended after the X copy on this platform. */
+  suffix: string;
+  /** Appended after the suffix when the post does not already carry that hashtag. */
+  hashtags: string;
+  /** TikTok direct posts must use one of the creator's allowed privacy levels. Unaudited apps can only use SELF_ONLY. */
+  tiktokPrivacy: TikTokPrivacy;
+}
+
+export const DEFAULT_PLATFORMS: PlatformTarget[] = [
+  { platform: 'x', enabled: true, credentialId: null, suffix: '', hashtags: '', tiktokPrivacy: 'SELF_ONLY' },
+  { platform: 'facebook', enabled: false, credentialId: null, suffix: '', hashtags: '#NSE #NairobiStockExchange', tiktokPrivacy: 'SELF_ONLY' },
+  {
+    platform: 'instagram',
+    enabled: false,
+    credentialId: null,
+    suffix: 'Educational only. Follow for daily NSE insights.',
+    hashtags: '#NSE #NairobiStockExchange #Investing #Kenya',
+    tiktokPrivacy: 'SELF_ONLY',
+  },
+  {
+    platform: 'threads',
+    enabled: false,
+    credentialId: null,
+    suffix: 'What are you watching on the NSE today?',
+    hashtags: '#NSE',
+    tiktokPrivacy: 'SELF_ONLY',
+  },
+  {
+    platform: 'tiktok',
+    enabled: false,
+    credentialId: null,
+    suffix: '',
+    hashtags: '#NSE #NairobiStockExchange #Investing #Kenya',
+    tiktokPrivacy: 'SELF_ONLY',
+  },
+];
+
 export interface SlotDef {
   id: string;
   enabled: boolean;
@@ -35,7 +92,10 @@ export interface StreamRule {
 export interface AutomationConfig {
   enabled: boolean;
   mode: 'draft' | 'live';
+  /** Kept for the original X-only config. It mirrors platforms[x].credentialId. */
   credentialId: string | null;
+  /** Where each slot goes, and how the X copy is adapted there. */
+  platforms: PlatformTarget[];
   /** JS weekday, 0 = Sunday. */
   days: number[];
   startMinute: number;
@@ -92,6 +152,7 @@ export const DEFAULT_CONFIG: AutomationConfig = {
   enabled: false,
   mode: 'draft',
   credentialId: null,
+  platforms: DEFAULT_PLATFORMS.map((target) => ({ ...target })),
   days: [1, 2, 3, 4, 5],
   startMinute: 9 * 60,
   endMinute: 16 * 60,
@@ -139,6 +200,36 @@ function slotId(value: unknown, index: number): string {
   const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
   const cleaned = raw.replace(/[^a-z0-9-]/g, '').slice(0, 40);
   return cleaned || `slot-${index + 1}`;
+}
+
+function privacy(value: unknown, fallback: TikTokPrivacy): TikTokPrivacy {
+  return typeof value === 'string' && (TIKTOK_PRIVACY_LEVELS as readonly string[]).includes(value)
+    ? (value as TikTokPrivacy)
+    : fallback;
+}
+
+/**
+ * One target per known platform, in a stable order. A config written before the
+ * other platforms existed keeps its X account and leaves the rest off.
+ */
+export function normalizePlatforms(raw: unknown, legacyCredentialId: unknown): PlatformTarget[] {
+  const rows = Array.isArray(raw) ? raw : [];
+  const legacy = typeof legacyCredentialId === 'string' && legacyCredentialId.trim() ? legacyCredentialId.trim() : null;
+  return SOCIAL_PLATFORMS.map((platform) => {
+    const fallback = DEFAULT_PLATFORMS.find((target) => target.platform === platform)!;
+    const row = rows.find((item) => item && typeof item === 'object' && (item as Record<string, unknown>).platform === platform) as
+      | Record<string, unknown>
+      | undefined;
+    const selected = typeof row?.credentialId === 'string' && row.credentialId.trim() ? row.credentialId.trim() : null;
+    return {
+      platform,
+      enabled: row ? row.enabled === true : fallback.enabled,
+      credentialId: selected ?? (platform === 'x' ? legacy : null),
+      suffix: typeof row?.suffix === 'string' ? row.suffix.trim().slice(0, 280) : fallback.suffix,
+      hashtags: typeof row?.hashtags === 'string' ? row.hashtags.trim().slice(0, 280) : fallback.hashtags,
+      tiktokPrivacy: privacy(row?.tiktokPrivacy, fallback.tiktokPrivacy),
+    };
+  });
 }
 
 /** Fills anything missing or out of range with the defaults. Drops slots and rules that cannot be posted. */
@@ -196,12 +287,14 @@ export function normalizeConfig(input: unknown): AutomationConfig {
   }
 
   const mode = raw.mode === 'live' ? 'live' : 'draft';
-  const credentialId = typeof raw.credentialId === 'string' && raw.credentialId.trim() ? raw.credentialId.trim() : null;
+  const platforms = normalizePlatforms(raw.platforms, raw.credentialId);
+  const credentialId = platforms.find((target) => target.platform === 'x')?.credentialId ?? null;
 
   return {
     enabled: raw.enabled === true,
     mode,
     credentialId,
+    platforms,
     days: Array.isArray(raw.days) ? days : base.days,
     startMinute: clampInt(raw.startMinute, base.startMinute, 0, 24 * 60 - 1),
     endMinute: clampInt(raw.endMinute, base.endMinute, 0, 24 * 60 - 1),

@@ -5,10 +5,19 @@ import { Card, CardHead } from '../ui/primitives';
 
 interface Slot { id: string; enabled: boolean; hour?: number; atMinute?: number; template: string }
 interface Rule { tag: string; value: string }
+interface PlatformTarget {
+  platform: string;
+  enabled: boolean;
+  credentialId: string | null;
+  suffix: string;
+  hashtags: string;
+  tiktokPrivacy: string;
+}
 interface Config {
   enabled: boolean;
   mode: 'draft' | 'live';
   credentialId: string | null;
+  platforms: PlatformTarget[];
   days: number[];
   startMinute: number;
   endMinute: number;
@@ -26,7 +35,8 @@ interface Config {
   streamMonthlyUsdCap: number;
   streamUnitUsd: number;
 }
-interface Run { slotId: string; status: string; template: string; content: string; reason: string | null; createdAt: string }
+interface Delivery { platform: string; status: string; reason?: string; url?: string }
+interface Run { slotId: string; status: string; template: string; content: string; reason: string | null; deliveries?: Delivery[]; createdAt: string }
 interface View {
   config: Config;
   runs: Run[];
@@ -37,6 +47,8 @@ interface Preview { due: { action: string; reason?: string; slot?: { id: string 
 
 const TEMPLATES = ['session-open', 'mover', 'breadth', 'spotlight', 'most-active', 'into-the-close', 'session-close', 'evening-wrap'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PRIVACY = ['SELF_ONLY', 'PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR'];
+const selectStyle: React.CSSProperties = { padding: 8 };
 const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 const toMinute = (value: string) => {
   const [h, m] = value.split(':').map((part) => Number(part));
@@ -50,7 +62,7 @@ const check = (label: string, checked: boolean, onChange: (v: boolean) => void) 
 );
 
 /** The hourly poster and the budgeted stream, edited as one config document. */
-export function XAutomationPanel({ accounts }: { accounts: { id: string; accountName: string }[] }) {
+export function XAutomationPanel({ accounts, platforms }: { accounts: { id: string; accountName: string; platform: string }[]; platforms: { id: string; label: string; needsMedia: boolean }[] }) {
   const [config, setConfig] = useState<Config | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [spend, setSpend] = useState<View['spend'] | null>(null);
@@ -85,6 +97,9 @@ export function XAutomationPanel({ accounts }: { accounts: { id: string; account
 
   if (!config || !spend) return null;
   const set = (patch: Partial<Config>) => setConfig({ ...config, ...patch });
+  const platformLabel = (id: string) => platforms.find((p) => p.id === id)?.label ?? id;
+  const setTarget = (index: number, patch: Partial<PlatformTarget>) =>
+    set({ platforms: (config.platforms ?? []).map((target, i) => (i === index ? { ...target, ...patch } : target)) });
 
   const save = () => run('save', async () => {
     const view = await adminFetch<View>('/marketing/x/automation', { method: 'PUT', body: JSON.stringify(config) });
@@ -114,7 +129,7 @@ export function XAutomationPanel({ accounts }: { accounts: { id: string; account
       <Card>
         <CardHead
           title="Hourly posting"
-          hint="One slot an hour on weekdays, from prices already stored here. Draft mode saves the text and does not call X. The evening wrap uses the verified market-report post at 21:10."
+          hint="One slot an hour on weekdays, from prices already stored here. Draft mode saves the text and does not call any platform. The evening wrap uses the verified market-report post at 21:10."
           right={<Button size="S" loading={busy === 'save'} onClick={save}>Save</Button>}
         />
         {message && <Box paddingBottom={3}><Pill kind={message.bad ? 'bad' : 'good'}>{message.bad ? 'Error' : 'Done'}</Pill> <Typography>{message.text}</Typography></Box>}
@@ -129,10 +144,16 @@ export function XAutomationPanel({ accounts }: { accounts: { id: string; account
             </select>
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, paddingBottom: 4 }}>Account</div>
-            <select aria-label="Posting account" value={config.credentialId ?? ''} onChange={(e) => set({ credentialId: e.target.value || null })} style={{ padding: 8 }}>
-              <option value="">First active account</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountName}</option>)}
+            <div style={{ fontSize: 12, fontWeight: 600, paddingBottom: 4 }}>X account</div>
+            <select aria-label="X posting account" value={config.credentialId ?? ''} onChange={(e) => {
+              const credentialId = e.target.value || null;
+              set({
+                credentialId,
+                platforms: (config.platforms ?? []).map((target) => (target.platform === 'x' ? { ...target, credentialId } : target)),
+              });
+            }} style={selectStyle}>
+              <option value="">First active X account</option>
+              {accounts.filter((a) => a.platform === 'x').map((a) => <option key={a.id} value={a.id}>{a.accountName}</option>)}
             </select>
           </div>
           <LTextInput label="From" name="start" type="time" value={clock(config.startMinute)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set({ startMinute: toMinute(e.target.value) })} />
@@ -152,6 +173,46 @@ export function XAutomationPanel({ accounts }: { accounts: { id: string; account
             {check('Skip a repeat and post a lesson', config.skipIfUnchanged, (skipIfUnchanged) => set({ skipIfUnchanged }))}
             {check('Rewrite market slots with the cheapest model', config.aiCompose, (aiCompose) => set({ aiCompose }))}
           </Flex>
+        </Box>
+
+        <Box paddingTop={4}>
+          <Typography variant="delta">Platforms</Typography>
+          <Box paddingTop={2}><Typography textColor="neutral600">
+            Every enabled platform receives the same X sentence. The suffix and hashtags below are added after it when they fit.
+            Instagram and TikTok need images, so a slot without cards is skipped there rather than failing.
+          </Typography></Box>
+          {(config.platforms ?? []).map((target, index) => (
+            <Box key={target.platform} paddingTop={3}>
+              <Flex gap={3} wrap="wrap" alignItems="flex-end">
+                {check(platformLabel(target.platform), target.enabled, (enabled) => setTarget(index, { enabled }))}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, paddingBottom: 4 }}>Account</div>
+                  <select
+                    aria-label={`${platformLabel(target.platform)} account`}
+                    value={target.credentialId ?? ''}
+                    onChange={(e) => setTarget(index, { credentialId: e.target.value || null })}
+                    style={selectStyle}
+                  >
+                    <option value="">First active account</option>
+                    {accounts.filter((a) => a.platform === target.platform).map((a) => <option key={a.id} value={a.id}>{a.accountName}</option>)}
+                  </select>
+                </div>
+                {target.platform === 'tiktok' && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, paddingBottom: 4 }}>Privacy</div>
+                    <select aria-label="TikTok privacy" value={target.tiktokPrivacy} onChange={(e) => setTarget(index, { tiktokPrivacy: e.target.value })} style={selectStyle}>
+                      {PRIVACY.map((level) => <option key={level} value={level}>{level}</option>)}
+                    </select>
+                  </div>
+                )}
+                <LTextInput label="Suffix" name={`suffix-${target.platform}`} value={target.suffix} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTarget(index, { suffix: e.target.value })} />
+                <LTextInput label="Hashtags" name={`tags-${target.platform}`} placeholder="#NSE #Investing" value={target.hashtags} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTarget(index, { hashtags: e.target.value })} />
+              </Flex>
+            </Box>
+          ))}
+          <Box paddingTop={2}><Typography variant="pi" textColor="neutral600">
+            A TikTok app that has not passed TikTok&apos;s audit can only post as SELF_ONLY. Choose a public level only after the audit.
+          </Typography></Box>
         </Box>
 
         <Box paddingTop={4}>
@@ -237,6 +298,16 @@ export function XAutomationPanel({ accounts }: { accounts: { id: string; account
               <Box key={run.slotId} paddingTop={1}>
                 <Pill kind={run.status === 'posted' ? 'good' : run.status === 'failed' ? 'bad' : 'neutral'}>{run.status}</Pill>{' '}
                 <Typography>{run.slotId}{run.reason ? ` (${run.reason})` : ''} {run.content ? `— ${run.content.slice(0, 140)}` : ''}</Typography>
+                {run.deliveries && run.deliveries.length > 0 && (
+                  <Box paddingTop={1} paddingLeft={3}>
+                    {run.deliveries.map((delivery) => (
+                      <div key={delivery.platform}>
+                        <Pill kind={delivery.status === 'posted' || delivery.status === 'draft' ? 'good' : delivery.status === 'failed' ? 'bad' : 'neutral'}>{delivery.status}</Pill>{' '}
+                        <Typography variant="pi">{platformLabel(delivery.platform)}{delivery.reason ? ` — ${delivery.reason}` : ''}</Typography>
+                      </div>
+                    ))}
+                  </Box>
+                )}
               </Box>
             ))}
           </Box>

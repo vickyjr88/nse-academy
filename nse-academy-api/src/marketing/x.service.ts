@@ -64,6 +64,8 @@ export class XService {
 
       const postId = await this.sendTweet(decryptedCreds, content, mediaIds, opts?.quoteTweetId);
 
+      const url = `https://twitter.com/i/web/status/${postId}`;
+
       // Store the post record for future reference
       await (this.prisma as any).socialMediaPost.create({
         data: {
@@ -72,6 +74,7 @@ export class XService {
           reportType,
           reportId,
           externalPostId: postId,
+          url,
           content,
           mediaUrls: mediaUrls || [],
           quoteTweetId: opts?.quoteTweetId,
@@ -80,10 +83,7 @@ export class XService {
         },
       });
 
-      return {
-        postId,
-        url: `https://twitter.com/i/web/status/${postId}`,
-      };
+      return { postId, url };
     } catch (error) {
       await this.logFailedPost(credentialId, content, mediaUrls, (error as Error).message, reportId, reportType);
       throw new InternalServerErrorException(`Failed to post to X: ${(error as Error).message}`);
@@ -132,6 +132,7 @@ export class XService {
           reportType: 'daily',
           reportId: reportDate,
           externalPostId: postId,
+          url: `https://twitter.com/i/web/status/${postId}`,
           content: reportContent,
           mediaUrls: cardImageUrls || [],
           status: 'published',
@@ -218,11 +219,12 @@ export class XService {
     const decrypted = this.decryptCredentials(credential);
     const mediaIds = post.mediaUrls?.length ? await this.uploadMedia(decrypted, post.mediaUrls) : [];
     const tweetId = await this.sendTweet(decrypted, post.content, mediaIds, post.quoteTweetId ?? undefined);
+    const url = `https://twitter.com/i/web/status/${tweetId}`;
     await (this.prisma as any).socialMediaPost.update({
       where: { id: post.id },
-      data: { status: 'published', externalPostId: tweetId, publishedAt: new Date(), error: null },
+      data: { status: 'published', externalPostId: tweetId, url, publishedAt: new Date(), error: null },
     });
-    return { postId: tweetId, url: `https://twitter.com/i/web/status/${tweetId}` };
+    return { postId: tweetId, url };
   }
 
   private async sendTweet(credentials: XCredentials, content: string, mediaIds: string[], quoteTweetId?: string): Promise<string> {
@@ -234,26 +236,35 @@ export class XService {
   }
 
   /**
-   * Store X credentials (encrypted)
+   * Store encrypted credentials for any supported platform. The same row shape
+   * carries X's four OAuth keys, Meta's page/user token, and TikTok's refresh
+   * token, so the admin screen and the database stay one pattern.
    */
   async storeCredentials(
     accountName: string,
-    credentials: XCredentials & { bearerToken?: string },
+    credentials: Partial<XCredentials> & {
+      bearerToken?: string;
+      refreshToken?: string;
+      externalId?: string;
+      expiresAt?: Date | null;
+    },
+    platform = 'x',
   ): Promise<{ id: string }> {
     const encryptedCreds = {
-      apiKey: this.encryption.encrypt(credentials.apiKey),
-      apiSecret: this.encryption.encrypt(credentials.apiSecret),
-      accessToken: this.encryption.encrypt(credentials.accessToken),
-      accessTokenSecret: this.encryption.encrypt(credentials.accessTokenSecret),
+      // The columns are NOT NULL for historical reasons. An empty encrypted value is valid and decrypts to ''.
+      apiKey: this.encryption.encrypt(credentials.apiKey?.trim() ?? ''),
+      apiSecret: this.encryption.encrypt(credentials.apiSecret?.trim() ?? ''),
+      accessToken: this.encryption.encrypt(credentials.accessToken?.trim() ?? ''),
+      accessTokenSecret: this.encryption.encrypt(credentials.accessTokenSecret?.trim() ?? ''),
       ...(credentials.bearerToken?.trim() ? { bearerToken: this.encryption.encrypt(credentials.bearerToken.trim()) } : {}),
+      ...(credentials.refreshToken?.trim() ? { refreshToken: this.encryption.encrypt(credentials.refreshToken.trim()) } : {}),
+      ...(credentials.externalId?.trim() ? { externalId: credentials.externalId.trim() } : {}),
+      ...(credentials.expiresAt ? { expiresAt: credentials.expiresAt } : {}),
     };
 
     const credential = await (this.prisma as any).socialMediaCredential.upsert({
       where: {
-        platform_accountName: {
-          platform: 'x',
-          accountName,
-        },
+        platform_accountName: { platform, accountName },
       },
       update: {
         ...encryptedCreds,
@@ -261,7 +272,7 @@ export class XService {
         lastTestedAt: new Date(),
       },
       create: {
-        platform: 'x',
+        platform,
         accountName,
         ...encryptedCreds,
         isActive: true,
@@ -300,24 +311,36 @@ export class XService {
     }
   }
 
-  /**
-   * Get all active X credentials
-   */
-  async getActiveCredentials() {
+  /** Active accounts for one platform, or every platform when none is named. */
+  async getActiveCredentials(platform?: string) {
     const rows = await (this.prisma as any).socialMediaCredential.findMany({
       where: {
-        platform: 'x',
+        ...(platform ? { platform } : {}),
         isActive: true,
       },
+      orderBy: [{ platform: 'asc' }, { createdAt: 'asc' }],
       select: {
         id: true,
+        platform: true,
         accountName: true,
+        externalId: true,
+        expiresAt: true,
         lastTestedAt: true,
         createdAt: true,
         bearerToken: true,
+        refreshToken: true,
       },
     });
-    return rows.map(({ bearerToken, ...rest }: { bearerToken: string | null }) => ({ ...rest, hasBearer: Boolean(bearerToken) }));
+    return rows.map(
+      ({
+        bearerToken,
+        refreshToken,
+        ...rest
+      }: {
+        bearerToken: string | null;
+        refreshToken: string | null;
+      }) => ({ ...rest, hasBearer: Boolean(bearerToken), hasRefreshToken: Boolean(refreshToken) }),
+    );
   }
 
   /**
@@ -326,27 +349,36 @@ export class XService {
    */
   async updateCredential(
     credentialId: string,
-    changes: Partial<XCredentials> & { accountName?: string; bearerToken?: string },
+    changes: Partial<XCredentials> & {
+      accountName?: string;
+      bearerToken?: string;
+      refreshToken?: string;
+      externalId?: string;
+      expiresAt?: Date | null;
+    },
   ): Promise<{ id: string }> {
     const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
-    if (!existing) throw new NotFoundException('X account not found');
+    if (!existing) throw new NotFoundException('Account not found');
 
     const data: Record<string, unknown> = {};
     if (changes.accountName?.trim()) data.accountName = changes.accountName.trim();
-    for (const field of ['apiKey', 'apiSecret', 'accessToken', 'accessTokenSecret'] as const) {
+    if (changes.externalId !== undefined) data.externalId = changes.externalId.trim() || null;
+    if (changes.expiresAt !== undefined) data.expiresAt = changes.expiresAt;
+    for (const field of ['apiKey', 'apiSecret', 'accessToken', 'accessTokenSecret', 'refreshToken'] as const) {
+
       const value = changes[field]?.trim();
       if (value) data[field] = this.encryption.encrypt(value);
     }
     if (changes.bearerToken?.trim()) data.bearerToken = this.encryption.encrypt(changes.bearerToken.trim());
     // A bearer token is not part of the OAuth 1.0a posting keys, so it does not invalidate the last posting test.
-    if (Object.keys(data).some((k) => k !== 'accountName' && k !== 'bearerToken')) data.lastTestedAt = null;
+    if (Object.keys(data).some((k) => !['accountName', 'bearerToken', 'externalId', 'expiresAt'].includes(k))) data.lastTestedAt = null;
     if (Object.keys(data).length === 0) return { id: credentialId };
 
     try {
       await (this.prisma as any).socialMediaCredential.update({ where: { id: credentialId }, data });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
-        throw new BadRequestException('Another X account already uses that name');
+        throw new BadRequestException('Another account on this platform already uses that name');
       }
       throw error;
     }
@@ -356,7 +388,7 @@ export class XService {
   /** Delete an account. Its post history goes with it (the database cascades). */
   async deleteCredential(credentialId: string): Promise<void> {
     const existing = await (this.prisma as any).socialMediaCredential.findUnique({ where: { id: credentialId } });
-    if (!existing) throw new NotFoundException('X account not found');
+    if (!existing) throw new NotFoundException('Account not found');
     await (this.prisma as any).socialMediaCredential.delete({ where: { id: credentialId } });
   }
 
@@ -367,18 +399,23 @@ export class XService {
     await (this.prisma as any).socialMediaPost.delete({ where: { id: postId } });
   }
 
-  /** Remove every failed attempt from the post history. */
-  async clearFailedPosts(): Promise<{ deleted: number }> {
-    const result = await (this.prisma as any).socialMediaPost.deleteMany({ where: { platform: 'x', status: 'failed' } });
+  /** Remove every failed attempt from the post history, optionally for one platform. */
+  async clearFailedPosts(platform?: string): Promise<{ deleted: number }> {
+    const result = await (this.prisma as any).socialMediaPost.deleteMany({
+      where: { status: 'failed', ...(platform ? { platform } : {}) },
+    });
     return { deleted: result.count };
   }
 
   /**
-   * Get posts history
+   * Get posts history across platforms, or for one account/platform.
    */
-  async getPostHistory(credentialId?: string, limit = 50) {
+  async getPostHistory(credentialId?: string, limit = 50, platform?: string) {
     return (this.prisma as any).socialMediaPost.findMany({
-      where: credentialId ? { credentialId, platform: 'x' } : { platform: 'x' },
+      where: {
+        ...(credentialId ? { credentialId } : {}),
+        ...(platform ? { platform } : {}),
+      },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       include: {

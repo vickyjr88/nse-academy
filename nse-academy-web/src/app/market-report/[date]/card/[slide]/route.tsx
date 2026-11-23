@@ -19,6 +19,8 @@ import { SITE_HOST } from "@/lib/seo";
 
 const W = 1080;
 const H = 1920;
+// 4:5 feed variant for Instagram, which rejects the 9:16 story card.
+const FEED_H = 1350;
 const BG = "linear-gradient(180deg, #052e24 0%, #064e3b 100%)";
 const UP = "#34d399";
 const DOWN = "#f87171";
@@ -145,7 +147,7 @@ function slideBody(slide: number, r: MarketReport): React.ReactNode {
   }
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ date: string; slide: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ date: string; slide: string }> }) {
   const { date, slide } = await params;
   const n = Number(slide);
   if (!Number.isInteger(n) || n < 1 || n > CARD_SLIDES) return new Response("Not found", { status: 404 });
@@ -155,9 +157,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ date: s
 
   // Host + section only: the dated address wraps mid-word on a phone-width card, and the CTA points at the report list anyway.
   const shortUrl = `${SITE_HOST}/market-report`;
-  return new ImageResponse(<Frame step={n} url={shortUrl}>{slideBody(n, report)}</Frame>, {
-    width: W,
-    height: H,
-    headers: { "Cache-Control": "public, max-age=300, s-maxage=3600" },
-  });
+  const card = <Frame step={n} url={shortUrl}>{slideBody(n, report)}</Frame>;
+  const headers = { "Cache-Control": "public, max-age=300, s-maxage=3600" };
+
+  // Instagram feed posts must be between 4:5 and 1.91:1; the story card is 9:16.
+  // The same design is scaled to fit a 4:5 frame, with the background filling the sides.
+  if (new URL(req.url).searchParams.get("format") === "feed") {
+    const scale = FEED_H / H;
+    return new ImageResponse(
+      (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#052e24" }}>
+          <div style={{ display: "flex", width: W, height: H, transform: `scale(${scale})` }}>{card}</div>
+        </div>
+      ),
+      { width: W, height: FEED_H, headers },
+    );
+  }
+
+  return new ImageResponse(card, { width: W, height: H, headers });
 }

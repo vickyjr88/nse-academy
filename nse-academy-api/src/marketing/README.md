@@ -1,16 +1,20 @@
 # Social Media Marketing Module
 
-This module enables automated posting of daily/weekly reports to X (Twitter) and manual resend capabilities for previously published posts.
+This module publishes the daily/weekly market story to X (Twitter), a Facebook
+Page, Instagram, Threads and TikTok, with manual posting and resend from the
+admin UI. X is the copy source; the other platforms receive the same sentence
+adapted to their limits. See `SOCIAL_PLATFORMS.md`.
 
 ## Features
 
-- **Encrypted API Credentials**: X API keys and secrets are encrypted at rest using AES-256-GCM
+- **Encrypted API Credentials**: every platform's keys are encrypted at rest using AES-256-GCM
 - **Hourly posting**: Configurable slots through the Nairobi session, in draft or live mode. See `X_AUTOMATION.md`. The old 08:30 cron has been removed.
+- **Multi-platform fan-out**: each slot posts to every enabled platform; one failure does not stop the rest
 - **Media Support**: Attach images to posts from report attachments or media URLs
-- **Manual Resend**: Resend previously published reports to X from the admin UI
-- **Post History**: Track all published posts with timestamps and status
-- **Credential Testing**: Test X API credentials before saving
-- **Multiple Accounts**: Support multiple X accounts/handles
+- **Manual Posting and Resend**: Post to any connected account, or resend a published report/post from the admin UI
+- **Post History**: Track all published posts with timestamps, status and public URL
+- **Credential Testing**: Test an account on its own platform before saving or enabling it
+- **Multiple Accounts**: Support multiple accounts per platform
 
 ## Architecture
 
@@ -274,13 +278,16 @@ Check `SocialMediaPost` records with `status = 'failed'` to debug issues.
 
 ## Extending to Other Platforms
 
-The module is designed to support multiple platforms:
+Facebook, Instagram, Threads and TikTok are implemented. See
+[`SOCIAL_PLATFORMS.md`](SOCIAL_PLATFORMS.md) for the account fields, the
+publish path and the platform rules.
 
-1. Create platform-specific service (e.g., `FacebookService`)
-2. Extend `SocialMediaCredential` model if needed
-3. Add platform detection in controller and routing logic
-4. Implement OAuth/authentication for the platform
-5. Use `SocialMediaPost` table with `platform` field for tracking
+To add another platform:
+
+1. Add it to `SOCIAL_PLATFORMS` and `DEFAULT_PLATFORMS` in `x-automation.config.ts`.
+2. Add its limit to `PLATFORM_TEXT_LIMIT` in `platform-copy.ts`.
+3. Implement `publish*` in a service that accepts the decrypted `SocialCredential`.
+4. Route it in `SocialPostService.publishToPlatform`; history and failures are shared.
 
 ## Best Practices
 
@@ -357,7 +364,8 @@ GROUP BY credential."accountName";
 
 ## Future Enhancements
 
-- [ ] Facebook/Instagram posting
+- [x] Facebook/Instagram posting
+- [x] Threads and TikTok photo posts
 - [ ] LinkedIn posting
 - [ ] LinkedIn threading for long-form content
 - [ ] Post scheduling (post at specific times)

@@ -877,6 +877,10 @@ model SocialMediaCredential {
   refreshToken    String?  // Encrypted refresh token (for OAuth 2.0)
   // App-only bearer for read endpoints (filtered stream, recent search). Posting still uses the OAuth 1.0a keys.
   bearerToken     String?
+  // Page ID (Facebook), IG professional account ID, Threads user ID, or TikTok open_id.
+  externalId      String?
+  // Set when the platform tells us when the token ends (Threads 60 days, TikTok 24 hours).
+  expiresAt       DateTime?
   isActive        Boolean  @default(true)
   lastTestedAt    DateTime?
   createdAt       DateTime @default(now())
@@ -896,6 +900,7 @@ model SocialMediaPost {
   reportType          String                // daily, weekly, etc.
   reportId            String?               // Reference to the report that was posted
   externalPostId      String                // Platform's post ID (tweet ID for X)
+  url                 String?               // Public link when the platform gives us one
   content             String                // The text content posted
   mediaUrls           String[]              @default([]) // URLs of attached media
   quoteTweetId       String?               // When set, publishing quotes this post instead of standing alone
@@ -930,6 +935,8 @@ model XSlotRun {
   lessonIndex  Int?
   postId       String?
   reason       String?
+  // One entry per enabled platform: posted, draft, skipped or failed.
+  deliveries   Json?
   createdAt    DateTime @default(now())
 
   @@unique([sessionDate, slotId])

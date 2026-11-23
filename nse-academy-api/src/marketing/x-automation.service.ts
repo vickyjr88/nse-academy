@@ -4,11 +4,20 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
-import { reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
+import { publicCardUrls, reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
 import { eatDayBounds, PriceRow } from '../reports/report-helpers';
 import { XService } from './x.service';
 import { XComposeService } from './x-compose';
-import { AutomationConfig, DEFAULT_CONFIG, STARTER_CONFIG, SlotTemplate, normalizeConfig } from './x-automation.config';
+import { SocialPostService, Delivery } from './social-post.service';
+import {
+  AutomationConfig,
+  DEFAULT_CONFIG,
+  MEDIA_ONLY_PLATFORMS,
+  STARTER_CONFIG,
+  SlotTemplate,
+  SocialPlatform,
+  normalizeConfig,
+} from './x-automation.config';
 import {
   NairobiClock,
   Pulse,
@@ -62,6 +71,7 @@ export class XAutomationService implements OnModuleInit {
     private xService: XService,
     private compose: XComposeService,
     private configService: ConfigService,
+    private social: SocialPostService,
     @Optional() private monitor?: JobMonitorService,
   ) {}
 
@@ -165,13 +175,6 @@ export class XAutomationService implements OnModuleInit {
   }
 
   private async prepare(config: AutomationConfig, clock: NairobiClock, template: SlotTemplate, slotId: string, now: Date): Promise<RenderedSlot | { wait: true }> {
-    if (template === 'evening-wrap') {
-      const report = await this.prisma.marketReport.findUnique({ where: { sessionDate: clock.ymd } });
-      if (report?.xPosted) {
-        await this.claim(clock, slotId, template, { text: '', fingerprint: 'wrap', lessonIndex: null }, 'skipped', 'report already posted');
-        return { text: '', fingerprint: 'wrap', lessonIndex: null };
-      }
-    }
     const spotlight = spotlightTicker(config.spotlightTickers, clock.ymd);
     const pulse = template === 'evening-wrap' ? null : await this.loadPulse(now, spotlight);
     const rendered = renderSlot({
@@ -192,43 +195,92 @@ export class XAutomationService implements OnModuleInit {
     return { ...rendered, text };
   }
 
+  /**
+   * The X sentence goes to every enabled target. One platform failing does not
+   * stop the others; the per-platform result is on the slot row so the admin
+   * can see exactly what went out. A platform that needs an image is skipped
+   * when the slot has none (the evening wrap is the slot that carries cards).
+   */
   private async publish(config: AutomationConfig, clock: NairobiClock, slotId: string, template: SlotTemplate, rendered: RenderedSlot): Promise<string> {
-    if (rendered.fingerprint === 'wrap' && !rendered.text) return `${slotId} skipped: report already posted`;
-
     const claimed = await this.claim(clock, slotId, template, rendered, 'claimed');
     if (!claimed) return `${slotId} already claimed`;
 
-    const credentialId = await this.credentialId(config);
-    if (!credentialId) {
-      await this.finish(clock, slotId, 'skipped', 'no X account selected');
-      return `${slotId} skipped: no account`;
+    const targets = config.platforms.filter((target) => target.enabled);
+    if (targets.length === 0) {
+      await this.finish(clock, slotId, 'skipped', 'no platform enabled');
+      return `${slotId} skipped: no platform enabled`;
     }
 
-    const mediaUrls = template === 'evening-wrap' ? await this.cardUrls(clock.ymd) : [];
-    try {
-      if (config.mode === 'draft') {
-        const draft = await this.xService.saveDraft({
-          credentialId,
-          content: rendered.text,
+    const reportId = template === 'evening-wrap' ? clock.ymd : undefined;
+    const cards = template === 'evening-wrap' ? await this.cardUrls(clock.ymd) : { story: [], feed: [] };
+    const report = template === 'evening-wrap' ? await this.prisma.marketReport.findUnique({ where: { sessionDate: clock.ymd } }) : null;
+
+    const deliveries: Delivery[] = [];
+    for (const target of targets) {
+      if (target.platform === 'x' && report?.xPosted) {
+        deliveries.push({ platform: 'x', status: 'skipped', reason: 'report already posted to X' });
+        continue;
+      }
+      const credential = await this.social.resolveCredential(target.platform, target.credentialId);
+      if (!credential) {
+        deliveries.push({ platform: target.platform, status: 'skipped', reason: 'no account selected' });
+        continue;
+      }
+      const media = this.mediaFor(target.platform, cards);
+      if (MEDIA_ONLY_PLATFORMS.includes(target.platform) && media.length === 0) {
+        deliveries.push({ platform: target.platform, status: 'skipped', reason: 'no images' });
+        continue;
+      }
+      try {
+        const delivery = await this.social.publishTarget(target, rendered.text, media, credential.id, {
+          mode: config.mode,
           reportType: template,
-          reportId: template === 'evening-wrap' ? clock.ymd : undefined,
-          mediaUrls,
+          reportId,
         });
-        await this.finish(clock, slotId, 'draft', undefined, draft.id);
-        this.logger.log(`Drafted ${slotId} for ${clock.ymd}`);
-        return `drafted ${slotId}`;
+        deliveries.push(delivery);
+        if (delivery.platform === 'x' && delivery.status === 'posted' && template === 'evening-wrap') {
+          await this.prisma.marketReport
+            .update({
+              where: { sessionDate: clock.ymd },
+              data: { xPosted: true, xPostId: delivery.postId, lastXAttemptAt: new Date(), xError: null },
+            })
+            .catch(() => undefined);
+        }
+      } catch (err) {
+        const message = (err as Error).message.replace(/^Failed to post to [^:]+:\s*/, '');
+        deliveries.push({ platform: target.platform, status: 'failed', reason: message });
+        this.logger.warn(`${slotId} failed on ${target.platform}: ${message}`);
       }
-      const result = await this.xService.postToX(credentialId, rendered.text, mediaUrls, template === 'evening-wrap' ? clock.ymd : undefined, { reportType: template });
-      await this.finish(clock, slotId, 'posted', undefined, result.postId);
-      if (template === 'evening-wrap') {
-        await this.prisma.marketReport.update({ where: { sessionDate: clock.ymd }, data: { xPosted: true, xPostId: result.postId, lastXAttemptAt: new Date(), xError: null } }).catch(() => undefined);
-      }
-      this.logger.log(`Posted ${slotId} for ${clock.ymd}`);
-      return `posted ${slotId}`;
-    } catch (err) {
-      await this.finish(clock, slotId, 'failed', (err as Error).message);
-      throw err;
     }
+
+    const posted = deliveries.filter((delivery) => delivery.status === 'posted' || delivery.status === 'draft');
+    const failed = deliveries.filter((delivery) => delivery.status === 'failed');
+    const status = posted.length > 0 ? (config.mode === 'draft' ? 'draft' : 'posted') : failed.length > 0 ? 'failed' : 'skipped';
+    const summary = this.summary(slotId, deliveries);
+    // Keep the slot row's postId meaningful for older screens: X first, then any platform that returned one.
+    const primary = deliveries.find((delivery) => delivery.platform === 'x' && delivery.postId) ?? deliveries.find((delivery) => delivery.postId);
+    await this.finish(clock, slotId, status, failed.length > 0 ? `${failed.length} platform(s) failed` : undefined, primary?.postId, deliveries);
+
+    if (status === 'failed') throw new Error(summary);
+    this.logger.log(summary);
+    return summary;
+  }
+
+  private summary(slotId: string, deliveries: Delivery[]): string {
+    const parts = deliveries.map((delivery) =>
+      delivery.status === 'failed'
+        ? `${delivery.platform} failed (${delivery.reason ?? 'unknown error'})`
+        : `${delivery.platform} ${delivery.status}${delivery.reason ? ` (${delivery.reason})` : ''}`,
+    );
+    return `${slotId}: ${parts.join(', ')}`;
+  }
+
+  private mediaFor(platform: SocialPlatform, cards: { story: string[]; feed: string[] }): string[] {
+    if (platform === 'x') return cards.story.slice(0, 4);
+    if (platform === 'facebook' || platform === 'threads') return cards.story.slice(0, 1);
+    if (platform === 'instagram') return cards.feed.slice(0, 10);
+    if (platform === 'tiktok') return cards.story.slice(0, 35);
+    return [];
   }
 
   /** Inserts the idempotency row. False when another process already owns this slot today. */
@@ -253,10 +305,17 @@ export class XAutomationService implements OnModuleInit {
     }
   }
 
-  private async finish(clock: NairobiClock, slotId: string, status: string, reason?: string, postId?: string): Promise<void> {
+  private async finish(
+    clock: NairobiClock,
+    slotId: string,
+    status: string,
+    reason?: string,
+    postId?: string,
+    deliveries?: Delivery[],
+  ): Promise<void> {
     await this.prisma.xSlotRun.update({
       where: { sessionDate_slotId: { sessionDate: clock.ymd, slotId } },
-      data: { status, reason, postId },
+      data: { status, reason, postId, ...(deliveries ? { deliveries: deliveries as unknown as Prisma.InputJsonValue } : {}) },
     });
   }
 
@@ -279,6 +338,7 @@ export class XAutomationService implements OnModuleInit {
       template: run.template,
       content: run.content,
       reason: run.reason,
+      deliveries: run.deliveries ?? [],
       createdAt: run.createdAt.toISOString(),
     }));
   }
@@ -343,14 +403,21 @@ export class XAutomationService implements OnModuleInit {
     return fillReportPost(social?.xPost, ymd, this.siteUrl());
   }
 
-  private async cardUrls(ymd: string): Promise<string[]> {
+  /**
+   * Instagram feed images must be between 4:5 and 1.91:1. The story cards are
+   * 9:16, so Instagram gets the same cards rendered at 4:5 (`?format=feed`).
+   * X, Facebook, Threads and TikTok use the vertical cards.
+   */
+  private async cardUrls(ymd: string): Promise<{ story: string[]; feed: string[] }> {
     const report = await this.prisma.marketReport.findUnique({
       where: { sessionDate: ymd },
       select: { cardImageUrls: true, status: true },
     });
-    if (!report || report.status !== 'published') return [];
+    if (!report || report.status !== 'published') return { story: [], feed: [] };
     const site = reportSiteUrl((key) => this.configService.get<string>(key));
-    return resolveCardUrls(report.cardImageUrls ?? [], site, ymd).slice(0, 4);
+    const story = resolveCardUrls(report.cardImageUrls ?? [], site, ymd);
+    const feed = publicCardUrls(site, ymd).map((url) => `${url}?format=feed`);
+    return { story, feed };
   }
 
   private async credentialId(config: AutomationConfig): Promise<string | null> {

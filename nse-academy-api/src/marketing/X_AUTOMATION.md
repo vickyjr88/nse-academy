@@ -58,6 +58,10 @@ Once per process per Nairobi day, a recent-search call with `max_results=10` and
 
 ## Operations
 
-The admin page is Social media → X. The job name in system health is `x-hourly`. Only a real slot attempt is recorded, so quiet minutes do not wash out a failure.
+The admin page is Social media → Accounts, Hourly posting, Post history. The job
+name in system health is `x-hourly`. Only a real slot attempt is recorded, so
+quiet minutes do not wash out a failure.
 
-Apply migration `33_x_automation` before turning the feature on.
+Apply migration `33_x_automation` before turning the feature on, and
+`34_social_platforms` before enabling Facebook, Instagram, Threads or TikTok.
+Those platforms are described in [`SOCIAL_PLATFORMS.md`](SOCIAL_PLATFORMS.md).

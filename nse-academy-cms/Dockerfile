@@ -20,6 +20,8 @@ ENV NODE_ENV=production
 # The NSE API's address is bundled into the Admin panel only so it can recognise calls to route through Strapi's proxy.
 # Do NOT add the admin key here: everything in the bundle is public. The key is a runtime variable (docker-compose.yml).
 ARG STRAPI_ADMIN_NSE_API_URL
+ARG PUBLIC_URL=https://admin.nseacademy.co.ke
+ENV PUBLIC_URL=$PUBLIC_URL
 ENV STRAPI_ADMIN_NSE_API_URL=$STRAPI_ADMIN_NSE_API_URL
 
 # Build the Strapi admin panel and server

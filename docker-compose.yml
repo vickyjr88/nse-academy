@@ -68,7 +68,7 @@ services:
       WHATSAPP_CHANNEL_URL: ${WHATSAPP_CHANNEL_URL:-}
       BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET:-}
       RAPID_API_MAX_REQUESTS_PER_HOUR: ${RAPID_API_MAX_REQUESTS_PER_HOUR:-4}
-      CMS_ADMIN_URL: ${CMS_ADMIN_URL:-https://nseacademy-admin.vitaldigitalmedia.net}
+      CMS_ADMIN_URL: ${CMS_ADMIN_URL:-https://admin.nseacademy.co.ke}
       PORT: 3011
     depends_on:
       postgres:
@@ -82,6 +82,8 @@ services:
         # The admin's JavaScript is public, so no secret may be passed here. The admin key is a runtime variable below,
         # held by the Strapi server, which forwards the admin pages' calls to the API (see src/plugins/user-manager/server).
         STRAPI_ADMIN_NSE_API_URL: ${NSE_API_URL:-http://localhost:3011}
+        # Strapi writes its public address into the admin bundle at build time, so it must be a build arg too.
+        PUBLIC_URL: ${CMS_PUBLIC_URL:-https://admin.nseacademy.co.ke}
     restart: unless-stopped
     ports:
       - '1337:1337'
@@ -101,6 +103,7 @@ services:
       # Where the Strapi server reaches the NSE API (inside the compose network) and the key it sends. Never a build arg.
       NSE_API_URL: ${NSE_API_INTERNAL_URL:-http://api:3011}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      PUBLIC_URL: ${CMS_PUBLIC_URL:-https://admin.nseacademy.co.ke}
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,8 +117,9 @@ services:
       args:
         # NEXT_PUBLIC_* are inlined into the client bundle at build time -
         # they MUST be passed as build args, runtime env alone is too late.
-        NEXT_PUBLIC_API_URL: https://nseacademy-api.vitaldigitalmedia.net
-        NEXT_PUBLIC_CMS_URL: https://nseacademy-admin.vitaldigitalmedia.net
+        # The public API and CMS addresses. The old nseacademy-api / nseacademy-admin .vitaldigitalmedia.net names keep working at nginx.
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.nseacademy.co.ke}
+        NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://admin.nseacademy.co.ke}
         # The public website address: canonical links, share previews and sitemap. Set SITE_URL in .env to move domains.
         NEXT_PUBLIC_SITE_URL: ${SITE_URL:-https://nseacademy.co.ke}
         NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
@@ -126,8 +130,8 @@ services:
     ports:
       - '3010:3010'
     environment:
-      NEXT_PUBLIC_API_URL: https://nseacademy-api.vitaldigitalmedia.net
-      NEXT_PUBLIC_CMS_URL: https://nseacademy-admin.vitaldigitalmedia.net
+      NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.nseacademy.co.ke}
+      NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://admin.nseacademy.co.ke}
       CMS_API_TOKEN: ${CMS_API_TOKEN}
       CMS_INTERNAL_URL: http://cms:1337
       API_INTERNAL_URL: http://api:3011

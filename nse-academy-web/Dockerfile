@@ -13,8 +13,8 @@ COPY . .
 
 # Set build-time environments (Next.js inlines NEXT_PUBLIC_* into the client
 # bundle at build time, so they must be ARGs not just runtime env).
-ARG NEXT_PUBLIC_API_URL=https://nseacademy-api.vitaldigitalmedia.net
-ARG NEXT_PUBLIC_CMS_URL=https://nseacademy-admin.vitaldigitalmedia.net
+ARG NEXT_PUBLIC_API_URL=https://api.nseacademy.co.ke
+ARG NEXT_PUBLIC_CMS_URL=https://admin.nseacademy.co.ke
 ARG NEXT_PUBLIC_SITE_URL=https://nseacademy.co.ke
 ARG NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
 ARG NEXT_PUBLIC_POSTHOG_KEY=

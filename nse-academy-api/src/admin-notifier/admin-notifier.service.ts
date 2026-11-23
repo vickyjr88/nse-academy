@@ -60,7 +60,7 @@ export class AdminNotifierService {
 
   /** Deep link into the Strapi admin's user-manager plugin, e.g. adminUrl('contact-submissions/abc'). */
   adminUrl(path = ''): string {
-    const base = (this.config.get<string>('CMS_ADMIN_URL') || 'https://nseacademy-admin.vitaldigitalmedia.net').replace(/\/$/, '');
+    const base = (this.config.get<string>('CMS_ADMIN_URL') || 'https://admin.nseacademy.co.ke').replace(/\/$/, '');
     return `${base}/admin/plugins/user-manager${path ? `/${path}` : ''}`;
   }
 

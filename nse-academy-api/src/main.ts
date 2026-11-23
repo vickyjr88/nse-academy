@@ -17,6 +17,7 @@ function corsOrigins(): string[] {
     'https://nseacademy.co.ke',
     'https://www.nseacademy.co.ke',
     'https://nseacademy.vitaldigitalmedia.net',
+    'https://admin.nseacademy.co.ke',
     'https://nseacademy-admin.vitaldigitalmedia.net',
   ];
   // Only add localhost when nothing production-like is configured, rather

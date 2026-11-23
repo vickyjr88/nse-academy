@@ -18,7 +18,7 @@ void main() {
       expect(page.pageCount, 1);
       expect(page.articles.map((a) => a.slug), ['green-friday', 'bamb-analysis', 'cds-account']);
       expect(page.articles[0].coverImageUrl, isNull);
-      expect(page.articles[1].coverImageUrl, 'https://nseacademy-admin.vitaldigitalmedia.net/uploads/bamb.jpg');
+      expect(page.articles[1].coverImageUrl, 'https://admin.nseacademy.co.ke/uploads/bamb.jpg');
       expect(page.articles[1].isPremium, isTrue);
       expect(page.articles[0].tags, ['daily', 'market']);
     });

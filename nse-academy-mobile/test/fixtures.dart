@@ -49,7 +49,7 @@ String historyJson(String ticker, {int days = 40}) {
 }
 
 const reportJson = '''
-{"sessionYmd":"2026-11-12","label":"Thursday 12 November 2026","url":"https://nseacademy.vitaldigitalmedia.net/market-report/2026-11-12","headline":"NSE Thu 12 Nov 2026: 26 stocks rose, 17 fell","summary":"26 of 58 traded stocks rose.","lessons":[{"title":"One stock can dominate the total value traded","body":"Safaricom accounted for 41.1% of today's value traded."}],"facts":{"breadth":{"advancers":26,"decliners":17,"unchanged":15,"traded":58},"valueTradedKes":405800000}}
+{"sessionYmd":"2026-11-12","label":"Thursday 12 November 2026","url":"https://nseacademy.co.ke/market-report/2026-11-12","headline":"NSE Thu 12 Nov 2026: 26 stocks rose, 17 fell","summary":"26 of 58 traded stocks rose.","lessons":[{"title":"One stock can dominate the total value traded","body":"Safaricom accounted for 41.1% of today's value traded."}],"facts":{"breadth":{"advancers":26,"decliners":17,"unchanged":15,"traded":58},"valueTradedKes":405800000}}
 ''';
 
 const coursesJson = '''

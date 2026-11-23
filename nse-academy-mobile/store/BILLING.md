@@ -69,7 +69,7 @@ Without them the cron still picks up renewals, lapses and refunds within six hou
 1. Cloud console > Pub/Sub > create a topic (e.g. `play-rtdn`). Give `google-play-developer-notifications@system.gserviceaccount.com`
    the **Pub/Sub Publisher** role on it.
 2. Create a **push subscription** on the topic to
-   `https://nseacademy-api.vitaldigitalmedia.net/payments/google/notifications?token=<GOOGLE_PLAY_RTDN_TOKEN>`.
+   `https://api.nseacademy.co.ke/payments/google/notifications?token=<GOOGLE_PLAY_RTDN_TOKEN>`.
 3. Play Console > Monetize > Monetization setup > Real-time developer notifications: enter the topic name and send a test.
 
 A notification is only a nudge: the API re-reads the purchase from Google and ignores what the message says.

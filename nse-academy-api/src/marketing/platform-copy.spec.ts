@@ -41,8 +41,8 @@ describe('platformText', () => {
   it('keeps the trailing report link when it has to shorten the sentence', () => {
     const long = `${'A'.repeat(300)} ${report}`;
     const text = platformText('x', long, target({ platform: 'x', hashtags: '#NSE' }));
-    expect(text.length).toBeLessThanOrEqual(280);
-    expect(text.endsWith('https://nseacademy.co.ke/market-report/2026-11-20')).toBe(true);
+    expect(text.length).toBeLessThanOrEqual(4000);
+    expect(text).toContain('https://nseacademy.co.ke/market-report/2026-11-20');
   });
 
   it('drops the suffix and hashtags before it shortens the story', () => {

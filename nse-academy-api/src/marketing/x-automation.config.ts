@@ -46,13 +46,20 @@ export interface PlatformTarget {
 }
 
 export const DEFAULT_PLATFORMS: PlatformTarget[] = [
-  { platform: 'x', enabled: true, credentialId: null, suffix: '', hashtags: '', tiktokPrivacy: 'SELF_ONLY' },
-  { platform: 'facebook', enabled: false, credentialId: null, suffix: '', hashtags: '#NSE #NairobiStockExchange', tiktokPrivacy: 'SELF_ONLY' },
+  { platform: 'x', enabled: true, credentialId: null, suffix: 'Follow NSE Academy for the full NSE story.', hashtags: '', tiktokPrivacy: 'SELF_ONLY' },
+  {
+    platform: 'facebook',
+    enabled: false,
+    credentialId: null,
+    suffix: 'Checkout NSE Academy for the full NSE story.',
+    hashtags: '#NSE #NairobiStockExchange',
+    tiktokPrivacy: 'SELF_ONLY',
+  },
   {
     platform: 'instagram',
     enabled: false,
     credentialId: null,
-    suffix: 'Educational only. Follow for daily NSE insights.',
+    suffix: 'Checkout NSE Academy for the full NSE story.',
     hashtags: '#NSE #NairobiStockExchange #Investing #Kenya',
     tiktokPrivacy: 'SELF_ONLY',
   },
@@ -60,7 +67,7 @@ export const DEFAULT_PLATFORMS: PlatformTarget[] = [
     platform: 'threads',
     enabled: false,
     credentialId: null,
-    suffix: 'What are you watching on the NSE today?',
+    suffix: 'What are you watching on the NSE today? Follow NSE Academy for the full story.',
     hashtags: '#NSE',
     tiktokPrivacy: 'SELF_ONLY',
   },
@@ -68,7 +75,7 @@ export const DEFAULT_PLATFORMS: PlatformTarget[] = [
     platform: 'tiktok',
     enabled: false,
     credentialId: null,
-    suffix: '',
+    suffix: 'Checkout NSE Academy for the full NSE story.',
     hashtags: '#NSE #NairobiStockExchange #Investing #Kenya',
     tiktokPrivacy: 'SELF_ONLY',
   },
@@ -140,7 +147,7 @@ export const DEFAULT_LESSONS = [
   'Near the 10% limit, a stock can stop trading higher or lower for the rest of the day and still gap next session.',
   'Comparing one stock with the session breadth stops a single mover from standing in for the whole market.',
   'Prices on this feed are snapshots through the day. The official close is the figure the exchange publishes.',
-  'Educational posts describe the session. They are not a recommendation to buy, sell, or hold.',
+  'These posts describe the session. They are not a recommendation to buy, sell, or hold.',
 ];
 
 export const DEFAULT_RULES: StreamRule[] = [
@@ -209,6 +216,17 @@ function privacy(value: unknown, fallback: TikTokPrivacy): TikTokPrivacy {
 }
 
 /**
+ * Older configs closed every post with "Educational only...". That line is
+ * replaced once with the brand line, so a stored config picks up the new copy
+ * without the operator having to retype it. Any other suffix is left alone.
+ */
+function suffix(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim().slice(0, 280);
+  return /^educational only\b/i.test(trimmed) ? fallback : trimmed;
+}
+
+/**
  * One target per known platform, in a stable order. A config written before the
  * other platforms existed keeps its X account and leaves the rest off.
  */
@@ -225,7 +243,7 @@ export function normalizePlatforms(raw: unknown, legacyCredentialId: unknown): P
       platform,
       enabled: row ? row.enabled === true : fallback.enabled,
       credentialId: selected ?? (platform === 'x' ? legacy : null),
-      suffix: typeof row?.suffix === 'string' ? row.suffix.trim().slice(0, 280) : fallback.suffix,
+      suffix: suffix(row?.suffix, fallback.suffix),
       hashtags: typeof row?.hashtags === 'string' ? row.hashtags.trim().slice(0, 280) : fallback.hashtags,
       tiktokPrivacy: privacy(row?.tiktokPrivacy, fallback.tiktokPrivacy),
     };

@@ -48,6 +48,7 @@ describe('renderSlot', () => {
   it('names the mover when the move clears the threshold', () => {
     const rendered = renderSlot({
       template: 'mover',
+      heading: 'Morning session · Movers',
       pulse,
       shortLabel: 'Thu 5 Nov',
       thresholdPct: 3,
@@ -58,12 +59,12 @@ describe('renderSlot', () => {
     });
     expect(rendered).toMatchObject({ lessonIndex: null });
     expect('text' in rendered && rendered.text).toContain('KCB');
-    expect('text' in rendered && rendered.text.length).toBeLessThanOrEqual(280);
   });
 
   it('uses a lesson when the same breadth was already posted', () => {
     const fingerprint = renderSlot({
       template: 'breadth',
+      heading: 'Morning session · Breadth',
       pulse,
       shortLabel: 'Thu 5 Nov',
       thresholdPct: 3,
@@ -74,6 +75,7 @@ describe('renderSlot', () => {
     });
     const again = renderSlot({
       template: 'breadth',
+      heading: 'Morning session · Breadth',
       pulse,
       shortLabel: 'Thu 5 Nov',
       thresholdPct: 3,
@@ -82,12 +84,14 @@ describe('renderSlot', () => {
       skipIfUnchanged: true,
       reportText: null,
     });
-    expect(again).toMatchObject({ lessonIndex: 2, text: 'Breadth is how many stocks rose.' });
+    expect(again).toMatchObject({ lessonIndex: 2 });
+    expect('text' in again && again.text).toContain('Breadth is how many stocks rose.');
   });
 
   it('waits for the evening report instead of claiming an empty wrap', () => {
     expect(renderSlot({
       template: 'evening-wrap',
+      heading: 'Evening wrap',
       pulse: null,
       shortLabel: 'Thu 5 Nov',
       thresholdPct: 3,

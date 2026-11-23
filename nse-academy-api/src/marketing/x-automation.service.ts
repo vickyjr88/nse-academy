@@ -14,6 +14,7 @@ import {
   DEFAULT_CONFIG,
   MEDIA_ONLY_PLATFORMS,
   STARTER_CONFIG,
+  SlotDef,
   SlotTemplate,
   SocialPlatform,
   normalizeConfig,
@@ -29,8 +30,10 @@ import {
   nairobiClock,
   nairobiMinuteOfDay,
   pickLesson,
+  postHeading,
   renderSlot,
   spotlightTicker,
+  withHeading,
 } from './x-slot';
 
 const CONFIG_ID = 'default';
@@ -135,6 +138,7 @@ export class XAutomationService implements OnModuleInit {
       const previous = await this.previousFingerprint(slot.template, clock.ymd);
       const rendered = renderSlot({
         template: slot.template,
+        heading: postHeading(slot),
         pulse,
         shortLabel,
         thresholdPct: config.moverThresholdPct,
@@ -159,7 +163,7 @@ export class XAutomationService implements OnModuleInit {
     const decision = dueSlot(config, clock, await this.slotState(clock));
     if (decision.action === 'idle') return { status: 'idle', summary: decision.reason };
 
-    const prepared = await this.prepare(config, clock, decision.slot.template, decision.slot.id, now);
+    const prepared = await this.prepare(config, clock, decision.slot, now);
     if ('wait' in prepared) return { status: 'waiting', summary: `${decision.slot.id} waiting for data` };
 
     const startedAt = new Date();
@@ -174,11 +178,13 @@ export class XAutomationService implements OnModuleInit {
     }
   }
 
-  private async prepare(config: AutomationConfig, clock: NairobiClock, template: SlotTemplate, slotId: string, now: Date): Promise<RenderedSlot | { wait: true }> {
+  private async prepare(config: AutomationConfig, clock: NairobiClock, slot: SlotDef, now: Date): Promise<RenderedSlot | { wait: true }> {
+    const { template, id: slotId } = slot;
     const spotlight = spotlightTicker(config.spotlightTickers, clock.ymd);
     const pulse = template === 'evening-wrap' ? null : await this.loadPulse(now, spotlight);
     const rendered = renderSlot({
       template,
+      heading: postHeading(slot),
       pulse,
       shortLabel: eatDayBounds(now, 0).shortLabel,
       thresholdPct: config.moverThresholdPct,

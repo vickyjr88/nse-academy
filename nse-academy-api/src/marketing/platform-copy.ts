@@ -7,7 +7,8 @@
 import { PlatformTarget, SocialPlatform } from './x-automation.config';
 
 export const PLATFORM_TEXT_LIMIT: Record<SocialPlatform, number> = {
-  x: 280,
+  // The X account is verified, so it can post long-form instead of the old 280 characters.
+  x: 4000,
   facebook: 63206,
   instagram: 2200,
   threads: 500,

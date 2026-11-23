@@ -130,6 +130,7 @@ const SegBtn = styled.button<{ $on: boolean }>`
   font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   color: ${({ $on, theme }) => ($on ? theme.colors.primary700 : theme.colors.neutral600)};
   background: ${({ $on, theme }) => ($on ? theme.colors.primary100 : 'transparent')};
   &:hover {

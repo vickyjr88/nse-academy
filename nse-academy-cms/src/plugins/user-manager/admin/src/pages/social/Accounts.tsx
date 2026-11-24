@@ -25,6 +25,12 @@ const ID_LABEL: Record<string, string> = {
   tiktok: 'TikTok open_id',
 };
 
+/** Only the fields that were filled in. A blank one means "nothing to send", never an empty value. */
+const filled = (f: Record<string, string>): Record<string, string> => Object.fromEntries(Object.entries(f).filter(([, v]) => v.trim() !== ''));
+
+/** Platforms whose tokens can have an end date worth tracking. */
+const HAS_EXPIRY = ['facebook', 'instagram', 'threads', 'tiktok'];
+
 const dateOnly = (iso?: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : '');
 
 function HealthBadge({ a }: { a: Account }) {
@@ -60,6 +66,7 @@ export function Accounts({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [clearExpiry, setClearExpiry] = useState(false);
   const formCard = useRef<HTMLDivElement>(null);
 
   const label = (id: string) => platforms.find((x) => x.id === id)?.label ?? id;
@@ -67,6 +74,7 @@ export function Accounts({
   const edit = (a: Account) => {
     setForm({ ...EMPTY, platform: a.platform, accountName: a.accountName, externalId: a.externalId ?? '', expiresAt: dateOnly(a.expiresAt) });
     setEditingId(a.id);
+    setClearExpiry(false);
     setShowForm(true);
   };
 
@@ -91,6 +99,7 @@ export function Accounts({
   const close = () => {
     setForm(EMPTY);
     setEditingId(null);
+    setClearExpiry(false);
     setShowForm(false);
   };
 
@@ -114,14 +123,16 @@ export function Accounts({
     run('save', async () => {
       const platform = form.platform;
       if (editingId) {
-        // A blank key means "keep the stored one".
-        const changes: Record<string, string> = Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim()));
+        // A blank key means "keep the stored one"; "No end date" sends null to clear the expiry.
+        const changes: Record<string, string | null> = filled(form);
         delete changes.platform;
+        if (clearExpiry) changes.expiresAt = null;
         await adminFetch(`/marketing/accounts/${editingId}`, { method: 'PUT', body: JSON.stringify(changes) });
         close();
         return `${label(platform)} account updated. Press Test to check the keys.`;
       }
-      await adminFetch('/marketing/accounts', { method: 'POST', body: JSON.stringify(form) });
+      // Blank optional fields are left out, so an empty expiry date is not sent as an invalid date.
+      await adminFetch('/marketing/accounts', { method: 'POST', body: JSON.stringify(filled(form)) });
       close();
       return `${label(platform)} account saved. The keys are stored encrypted. Press Test to check them.`;
     });
@@ -255,8 +266,16 @@ export function Accounts({
                     {secret('apiSecret', 'Client secret')}
                   </>
                 )}
-                {(form.platform === 'threads' || form.platform === 'tiktok') && (
-                  <LTextInput label="Token expiry (optional)" name="expiresAt" type="date" value={form.expiresAt} onChange={setField('expiresAt')} />
+                {HAS_EXPIRY.includes(form.platform) && (
+                  <>
+                    <LTextInput label="Token expiry (optional)" name="expiresAt" type="date" value={form.expiresAt} disabled={clearExpiry} onChange={setField('expiresAt')} />
+                    {editing && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: p.muted }}>
+                        <input type="checkbox" checked={clearExpiry} onChange={(e) => { setClearExpiry(e.target.checked); if (e.target.checked) setForm({ ...form, expiresAt: '' }); }} />
+                        This token has no end date (clear the stored expiry)
+                      </label>
+                    )}
+                  </>
                 )}
               </>
             )}

@@ -35,6 +35,15 @@ import { accountHealth, summarizePosts } from './social-stats';
 // Keys copied from the X console often carry a trailing space or newline, which makes X answer 401.
 const trim = () => Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
 
+// A form field left blank arrives as "". For a date that means "not given", not "an invalid date".
+const blankIsMissing = () => Transform(({ value }) => (typeof value === 'string' && value.trim() === '' ? undefined : value));
+
+/** undefined leaves the stored expiry alone, null clears it, a date sets it. */
+export function expiryFrom(value: string | null | undefined): Date | null | undefined {
+  if (value === null) return null;
+  return value ? new Date(value) : undefined;
+}
+
 // The global ValidationPipe uses whitelist: true, which strips every property that has no validator decorator.
 class StoreXCredentialsDto {
   @trim() @IsString() @IsNotEmpty() accountName: string;
@@ -54,7 +63,7 @@ class UpdateXCredentialsDto {
   @trim() @IsOptional() @IsString() bearerToken?: string;
 }
 
-class StoreSocialCredentialsDto {
+export class StoreSocialCredentialsDto {
   @IsIn(SOCIAL_PLATFORMS) platform: (typeof SOCIAL_PLATFORMS)[number];
   @trim() @IsString() @IsNotEmpty() accountName: string;
   @trim() @IsOptional() @IsString() externalId?: string;
@@ -64,10 +73,11 @@ class StoreSocialCredentialsDto {
   @trim() @ValidateIf((o) => o.platform === 'x') @IsString() @IsNotEmpty() accessTokenSecret?: string;
   @trim() @IsOptional() @IsString() refreshToken?: string;
   @trim() @IsOptional() @IsString() bearerToken?: string;
-  @IsOptional() @IsDateString() expiresAt?: string;
+  /** Optional. Blank or null means the token has no end date we know of. */
+  @blankIsMissing() @IsOptional() @IsDateString() expiresAt?: string | null;
 }
 
-class UpdateSocialCredentialsDto {
+export class UpdateSocialCredentialsDto {
   @trim() @IsOptional() @IsString() accountName?: string;
   @trim() @IsOptional() @IsString() externalId?: string;
   @trim() @IsOptional() @IsString() apiKey?: string;
@@ -76,7 +86,8 @@ class UpdateSocialCredentialsDto {
   @trim() @IsOptional() @IsString() accessTokenSecret?: string;
   @trim() @IsOptional() @IsString() refreshToken?: string;
   @trim() @IsOptional() @IsString() bearerToken?: string;
-  @IsOptional() @IsDateString() expiresAt?: string;
+  /** A date sets it, null clears it (the token never ends), blank leaves it as it is. */
+  @blankIsMissing() @IsOptional() @IsDateString() expiresAt?: string | null;
   /** False pauses the account: the hourly slots and the pickers skip it, and nothing is deleted. */
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
@@ -341,7 +352,7 @@ export class MarketingController {
         refreshToken: dto.refreshToken,
         bearerToken: dto.bearerToken,
         externalId: dto.externalId,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+        expiresAt: expiryFrom(dto.expiresAt) ?? undefined,
       },
       dto.platform,
     );
@@ -355,7 +366,7 @@ export class MarketingController {
   async updateAccount(@Param('credentialId') credentialId: string, @Body() dto: UpdateSocialCredentialsDto) {
     return this.xService.updateCredential(credentialId, {
       ...dto,
-      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+      expiresAt: expiryFrom(dto.expiresAt),
     });
   }
 

@@ -65,6 +65,7 @@ export const LISTED_COMPANIES: Record<string, ListedCompany> = {
   OCH: { sector: 'Industrials', shares: 40000000 },
   PORT: { sector: 'Industrials', shares: 90000000 },
   SASN: { sector: 'Consumer Goods', shares: 228000000 },
+  QMRT: { sector: 'Consumer Services', shares: 4000000000 },
   SBIC: { sector: 'Financials', shares: 395000000 },
   SCAN: { sector: 'Consumer Services', shares: 432000000 },
   SCBK: { sector: 'Financials', shares: 378000000 },

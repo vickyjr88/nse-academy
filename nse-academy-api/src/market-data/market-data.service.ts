@@ -12,6 +12,7 @@ import { loadDailyCloses } from './price-history';
 import { buildHeatmap } from './heatmap';
 import { cleanName } from '../market-report/market-facts';
 import { parseNumber } from '../reports/report-helpers';
+import { resolveFeedTicker } from './feed-ticker';
 
 @Injectable()
 export class MarketDataService {
@@ -100,7 +101,17 @@ export class MarketDataService {
         const stocks = response.data.data;
         const timestamp = new Date();
 
-        const dataToSave = stocks.map((s) => {
+        // A row with no usable ticker cannot be priced or charted: name it if we know it, otherwise leave it out.
+        const named = stocks.flatMap((s) => {
+          const ticker = resolveFeedTicker(s.ticker, s.name);
+          if (!ticker) {
+            this.logger.warn(`Skipped a feed row with no ticker: ${String(s.name ?? '').slice(0, 60)}`);
+            return [];
+          }
+          return [{ ...s, ticker }];
+        });
+
+        const dataToSave = named.map((s) => {
           // Parse price: handle "1,200.00" and "5.93 K"
           let rawPrice = (s.price || '0').replace(/,/g, '');
           let price = 0;

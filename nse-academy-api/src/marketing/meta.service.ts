@@ -123,9 +123,10 @@ export class MetaService {
 
   /** A text or single-image Threads post. */
   async publishThreads(credential: SocialCredential, text: string, mediaUrls: string[]): Promise<PublishedPost> {
-    const userId = credential.externalId || (await this.threadsUserId(credential));
-    if (!userId) throw new Error('Threads account has no user ID (externalId)');
     if (!credential.accessToken) throw new Error('Threads account has no access token');
+    // Post to the ID the token itself belongs to. A hand-pasted ID (often the Instagram or Facebook one) makes Meta
+    // answer "Object with ID ... does not exist", even though the token is perfectly valid.
+    const { id: userId } = await this.threadsIdentity(credential);
 
     const body: Record<string, unknown> = { media_type: 'TEXT', text };
     if (mediaUrls[0]) {
@@ -158,8 +159,14 @@ export class MetaService {
         return { success: true, message: `Token is valid (${data?.username ? `@${data.username}` : data?.id})` };
       }
       if (credential.platform === 'threads') {
-        const data = await this.threadsCall('GET', 'me', credential.accessToken, undefined, { fields: 'id,username' });
-        return { success: true, message: `Token is valid (${data?.username ? `@${data.username}` : data?.id})` };
+        const who = await this.threadsIdentity(credential);
+        const name = who.username ? `@${who.username}` : who.id;
+        return {
+          success: true,
+          message: who.corrected
+            ? `Token is valid (${name}). The saved Threads user ID did not belong to this token, so it was corrected to ${who.id}.`
+            : `Token is valid (${name})`,
+        };
       }
       return { success: false, message: `Unsupported Meta platform: ${credential.platform}` };
     } catch (error) {
@@ -196,11 +203,26 @@ export class MetaService {
     }
   }
 
-  private async threadsUserId(credential: SocialCredential): Promise<string | null> {
-    const data = await this.threadsCall('GET', 'me', credential.accessToken, undefined, { fields: 'id,username' });
-    const id = data?.id ? String(data.id) : null;
-    if (id) await this.prisma.socialMediaCredential.update({ where: { id: credential.id }, data: { externalId: id } }).catch(() => undefined);
-    return id;
+  /**
+   * Who this Threads token belongs to, from /me. The stored user ID is only a cache of that answer: when it is missing
+   * or different it is replaced, so posting never depends on a typed-in ID being right.
+   */
+  private async threadsIdentity(credential: SocialCredential): Promise<{ id: string; username?: string; corrected: boolean }> {
+    let me: any;
+    try {
+      me = await this.threadsCall('GET', 'me', credential.accessToken, undefined, { fields: 'id,username' });
+    } catch (error) {
+      throw new Error(`Threads did not accept the access token: ${(error as Error).message}`);
+    }
+    const id = me?.id ? String(me.id) : '';
+    if (!id) throw new Error('Threads did not say whose token this is');
+    const username = me?.username ? String(me.username) : undefined;
+    const corrected = !!credential.externalId && credential.externalId !== id;
+    if (credential.externalId !== id) {
+      if (corrected) this.logger.warn(`Threads user ID ${credential.externalId} did not match the token; using ${id} instead`);
+      await this.prisma.socialMediaCredential.update({ where: { id: credential.id }, data: { externalId: id } }).catch(() => undefined);
+    }
+    return { id, username, corrected };
   }
 
   private async waitForInstagram(containerId: string, token: string): Promise<void> {

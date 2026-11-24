@@ -5,6 +5,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import * as crypto from 'crypto';
 import { HistoryFilters, PostRow, historyWhere } from './social-stats';
+import { plainCopy } from './plain-copy';
 
 interface XCredentials {
   apiKey: string;
@@ -41,6 +42,7 @@ export class XService {
     opts?: { reportType?: string; quoteTweetId?: string },
   ): Promise<{ postId: string; url: string }> {
     const reportType = opts?.reportType ?? 'daily';
+    content = plainCopy(content);
     try {
       const credential = await (this.prisma as any).socialMediaCredential.findUnique({
         where: { id: credentialId },
@@ -228,7 +230,8 @@ export class XService {
     return { postId: tweetId, url };
   }
 
-  private async sendTweet(credentials: XCredentials, content: string, mediaIds: string[], quoteTweetId?: string): Promise<string> {
+  private async sendTweet(credentials: XCredentials, rawContent: string, mediaIds: string[], quoteTweetId?: string): Promise<string> {
+    const content = plainCopy(rawContent);
     const postData: Record<string, unknown> = { text: content };
     if (mediaIds.length > 0) postData.media = { media_ids: mediaIds };
     if (quoteTweetId) postData.quote_tweet_id = quoteTweetId;

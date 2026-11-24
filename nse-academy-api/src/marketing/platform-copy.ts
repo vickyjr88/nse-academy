@@ -5,6 +5,7 @@
  * poster both call the same functions, and the tests pin the edge cases.
  */
 import { PlatformTarget, SocialPlatform } from './x-automation.config';
+import { plainCopy } from './plain-copy';
 
 export interface CardSet {
   /** The vertical 9:16 story cards. */
@@ -66,10 +67,10 @@ function truncate(text: string, limit: number): string {
  */
 export function platformText(platform: SocialPlatform, base: string, target: PlatformTarget): string {
   const limit = PLATFORM_TEXT_LIMIT[platform];
-  const source = base.trim();
+  const source = plainCopy(base);
   if (!source) return '';
 
-  const suffix = target.suffix.trim();
+  const suffix = plainCopy(target.suffix);
   const withSuffix = suffix && !source.toLowerCase().includes(suffix.toLowerCase()) ? `${source}\n\n${suffix}` : source;
   const full = addHashtags(withSuffix, target.hashtags);
   if (full.length <= limit) return full;

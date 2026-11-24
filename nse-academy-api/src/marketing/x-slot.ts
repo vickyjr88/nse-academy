@@ -2,8 +2,10 @@
  * Pure clock, due-slot, and copy for the hourly poster. No database and no
  * model calls: the service decides whether a finished draft is worth an AI rewrite.
  */
-import { computeMovers, formatCompact, MIN_MOVER_VALUE_KES, PriceRow, toMovers } from '../reports/report-helpers';
+import { computeMovers, MIN_MOVER_VALUE_KES, PriceRow, toMovers } from '../reports/report-helpers';
 import { AutomationConfig, SlotDef, SlotTemplate } from './x-automation.config';
+import { StoryInput, isFresh, lessonText, storyText } from './x-story';
+import { plainCopy } from './plain-copy';
 
 const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
 
@@ -138,116 +140,10 @@ function leadMove(pulse: Pulse): { ticker: string; name: string; changePct: numb
 
 export interface RenderedSlot {
   text: string;
-  /** The session/topic heading, kept separately so an AI rewrite cannot drop it. */
+  /** Kept for older screens; posts no longer carry a label in front. */
   heading: string;
   fingerprint: string;
   lessonIndex: number | null;
-}
-
-/**
- * The heading tells a reader which part of the session and which topic the post
- * belongs to. Templates that name a phase keep their own label; the hourly
- * market slots follow the clock, so moving a slot moves its session.
- */
-export function postHeading(slot: SlotDef): string {
-  if (slot.template === 'session-open') return 'Opening bell';
-  if (slot.template === 'into-the-close') return 'Into the close';
-  if (slot.template === 'session-close') return 'Closing bell';
-  if (slot.template === 'evening-wrap') return 'Evening wrap';
-
-  const minute = slot.atMinute ?? (slot.hour ?? 0) * 60;
-  const session = minute < 12 * 60 ? 'Morning session' : minute < 14 * 60 ? 'Midday session' : minute < 17 * 60 ? 'Afternoon session' : 'Evening session';
-  const topic =
-    slot.template === 'mover'
-      ? 'Movers'
-      : slot.template === 'breadth'
-        ? 'Breadth'
-        : slot.template === 'spotlight'
-          ? 'Spotlight'
-          : slot.template === 'most-active'
-            ? 'Most active'
-            : null;
-  return topic ? `${session} · ${topic}` : session;
-}
-
-/** Put the heading first once. An AI rewrite or an already-labelled report text must not repeat it. */
-export function withHeading(heading: string, text: string): string {
-  const body = text.trim();
-  if (!body) return heading;
-  return body.toLowerCase().startsWith(heading.toLowerCase()) ? body : `${heading} — ${body}`;
-}
-
-const sgn = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.round(Math.abs(n) * 10) / 10}%`;
-const price = (n: number) => `KSh ${Math.round(n * 100) / 100}`;
-const kes = (n: number) => `KSh ${formatCompact(n)}`;
-
-/** "33 of the 60 stocks that traded are lower", so breadth is not just two abstract numbers. */
-function breadthDetail(pulse: Pulse): string {
-  if (pulse.decliners > pulse.advancers) return `${pulse.decliners} of the ${pulse.traded} stocks that traded are lower`;
-  if (pulse.advancers > pulse.decliners) return `${pulse.advancers} of the ${pulse.traded} stocks that traded are higher`;
-  return `${pulse.traded} stocks traded and risers and fallers are level`;
-}
-
-function moversLine(pulse: Pulse): string {
-  const parts: string[] = [];
-  if (pulse.gainer) parts.push(`top gainer ${pulse.gainer.ticker} ${sgn(pulse.gainer.changePct)} at ${price(pulse.gainer.price)}`);
-  if (pulse.loser) parts.push(`weakest ${pulse.loser.ticker} ${sgn(pulse.loser.changePct)} at ${price(pulse.loser.price)}`);
-  return parts.length ? ` ${parts.join('; ')}.` : '';
-}
-
-function marketText(template: SlotTemplate, pulse: Pulse, shortLabel: string, heading: string): string | null {
-  const breadth = `${pulse.advancers} up, ${pulse.decliners} down`;
-  let body: string | null = null;
-
-  if (template === 'session-open') {
-    const lead = pulse.gainer ? ` ${pulse.gainer.ticker} leads the risers at ${sgn(pulse.gainer.changePct)} (${price(pulse.gainer.price)}).` : '';
-    const lag = pulse.loser ? ` ${pulse.loser.ticker} is the weakest at ${sgn(pulse.loser.changePct)}.` : '';
-    body =
-      `NSE ${shortLabel} opens with ${pulse.advancers} stocks up, ${pulse.decliners} down and ${pulse.unchanged} unchanged. ` +
-      `${pulse.traded} stocks have traded, worth about ${kes(pulse.valueTradedKes)} so far.${lead}${lag} ` +
-      `Early breadth is a snapshot, not a verdict: it says how many stocks moved, not whether the day will hold.`;
-  } else if (template === 'mover') {
-    const lead = leadMove(pulse);
-    if (!lead) return null;
-    const verb = lead.changePct >= 0 ? 'rise' : 'fall';
-    body =
-      `${lead.ticker} is the biggest ${verb} so far, ${sgn(lead.changePct)} at ${price(lead.price)}, on about ${kes(lead.valueKes)} of traded value. ` +
-      `${breadthDetail(pulse)}. The mover list only counts stocks that traded at least KSh 100,000, so a large percentage on tiny volume does not make it. ` +
-      `One name moving is not the whole NSE: ${pulse.advancers} stocks are up and ${pulse.decliners} down.`;
-  } else if (template === 'breadth') {
-    body =
-      `${pulse.advancers} NSE stocks are up against ${pulse.decliners} down, with ${pulse.unchanged} unchanged. ` +
-      `${pulse.traded} stocks have traded, worth about ${kes(pulse.valueTradedKes)}. ${breadthDetail(pulse)}. ` +
-      `Breadth counts stocks, not size: a few large caps can dominate turnover and still leave most names lower.`;
-  } else if (template === 'spotlight') {
-    if (!pulse.spotlight) return null;
-    const s = pulse.spotlight;
-    const share = pulse.valueTradedKes > 0 ? Math.round((s.valueKes / pulse.valueTradedKes) * 100) : 0;
-    body =
-      `${s.ticker} (${s.name}) is at ${price(s.price)}, ${sgn(s.changePct)} on the day, on about ${kes(s.valueKes)} of traded value. ` +
-      `That is ${share}% of the ${kes(pulse.valueTradedKes)} traded across the NSE so far. ${breadthDetail(pulse)}. ` +
-      `A heavily traded name can set the pace for turnover, but it does not speak for the other ${Math.max(0, pulse.traded - 1)} stocks.`;
-  } else if (template === 'most-active') {
-    if (!pulse.active) return null;
-    const a = pulse.active;
-    body =
-      `${a.ticker} (${a.name}) has the most value traded so far: about ${kes(a.valueKes)}, ${a.sharePct}% of the ${kes(pulse.valueTradedKes)} that has changed hands across ${pulse.traded} stocks. ` +
-      `It is ${sgn(a.changePct)} at ${price(a.price)}. ${breadthDetail(pulse)}. ` +
-      `Turnover shows where activity is concentrated; it does not on its own say whether a price is cheap or expensive.`;
-  } else if (template === 'into-the-close') {
-    const near = pulse.limit ? ` ${pulse.limit.ticker} is at ${sgn(pulse.limit.changePct)} and near the NSE 10% daily limit, which can pause trading in that name.` : '';
-    body =
-      `${breadth} and ${pulse.unchanged} unchanged. ${pulse.traded} stocks have traded, worth about ${kes(pulse.valueTradedKes)}.${near}` +
-      `${moversLine(pulse)} ` +
-      `The closing prices are the ones the exchange publishes, so the last stretch matters more than an intraday print.`;
-  } else if (template === 'session-close') {
-    body =
-      `NSE ${shortLabel} closes with ${breadth} and ${pulse.unchanged} unchanged. ` +
-      `${pulse.traded} stocks traded, worth about ${kes(pulse.valueTradedKes)}.${moversLine(pulse)} ` +
-      `The close is the figure the exchange publishes, and the one to compare with tomorrow's opening range.`;
-  }
-
-  return body ? withHeading(heading, body) : null;
 }
 
 export function pickLesson(lessons: string[], recentIndexesNewestFirst: number[]): { index: number; text: string } | null {
@@ -263,7 +159,7 @@ export function pickLesson(lessons: string[], recentIndexesNewestFirst: number[]
 export function fillReportPost(xPost: string | undefined, sessionDate: string, siteUrl: string): string | null {
   if (!xPost?.trim()) return null;
   const url = `${siteUrl.replace(/\/$/, '')}/market-report/${sessionDate}`;
-  return xPost.split('{URL}').join(url);
+  return plainCopy(xPost.split('{URL}').join(url));
 }
 
 export function pulseFingerprint(template: SlotTemplate, pulse: Pulse): string {
@@ -288,9 +184,9 @@ function needsMove(template: SlotTemplate, pulse: Pulse, thresholdPct: number): 
  */
 export function renderSlot(args: {
   template: SlotTemplate;
-  heading: string;
   pulse: Pulse | null;
-  shortLabel: string;
+  /** Today and the recent sessions, for the comparisons. Null only when there is no history at all. */
+  story: StoryInput | null;
   thresholdPct: number;
   lesson: { index: number; text: string } | null;
   previousFingerprint: string | null;
@@ -299,20 +195,22 @@ export function renderSlot(args: {
 }): RenderedSlot | { wait: true } {
   if (args.template === 'evening-wrap') {
     if (!args.reportText) return { wait: true };
-    return { text: withHeading(args.heading, args.reportText), heading: args.heading, fingerprint: 'wrap', lessonIndex: null };
+    return { text: args.reportText, heading: '', fingerprint: 'wrap', lessonIndex: null };
   }
   if (!args.pulse || args.pulse.traded === 0) return { wait: true };
 
+  // The closing post is only the close once the feed has refreshed for today. Before that, wait rather than post
+  // yesterday's figures as today's.
+  if (args.template === 'session-close' && args.story && !isFresh(args.story)) return { wait: true };
+
   const fingerprint = pulseFingerprint(args.template, args.pulse);
   const unchanged = args.skipIfUnchanged && args.previousFingerprint != null && args.previousFingerprint === fingerprint;
-  const text = needsMove(args.template, args.pulse, args.thresholdPct)
-    ? marketText(args.template, args.pulse, args.shortLabel, args.heading)
-    : null;
-  if (text && !unchanged) return { text, heading: args.heading, fingerprint, lessonIndex: null };
+  const text = args.story && needsMove(args.template, args.pulse, args.thresholdPct) ? storyText(args.template, args.story) : null;
+  if (text && !unchanged) return { text, heading: '', fingerprint, lessonIndex: null };
   if (!args.lesson) {
     if (!text) return { wait: true };
-    return { text, heading: args.heading, fingerprint, lessonIndex: null };
+    return { text, heading: '', fingerprint, lessonIndex: null };
   }
-  const heading = "Today's lesson";
-  return { text: withHeading(heading, args.lesson.text), heading, fingerprint: `lesson:${args.lesson.index}`, lessonIndex: args.lesson.index };
+  const seed = args.story?.seed ?? 0;
+  return { text: lessonText(args.lesson.text, seed, args.lesson.index), heading: '', fingerprint: `lesson:${args.lesson.index}`, lessonIndex: args.lesson.index };
 }

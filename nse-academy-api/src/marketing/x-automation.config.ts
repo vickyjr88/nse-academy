@@ -46,7 +46,7 @@ export interface PlatformTarget {
 }
 
 export const DEFAULT_PLATFORMS: PlatformTarget[] = [
-  { platform: 'x', enabled: true, credentialId: null, suffix: 'Follow NSE Academy for the full NSE story.', hashtags: '', tiktokPrivacy: 'SELF_ONLY' },
+  { platform: 'x', enabled: true, credentialId: null, suffix: '', hashtags: '', tiktokPrivacy: 'SELF_ONLY' },
   {
     platform: 'facebook',
     enabled: false,
@@ -136,18 +136,18 @@ export const DEFAULT_SLOTS: SlotDef[] = [
 ];
 
 export const DEFAULT_LESSONS = [
-  'The NSE limits a share price to a 10% move in one day. A stock that hits the limit can still move again next session.',
-  'A price that jumps on a few shares is easy to misread. Our mover lists ignore stocks with under KSh 100,000 traded.',
-  'Breadth is how many stocks rose versus how many fell. It says more about the session than any single name.',
-  'Value traded is the shillings that changed hands, not a profit or a loss. A big turnover can belong to one stock.',
-  'The most traded name can be a large share of the whole market. Headline turnover then describes that stock more than the session.',
-  'A daily change compares the last price with the previous close. It does not say why the price moved.',
-  'Volume is what makes a move hard to dismiss. The same percentage on thin trading is a weaker signal.',
-  'Unchanged stocks are part of the picture. A session can look busy while most names barely moved.',
-  'Near the 10% limit, a stock can stop trading higher or lower for the rest of the day and still gap next session.',
-  'Comparing one stock with the session breadth stops a single mover from standing in for the whole market.',
-  'Prices on this feed are snapshots through the day. The official close is the figure the exchange publishes.',
-  'These posts describe the session. They are not a recommendation to buy, sell, or hold.',
+  'The NSE stops a share price from moving more than 10% in a day. A stock that hits the limit can still move again the next session.',
+  'A big percentage move on a few shares means very little. That is why I ignore anything under KSh 100,000 traded when I look for movers.',
+  'Breadth is just how many stocks rose against how many fell. It tells you more about the day than any one name.',
+  'Value traded is the shillings that changed hands, not profit or loss. One stock can account for most of it.',
+  'When one stock is a third of the day\'s turnover, headline turnover is mostly a story about that stock.',
+  'A daily change compares the last price with the previous close. It does not tell you why the price moved.',
+  'The same percentage move means more on heavy trading than on thin trading. Always check what traded.',
+  'Unchanged stocks are part of the picture. A day can look busy while most names barely moved.',
+  'A red day on thin turnover and a red day on heavy turnover are not the same thing. Volume tells you how many people agreed.',
+  'Compare any stock with the whole market before you read too much into it. One mover can stand in for nothing.',
+  'Prices here are snapshots. The official close is the number the exchange publishes after the bell.',
+  'A 20-day average is a quick way to see if a price is stretched. It is a ruler, not a forecast.',
 ];
 
 export const DEFAULT_RULES: StreamRule[] = [

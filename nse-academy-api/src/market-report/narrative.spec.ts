@@ -1,4 +1,5 @@
 import { buildFacts } from './market-facts';
+import { hasRoboticPunctuation } from '../marketing/plain-copy';
 import { Narrative, URL_PLACEHOLDER, buildPrompt, closeUnbalanced, fillUrl, parseNarrative, templateNarrative, verifyNarrative } from './narrative';
 
 const facts = buildFacts({
@@ -33,6 +34,33 @@ describe('templateNarrative', () => {
       expect(t.split(URL_PLACEHOLDER).join('x'.repeat(23)).length).toBeLessThanOrEqual(280);
     }
     expect(n.social.xPost).toContain(URL_PLACEHOLDER);
+  });
+
+  it('the fallback post compares with the session before and the usual turnover, in plain punctuation', () => {
+    const history = Object.fromEntries(
+      ['SCOM', 'KCB'].map((t) => [t, [
+        { ymd: '2026-11-02', value: 9_000_000, changePct: -1 },
+        { ymd: '2026-11-03', value: 8_000_000, changePct: -1 },
+      ]]),
+    );
+    const f = buildFacts({ sessionYmd: '2026-11-04', label: 'Wednesday 4 November 2026', shortLabel: 'Wed 4 Nov', weekday: 3, rows: [
+      { ticker: 'SCOM', name: 'Safaricom', price: 30, volume: '4000000', change: '1.50' },
+      { ticker: 'KCB', name: 'KCB Group', price: 50, volume: '800000', change: '-2.00' },
+    ], history, sectors: {} });
+    const post = templateNarrative(f).social.xPost;
+    expect(post).toContain('The session before:');
+    expect(post).toMatch(/Turnover .*(above|below) its recent average/);
+    expect(hasRoboticPunctuation(post)).toBe(false);
+    expect(verifyNarrative(templateNarrative(f), f)).toEqual([]);
+  });
+
+  it('strips dashes from whatever the model writes, on the page and in the posts', () => {
+    const n = good();
+    n.headline = 'NSE Wed \u2014 quiet day';
+    n.social.xPost = `Quiet day \u2014 ${URL_PLACEHOLDER}`;
+    const { narrative } = parseNarrative(JSON.stringify(n));
+    expect(narrative!.headline).toBe('NSE Wed, quiet day');
+    expect(hasRoboticPunctuation(narrative!.social.xPost)).toBe(false);
   });
 
   it('round-trips through the parser (so the stored shape is the shape we validate)', () => {

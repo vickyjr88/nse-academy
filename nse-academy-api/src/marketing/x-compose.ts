@@ -7,6 +7,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AiUsageService } from '../monitoring/ai-usage.service';
 import { OpenRouterService } from '../openrouter/openrouter.service';
+import { hasRoboticPunctuation, plainCopy } from './plain-copy';
 
 /** Free router. OpenRouter picks a model with a $0 price, which is the cheapest call available. */
 export const DEFAULT_X_POST_MODEL = 'openrouter/free';
@@ -32,6 +33,7 @@ export function tweetProblems(text: string, source: string, mode: 'market' | 'st
   const limit = mode === 'stream' ? 250 : 280;
   if (text.length > limit) problems.push(`longer than ${limit} characters`);
   if (!text.trim()) problems.push('empty');
+  if (hasRoboticPunctuation(text)) problems.push('dashes or fancy punctuation');
   for (const pattern of ADVICE) {
     if (pattern.test(text)) problems.push('advice');
   }
@@ -90,7 +92,9 @@ export class XComposeService {
           {
             role: 'system',
             content: [
-              'You rewrite one short post for NSE Academy, an investor-education account about the Nairobi Securities Exchange.',
+              'You rewrite one short post for an investor who follows the Nairobi Securities Exchange and talks about it plainly, like a person on X.',
+              'Sound natural and conversational: short sentences, no corporate phrasing, no hashtags, and never use dashes of any kind.',
+              'Keep the comparisons with the past and the plain reading of the numbers that are already in the draft.',
               'Use only numbers that already appear in SOURCE. Do not add advice, predictions, price targets, or a reason prices moved.',
               mode === 'stream'
                 ? 'The post comments on someone else\'s post. Stay under 240 characters. Do not invent what the original post did not say.'
@@ -101,7 +105,7 @@ export class XComposeService {
           { role: 'user', content: `SOURCE:\n${source}\n\nDRAFT:\n${draft}` },
         ],
       });
-      const text = stripModelText(result.content);
+      const text = plainCopy(stripModelText(result.content));
       const problems = tweetProblems(text, source, mode);
       await this.aiUsage.record({
         feature: 'x-post',

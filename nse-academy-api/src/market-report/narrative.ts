@@ -1,4 +1,5 @@
 import { MarketFacts, MoverFact, kesWords } from './market-facts';
+import { plainCopy } from '../marketing/plain-copy';
 
 /**
  * The words around the numbers: headline, story, lessons, and the social
@@ -61,7 +62,7 @@ export function templateNarrative(f: MarketFacts): Narrative {
 
   const mood = b.advancers > b.decliners ? 'more stocks rose than fell' : b.decliners > b.advancers ? 'more stocks fell than rose' : 'gainers and decliners were evenly matched';
   const headline = g && l
-    ? `NSE ${f.shortLabel}: ${b.advancers} up, ${b.decliners} down - ${g.ticker} leads, ${l.ticker} slides`
+    ? `NSE ${f.shortLabel}: ${b.advancers} up, ${b.decliners} down, ${g.ticker} leads, ${l.ticker} slides`
     : `NSE ${f.shortLabel}: ${b.advancers} stocks up, ${b.decliners} down`;
 
   const vs = f.valueVsAvgPct === null ? '' : f.valueVsAvgPct >= 0 ? `, ${f.valueVsAvgPct}% above its recent average` : `, ${Math.abs(f.valueVsAvgPct)}% below its recent average`;
@@ -115,7 +116,10 @@ export function templateNarrative(f: MarketFacts): Narrative {
   });
 
   const shortLink = URL_PLACEHOLDER;
-  const xPost = `NSE ${f.shortLabel}: ${b.advancers} up, ${b.decliners} down.${g ? ` Top gainer ${g.ticker} ${sgn(g.changePct)}` : ''}${l ? `, top loser ${l.ticker} ${sgn(l.changePct)}` : ''}. Full report + lessons: ${shortLink}`;
+  const sessionBefore = f.previous ? ` The session before: ${f.previous.decliners} down, ${f.previous.advancers} up.` : '';
+  const turnover = f.valueVsAvgNote ? ` Turnover ${kesWords(f.valueTradedKes)}, ${f.valueVsAvgNote}.` : '';
+  const share = f.concentration && f.concentration.sharePct >= 25 ? ` ${f.concentration.ticker} was ${f.concentration.sharePct}% of it.` : '';
+  const xPost = `NSE ${f.shortLabel}: ${b.decliners} down, ${b.advancers} up.${sessionBefore}${turnover}${share} Full report: ${shortLink}`;
   const xThread = [
     `NSE ${f.shortLabel}: ${b.advancers} stocks up, ${b.decliners} down, ${kesWords(f.valueTradedKes)} traded.`,
     [g ? `Gainers: ${f.gainers.slice(0, 3).map((x) => `${x.ticker} ${sgn(x.changePct)}`).join(', ')}` : '', l ? `Losers: ${f.losers.slice(0, 3).map((x) => `${x.ticker} ${sgn(x.changePct)}`).join(', ')}` : ''].filter(Boolean).join('. ') + '.',
@@ -171,7 +175,8 @@ export function buildPrompt(facts: MarketFacts): { system: string; user: string 
     '6. valueVsAvgPct says how far TOTAL value traded was ABOVE (+) or BELOW (-) the recent average: +76 means 76% ABOVE it (1.76 times as much). Use valueVsAvgNote\'s wording. NEVER write "X% of the average".',
     '7. A KSh figure in FACTS is VALUE TRADED (turnover). Never call it a gain, loss or profit - gains and losses are the percentage changes only.',
     '8. Direction matters: changePct > 0 means the stock ROSE, < 0 means it FELL. Never describe a faller as a gainer or the reverse.',
-    '9. Output ONLY one JSON object, no markdown fences, no commentary.',
+    '9. Never use dashes of any kind (no em dash, no en dash, no spaced hyphen as a pause). Write with commas and full stops, the way a person types.',
+    '10. Output ONLY one JSON object, no markdown fences, no commentary.',
   ].join('\n');
 
   const schema = `{
@@ -180,7 +185,7 @@ export function buildPrompt(facts: MarketFacts): { system: string; user: string 
   "story": ["3 short paragraphs (2-3 sentences each): the day overall; the biggest movers; what the activity/volume shows"],
   "lessons": [{"title": "<= 70 chars", "body": "2-3 sentences teaching a concept using today's data"}],
   "social": {
-    "xPost": "<= 250 characters, must contain the literal text {URL} once",
+    "xPost": "<= 250 characters, must contain the literal text {URL} once. Write it like a person who follows the market posting on X: plain, conversational, no hashtags. Include one comparison with the previous session or the recent average (use previous and valueVsAvgNote from FACTS) and one plain takeaway from the numbers, never a reason or a prediction",
     "xThread": ["3 posts, each <= 270 characters; the last contains {URL}"],
     "whatsapp": "short WhatsApp message using *bold* for ticker names, ends with {URL}",
     "reel": {"hook": "first line, <= 15 words", "scenes": [{"onScreen": "<= 8 words", "voiceover": "<= 25 words"}], "cta": "one closing line"},
@@ -209,7 +214,7 @@ export function buildPrompt(facts: MarketFacts): { system: string; user: string 
 
 // -------------------------------------------------------------------- parse
 
-const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+const str = (v: unknown): string => (typeof v === 'string' ? plainCopy(v) : '');
 const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
 
 /**

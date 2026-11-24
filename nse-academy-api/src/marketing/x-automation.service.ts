@@ -5,7 +5,10 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
 import { publicCardUrls, reportSiteUrl, resolveCardUrls } from '../market-report/market-report.service';
-import { eatDayBounds, PriceRow } from '../reports/report-helpers';
+import { PriceRow, parseNumber } from '../reports/report-helpers';
+import { LISTED_COMPANIES } from '../market-data/listed-companies';
+import { BarRow, toSessions } from './session-history';
+import type { StoryInput } from './x-story';
 import { XService } from './x.service';
 import { XComposeService } from './x-compose';
 import { SocialPostService, Delivery } from './social-post.service';
@@ -31,10 +34,8 @@ import {
   nairobiClock,
   nairobiMinuteOfDay,
   pickLesson,
-  postHeading,
   renderSlot,
   spotlightTicker,
-  withHeading,
 } from './x-slot';
 
 const CONFIG_ID = 'default';
@@ -130,8 +131,7 @@ export class XAutomationService implements OnModuleInit {
     const clock = nairobiClock(now);
     const state = await this.slotState(clock);
     const due = dueSlot(config, clock, state);
-    const pulse = await this.loadPulse(now, spotlightTicker(config.spotlightTickers, clock.ymd));
-    const shortLabel = eatDayBounds(now, 0).shortLabel;
+    const { pulse, story } = await this.loadContext(now, spotlightTicker(config.spotlightTickers, clock.ymd));
     const reportText = await this.reportText(clock.ymd);
     const recentLessons = await this.recentLessonIndexes();
     const samples: { slotId: string; template: string; text: string | null; waiting: boolean }[] = [];
@@ -139,9 +139,8 @@ export class XAutomationService implements OnModuleInit {
       const previous = await this.previousFingerprint(slot.template, clock.ymd);
       const rendered = renderSlot({
         template: slot.template,
-        heading: postHeading(slot),
         pulse,
-        shortLabel,
+        story,
         thresholdPct: config.moverThresholdPct,
         lesson: pickLesson(config.lessons, recentLessons),
         previousFingerprint: previous,
@@ -182,12 +181,11 @@ export class XAutomationService implements OnModuleInit {
   private async prepare(config: AutomationConfig, clock: NairobiClock, slot: SlotDef, now: Date): Promise<RenderedSlot | { wait: true }> {
     const { template, id: slotId } = slot;
     const spotlight = spotlightTicker(config.spotlightTickers, clock.ymd);
-    const pulse = template === 'evening-wrap' ? null : await this.loadPulse(now, spotlight);
+    const { pulse, story } = template === 'evening-wrap' ? { pulse: null, story: null } : await this.loadContext(now, spotlight);
     const rendered = renderSlot({
       template,
-      heading: postHeading(slot),
       pulse,
-      shortLabel: eatDayBounds(now, 0).shortLabel,
+      story,
       thresholdPct: config.moverThresholdPct,
       lesson: pickLesson(config.lessons, await this.recentLessonIndexes()),
       previousFingerprint: await this.previousFingerprint(template, clock.ymd),
@@ -378,22 +376,41 @@ export class XAutomationService implements OnModuleInit {
     return rows.map((row) => row.lessonIndex).filter((n): n is number => n != null);
   }
 
-  private async loadPulse(now: Date, spotlight: string | null): Promise<Pulse | null> {
-    const day = eatDayBounds(now, 0);
-    const raw = await this.prisma.$queryRaw<{ ticker: string; name: string; price: number; volume: string; change: string }[]>`
-      SELECT DISTINCT ON (ticker) ticker, name, price, volume, change
-      FROM "StockPrice"
-      WHERE price > 0 AND timestamp >= ${day.start} AND timestamp < ${day.end}
-      ORDER BY ticker, timestamp DESC`;
-    if (raw.length === 0) return null;
-    const rows: PriceRow[] = raw.map((row) => ({
-      ticker: row.ticker,
-      name: row.name,
-      price: Number(row.price),
-      volume: String(row.volume ?? ''),
-      change: String(row.change ?? ''),
+  /**
+   * The last real session and how it compares with the recent ones. The feed refreshes once a day, around the close, so
+   * the rows stored today are yesterday's numbers until then. Looking at sessions (days on which the numbers actually
+   * changed) is what keeps a morning post from presenting yesterday's close as today's trading.
+   */
+  private async loadContext(now: Date, spotlight: string | null): Promise<{ pulse: Pulse | null; story: StoryInput | null }> {
+    const since = new Date(now.getTime() - 75 * 24 * 60 * 60 * 1000);
+    const raw = await this.prisma.$queryRaw<{ ymd: string; ticker: string; name: string; price: number; volume: string; change: string }[]>`
+      SELECT DISTINCT ON (ticker, d) d AS ymd, ticker, name, price, volume, change FROM (
+        SELECT ticker, name, price, volume, change, timestamp,
+               to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d
+        FROM "StockPrice"
+        WHERE price > 0 AND ticker <> '' AND timestamp > ${since} AND timestamp <= ${now}
+      ) x
+      ORDER BY ticker, d, timestamp DESC`;
+    const bars: BarRow[] = raw.map((r) => ({
+      ymd: r.ymd,
+      ticker: r.ticker,
+      name: r.name,
+      price: Number(r.price),
+      volume: parseNumber(r.volume),
+      changePct: parseNumber(r.change),
     }));
-    return buildPulse(rows, spotlight);
+    const shares = Object.fromEntries(Object.entries(LISTED_COMPANIES).map(([ticker, c]) => [ticker, c.shares]));
+    const history = toSessions(bars, shares);
+    const last = history.sessions[history.sessions.length - 1];
+    if (!last) return { pulse: null, story: null };
+
+    const rows: PriceRow[] = bars
+      .filter((b) => b.ymd === last.ymd)
+      .map((b) => ({ ticker: b.ticker, name: b.name, price: b.price, volume: String(b.volume), change: String(b.changePct) }));
+    const pulse = buildPulse(rows, spotlight);
+    const clock = nairobiClock(now);
+    const [y, m, d] = clock.ymd.split('-').map(Number);
+    return { pulse, story: { todayYmd: clock.ymd, history, pulse, seed: Math.floor(Date.UTC(y, m - 1, d) / 86_400_000) } };
   }
 
   private siteUrl(): string {

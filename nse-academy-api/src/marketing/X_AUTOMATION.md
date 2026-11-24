@@ -34,7 +34,22 @@ The 08:30 crons are gone. They posted empty stats, including on weekends, and th
 
 ## Copy
 
-Market text is a deterministic template in `x-slot.ts`. Numbers come from `computeMovers`. The evening wrap reuses the report sentence, which was already checked against that day's facts.
+Market text is deterministic, written in `x-story.ts` from stored prices. Each post looks at the last real session and compares it with the recent past: a run of red or green sessions, turnover against the 20-day average, a stock's move against its own history, a stock's usual share of turnover, the market's total value over five sessions. A conclusion is only ever a reading of those numbers ("a dip on thin trading", "two stocks were most of the day"). Nothing says why a price moved, predicts one or recommends anything. The evening wrap reuses the daily report sentence, which was already checked against that day's facts.
+
+### The feed refreshes once a day
+
+The price feed updates once, around the close (about 15:40 to 15:57 Nairobi). Until then the rows stored today are yesterday's numbers again. `session-history.ts` therefore works in *sessions*: days on which the numbers actually changed. A weekday with no change (a holiday, or the hours before the refresh) is not a session.
+
+- Before the refresh, the morning posts describe the last real session by its weekday ("Monday closed with 39 stocks down…"), never as "today". The breadth slot gives way to a lesson, because the opening post already covered it.
+- `session-close` waits until the feed has refreshed for today, so it can never present yesterday's figures as today's close. `into-the-close` has nothing new to say before the close and gives way to a lesson.
+
+### Plain punctuation
+
+Every post passes through `plain-copy.ts` last: long dashes, middle dots and curly quotes become commas, full stops or plain characters. It runs on slot text, the AI rewrite (a rewrite that still contains one is rejected), the daily report text and manual posts, and at the single point where X receives text. Posts carry no heading in front and no sign-off. The X sign-off ("Follow NSE Academy…") was removed; add one back in Hourly posting, under Platforms, if you want it.
+
+### Feed rows with no ticker
+
+A listed company sometimes arrives with an empty ticker (QuickMart Plc did). `market-data/feed-ticker.ts` names the known ones by company name (QuickMart is `QMRT`) and drops any other row without a ticker instead of storing it.
 
 AI runs only when a rewrite is actually needed:
 

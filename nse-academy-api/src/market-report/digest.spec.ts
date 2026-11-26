@@ -58,7 +58,9 @@ describe('renderDigest', () => {
     const p = buildDigestPortfolio([{ ticker: 'SCOM', quantity: 1000 }], series, '2026-11-05');
     const out = renderDigest({ ...base, portfolio: p, isPremium: false });
     expect(out.subject).toMatch(/Your portfolio \+3\.53%/);
-    expect(out.html).toContain('Your portfolio today');
+    expect(out.html).toContain('Your portfolio');
+    // A catch-up send goes out the day after, so nothing may claim the figures are today's.
+    expect(`${out.html} ${out.text}`).not.toMatch(/portfolio today|% today|>Today</i);
     expect(out.html).toContain('Premium members also get Portfolio Watch');
     expect(out.html).toContain(base.unsubscribeUrl);
     expect(out.text).toContain('Stop this email');
@@ -68,7 +70,11 @@ describe('renderDigest', () => {
     const p = buildDigestPortfolio([{ ticker: 'SCOM', quantity: 1000 }], series, '2026-11-05');
     expect(renderDigest({ ...base, portfolio: p, isPremium: true }).html).not.toContain('Premium members also get');
     const none = renderDigest({ ...base, portfolio: null, isPremium: false });
-    expect(none.html).not.toContain('Your portfolio today');
+    expect(none.html).not.toContain('Your portfolio');
+    // The footer says why the member has it, truthfully now that nobody has to switch it on.
+    expect(none.html).toContain('You get this because you have an NSE Academy account');
+    expect(none.html).not.toContain('you turned on');
+    expect(none.html).toContain('stop it in one click');
     expect(none.subject).toContain('KSh 405.8M traded');
   });
 
@@ -100,7 +106,7 @@ describe('MarketDigestService.runAll', () => {
       },
     };
     const reports = { getLatestPublic: jest.fn().mockResolvedValue({ sessionYmd: opts.sessionYmd ?? '2026-11-05', headline: report.headline, summary: report.summary, url: report.url, facts: { ...report.facts, shortLabel: report.shortLabel } }) };
-    const brevo = { sendTransactional: jest.fn().mockResolvedValue(undefined) };
+    const brevo = { sendTransactional: jest.fn().mockResolvedValue({ sent: true }) };
     const config = { get: jest.fn((k: string) => (k === 'JWT_SECRET' ? 'secret' : undefined)) };
     const svc = new MarketDigestService(prisma as never, reports as never, brevo as never, config as never);
     return { svc, prisma, brevo };
@@ -126,7 +132,7 @@ describe('MarketDigestService.runAll', () => {
 
   it('counts a failure and carries on with the next member', async () => {
     const { svc, brevo } = make();
-    brevo.sendTransactional.mockRejectedValueOnce(new Error('brevo down')).mockResolvedValue(undefined);
+    brevo.sendTransactional.mockRejectedValueOnce(new Error('brevo down')).mockResolvedValue({ sent: true });
     const out = await svc.runAll(evening);
     expect(out).toMatchObject({ sent: 1, failed: 1 });
   });
@@ -136,6 +142,6 @@ describe('MarketDigestService.runAll', () => {
     expect(await svc.unsubscribe('u1', 'x'.repeat(32))).toBe(false);
     expect(prisma.user.updateMany).not.toHaveBeenCalled();
     expect(await svc.unsubscribe('u1', digestToken('u1', 'secret'))).toBe(true);
-    expect(prisma.user.updateMany).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { digestEnabled: false } });
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { digestEnabled: false, digestOptedOutAt: expect.any(Date) } });
   });
 });

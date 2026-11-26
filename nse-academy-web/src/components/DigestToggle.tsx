@@ -59,7 +59,7 @@ export default function DigestToggle({ variant = "card" }: { variant?: "card" | 
     <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <p className="text-sm font-medium text-gray-900">Evening market digest</p>
-        <p className="text-sm text-gray-600 mt-1">{text} Off until you turn it on.</p>
+        <p className="text-sm text-gray-600 mt-1">{text} It is on for every member. Switch it off here whenever you like.</p>
         {failed ? <p className="mt-2 text-sm text-red-600">Could not load or save this setting. Please try again.</p> : null}
       </div>
       <button

@@ -105,7 +105,7 @@ Collected data. Everything is optional: the app works for reading and prices wit
 | Data type | Collected | Shared | Optional | Purpose | Notes |
 |---|---|---|---|---|---|
 | Personal info: Name | Yes, with an account | No | Yes | Account management | Entered when creating an account |
-| Personal info: Email address | Yes, with an account | No | Yes | Account management, App functionality (alerts and digest emails you turn on) | |
+| Personal info: Email address | Yes, with an account | No | Yes | Account management, App functionality (alerts you turn on, and the evening digest email, which is on until you turn it off) | |
 | Personal info: Phone number | Yes, only if you add it | No | Yes | Account management | Optional field in My account |
 | Personal info: Other (password) | Yes, with an account | No | Yes | Account management | Declare under "Other" if the form has no password type; stored hashed on the server |
 | Personal info: Other (investor profile answers and result) | Yes, if you take the quiz | No | Yes | App functionality, Personalisation | Risk preference, horizon and capital range |

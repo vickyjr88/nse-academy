@@ -108,13 +108,13 @@ export function renderDigest(i: DigestInput): { subject: string; html: string; t
   if (portfolio) {
     const pct = portfolio.dayChangePct;
     parts.push(
-      sectionHeading('Your portfolio today'),
+      sectionHeading('Your portfolio', report.shortLabel),
       statRows([
         { label: 'Value at the close', value: kes(portfolio.valueKes) },
-        { label: 'Today', value: pct != null ? `${signedKes(portfolio.dayChangeKes)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)` : signedKes(portfolio.dayChangeKes) },
+        { label: 'Change on the day', value: pct != null ? `${signedKes(portfolio.dayChangeKes)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)` : signedKes(portfolio.dayChangeKes) },
       ]),
       dataTable(
-        [{ header: 'Stock' }, { header: 'Shares', align: 'right' }, { header: 'Close', align: 'right' }, { header: 'Today', align: 'right' }],
+        [{ header: 'Stock' }, { header: 'Shares', align: 'right' }, { header: 'Close', align: 'right' }, { header: 'Day', align: 'right' }],
         portfolio.holdings.slice(0, MAX_HOLDING_ROWS).map((h) => [`<strong>${escapeHtml(h.ticker)}</strong>`, h.quantity.toLocaleString('en-KE'), px(h.price), h.dayChangePct != null ? signedPct(h.dayChangePct) : 'no trade']),
       ),
     );
@@ -132,7 +132,7 @@ export function renderDigest(i: DigestInput): { subject: string; html: string; t
     dataTable(moverCols, moverRows(f.losers)),
   );
 
-  const foot = `Educational content only, not investment advice. Prices are NSE closing prices for ${report.shortLabel}. You get this because you turned on the evening digest. <a href="${i.manageUrl}" style="color:#047857;">Manage it</a> or <a href="${i.unsubscribeUrl}" style="color:#047857;">stop it in one click</a>.`;
+  const foot = `Educational content only, not investment advice. Prices are NSE closing prices for ${report.shortLabel}. You get this because you have an NSE Academy account: the evening digest is on for every member until they switch it off. <a href="${i.manageUrl}" style="color:#047857;">Manage it</a> or <a href="${i.unsubscribeUrl}" style="color:#047857;">stop it in one click</a>.`;
 
   const html = renderEmailHtml({
     eyebrow: `Evening digest - ${report.shortLabel}`,
@@ -148,7 +148,7 @@ export function renderDigest(i: DigestInput): { subject: string; html: string; t
     heading: report.headline,
     bodyText: [
       `Hi ${first}, ${report.summary}`,
-      portfolio ? `Your portfolio: ${kes(portfolio.valueKes)}${portfolio.dayChangePct != null ? `, ${portfolio.dayChangePct >= 0 ? '+' : ''}${portfolio.dayChangePct.toFixed(2)}% today` : ''}.` : '',
+      portfolio ? `Your portfolio: ${kes(portfolio.valueKes)}${portfolio.dayChangePct != null ? `, ${portfolio.dayChangePct >= 0 ? '+' : ''}${portfolio.dayChangePct.toFixed(2)}% on the day` : ''}.` : '',
       `Risers: ${f.gainers.slice(0, MOVER_ROWS).map((m) => `${m.ticker} ${m.changePct >= 0 ? '+' : ''}${m.changePct.toFixed(2)}%`).join(', ')}.`,
       `Fallers: ${f.losers.slice(0, MOVER_ROWS).map((m) => `${m.ticker} ${m.changePct.toFixed(2)}%`).join(', ')}.`,
       `Educational content only, not investment advice. Stop this email: ${i.unsubscribeUrl}`,

@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsBoolean, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminAuthGuard } from '../admin/admin-auth.guard';
 import { MarketDigestService } from './market-digest.service';
@@ -8,6 +8,18 @@ import { MarketDigestService } from './market-digest.service';
 class DigestPreferenceDto {
   @IsBoolean()
   enabled!: boolean;
+}
+
+class RunDigestDto {
+  /** A published session in the last week, e.g. "2026-11-25". Left out: today's, as the evening job does. */
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  session?: string;
+
+  /** True: report who would get it and who would be blocked, and send nothing. */
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }
 
 class UnsubscribeDto {
@@ -63,9 +75,9 @@ export class AdminDigestController {
     return this.digest.sendTest(body.email);
   }
 
-  /** Runs the whole evening job now (same as the 21:20 cron). */
+  /** Runs the evening job now. Body (optional): { session, dryRun }. Members who already had that session are skipped. */
   @Post('run')
-  run() {
-    return this.digest.runAll();
+  run(@Body() body: RunDigestDto) {
+    return this.digest.runAll(new Date(), { session: body?.session, dryRun: body?.dryRun });
   }
 }

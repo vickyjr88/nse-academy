@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,11 +14,26 @@ import { publicSiteUrl } from '../site-url';
 export interface DigestRun {
   session: string | null;
   considered: number;
+  /** Handed to Brevo. */
   sent: number;
+  /** Held back on purpose: a suppressed or undeliverable address. */
+  blocked: number;
+  /** Already had this session's digest. */
   skipped: number;
   failed: number;
+  /** Why mail was blocked or failed, with a count for each. No addresses. */
+  reasons?: Record<string, number>;
+  /** True when nothing was sent and `sent` is how many would be. */
+  dryRun?: boolean;
   note?: string;
 }
+
+export const summarizeRun = (o: DigestRun) => o.note ?? `${o.sent} ${o.dryRun ? 'would be sent' : 'sent'}, ${o.blocked} blocked, ${o.failed} failed, ${o.skipped} already had it, of ${o.considered}`;
+
+/** How far back a manual run may go: far enough to cover a long weekend, not so far that old news goes out by mistake. */
+const MAX_CATCH_UP_DAYS = 7;
+
+export class DigestBlockedError extends Error {}
 
 @Injectable()
 export class MarketDigestService {
@@ -43,8 +58,12 @@ export class MarketDigestService {
   /** 21:20 Nairobi on trading days: after the 21:00 public market report has been published. */
   @Cron('20 21 * * 1-5', { timeZone: 'Africa/Nairobi' })
   async handleDaily() {
-    const out = await tracked(this.monitor, 'market-digest', () => this.runAll(), (o) => (o.note ? o.note : `${o.sent} sent, ${o.skipped} skipped, ${o.failed} failed of ${o.considered}`));
-    this.logger.log(`Market digest: ${out.note ?? `${out.sent} sent, ${out.skipped} skipped, ${out.failed} failed of ${out.considered}`}`);
+    const out = await tracked(this.monitor, 'market-digest', () => this.runAll(), summarizeRun);
+    this.logger.log(`Market digest: ${summarizeRun(out)}`);
+  }
+
+  private toDigest(r: Awaited<ReturnType<MarketReportService['getLatestPublic']>>): DigestReport {
+    return { sessionYmd: r.sessionYmd, shortLabel: r.facts.shortLabel, headline: r.headline, summary: r.summary, url: r.url, facts: r.facts };
   }
 
   /** The latest published report, if it is today's session. A digest about an old session would only confuse. */
@@ -52,32 +71,74 @@ export class MarketDigestService {
     try {
       const r = await this.reports.getLatestPublic();
       if (r.sessionYmd !== eatDayBounds(now, 0).ymd) return null;
-      return { sessionYmd: r.sessionYmd, shortLabel: r.facts.shortLabel, headline: r.headline, summary: r.summary, url: r.url, facts: r.facts };
+      return this.toDigest(r);
     } catch {
       return null;
     }
   }
 
-  async runAll(now = new Date()): Promise<DigestRun> {
-    const report = await this.todaysReport(now);
-    if (!report) return { session: null, considered: 0, sent: 0, skipped: 0, failed: 0, note: "Today's market report is not published, so no digest was sent" };
+  /** A named, published, recent session, for sending a digest that was missed or never went to some members. */
+  private async reportFor(session: string, now: Date): Promise<DigestReport> {
+    const oldest = eatDayBounds(now, MAX_CATCH_UP_DAYS).ymd;
+    if (session < oldest || session > eatDayBounds(now, 0).ymd) throw new BadRequestException(`The session must be between ${oldest} and today`);
+    return this.toDigest(await this.reports.getPublic(session));
+  }
+
+  /**
+   * Everyone who has not opted out and has not had this session's digest. With no `session` it is today's, as the
+   * evening job runs it. `dryRun` works out who would get it and who would be blocked, and sends nothing.
+   */
+  async runAll(now = new Date(), opts: { session?: string; dryRun?: boolean } = {}): Promise<DigestRun> {
+    const report = opts.session ? await this.reportFor(opts.session, now) : await this.todaysReport(now);
+    const dryRun = opts.dryRun === true;
+    if (!report) return { session: null, considered: 0, sent: 0, blocked: 0, skipped: 0, failed: 0, note: "Today's market report is not published, so no digest was sent" };
 
     const users = await this.prisma.user.findMany({
-      where: { digestEnabled: true, OR: [{ digestLastSentOn: null }, { digestLastSentOn: { not: report.sessionYmd } }] },
+      where: {
+        digestEnabled: true,
+        digestOptedOutAt: null,
+        AND: { OR: [{ digestLastSentOn: null }, { digestLastSentOn: { not: report.sessionYmd } }] },
+      },
       select: { id: true, email: true, name: true },
     });
     let sent = 0;
+    let blocked = 0;
     let failed = 0;
+    const reasons: Record<string, number> = {};
+    const count = (why: string) => (reasons[why] = (reasons[why] ?? 0) + 1);
     for (const u of users) {
       try {
-        const o = await this.sendFor(u.id, report);
-        if (o === 'sent') sent++;
+        if (dryRun) {
+          const why = await this.brevo.blockReason(u.email);
+          if (why) {
+            blocked++;
+            count(why);
+          } else sent++;
+          continue;
+        }
+        if ((await this.sendFor(u.id, report)) === 'sent') sent++;
       } catch (err) {
-        failed++;
-        this.logger.error(`Digest failed for ${u.id}: ${(err as Error).message}`);
+        const message = (err as Error).message;
+        if (err instanceof DigestBlockedError) {
+          blocked++;
+          count(message);
+        } else {
+          failed++;
+          count(message.slice(0, 160));
+          this.logger.error(`Digest failed for ${u.id}: ${message}`);
+        }
       }
     }
-    return { session: report.sessionYmd, considered: users.length, sent, skipped: users.length - sent - failed, failed };
+    return {
+      session: report.sessionYmd,
+      considered: users.length,
+      sent,
+      blocked,
+      skipped: users.length - sent - blocked - failed,
+      failed,
+      ...(Object.keys(reasons).length ? { reasons } : {}),
+      ...(dryRun ? { dryRun } : {}),
+    };
   }
 
   /** Sends one member their digest and records it. `force` ignores the sent-today mark (admin test). */
@@ -104,7 +165,12 @@ export class MarketDigestService {
       unsubscribeUrl: `${web}/digest/unsubscribe?u=${encodeURIComponent(user.id)}&t=${digestToken(user.id, this.secret())}`,
       manageUrl: `${web}/dashboard/account`,
     });
-    await this.brevo.sendTransactional({ to: { email: user.email, name: user.name }, subject, htmlContent: html, textContent: text, tags: ['market-digest'] });
+    const result = await this.brevo.sendTransactional({ to: { email: user.email, name: user.name }, subject, htmlContent: html, textContent: text, tags: ['market-digest'] });
+    // Only a message that really left marks the member as done, so a failed one is picked up by the next run.
+    if (result.sent === false) {
+      if (result.blocked) throw new DigestBlockedError(result.reason);
+      throw new Error(result.reason);
+    }
     await this.prisma.user.update({ where: { id: user.id }, data: { digestLastSentOn: report.sessionYmd } });
     return 'sent';
   }
@@ -113,10 +179,13 @@ export class MarketDigestService {
   async sendTest(email: string): Promise<{ to: string; session: string }> {
     const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true } });
     if (!user) throw new Error('No user with that email');
-    const r = await this.reports.getLatestPublic();
-    const report: DigestReport = { sessionYmd: r.sessionYmd, shortLabel: r.facts.shortLabel, headline: r.headline, summary: r.summary, url: r.url, facts: r.facts };
-    await this.sendFor(user.id, report, { force: true });
-    return { to: email, session: r.sessionYmd };
+    const report = this.toDigest(await this.reports.getLatestPublic());
+    try {
+      await this.sendFor(user.id, report, { force: true });
+    } catch (err) {
+      throw new BadRequestException(`Not sent: ${(err as Error).message}`);
+    }
+    return { to: email, session: report.sessionYmd };
   }
 
   async getPreference(userId: string): Promise<{ enabled: boolean }> {
@@ -125,14 +194,14 @@ export class MarketDigestService {
   }
 
   async setPreference(userId: string, enabled: boolean): Promise<{ enabled: boolean }> {
-    await this.prisma.user.update({ where: { id: userId }, data: { digestEnabled: enabled } });
+    await this.prisma.user.update({ where: { id: userId }, data: { digestEnabled: enabled, digestOptedOutAt: enabled ? null : new Date() } });
     return { enabled };
   }
 
   /** The unsubscribe link's action. Idempotent; false when the link is not genuine. */
   async unsubscribe(userId: string, token: string): Promise<boolean> {
     if (!verifyDigestToken(userId, token, this.secret())) return false;
-    await this.prisma.user.updateMany({ where: { id: userId }, data: { digestEnabled: false } });
+    await this.prisma.user.updateMany({ where: { id: userId }, data: { digestEnabled: false, digestOptedOutAt: new Date() } });
     return true;
   }
 }

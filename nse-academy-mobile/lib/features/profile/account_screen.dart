@@ -125,7 +125,7 @@ class _BodyState extends ConsumerState<_Body> {
           error: (e, _) => ListTile(title: Text('Could not load your email setting.', style: AppText.bodySmall(c.textSecondary)), trailing: TextButton(onPressed: () => ref.invalidate(digestProvider), child: const Text('Retry'))),
           data: (on) => SwitchListTile(
             title: Text('Evening market digest', style: AppText.body(c.textPrimary)),
-            subtitle: Text('A short summary of the NSE close, by email. Off until you turn it on.', style: AppText.caption(c.textSecondary)),
+            subtitle: Text('A short summary of the NSE close, by email. Switch it off any time.', style: AppText.caption(c.textSecondary)),
             value: on,
             onChanged: (v) async {
               final ok = await runAction(context, () => ref.read(memberRepositoryProvider).setDigest(v), done: v ? 'Digest is on.' : 'Digest is off.');

@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <main className="flex-grow pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-gray-600 leading-relaxed">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-gray-900">Privacy Policy</h1>
-          <p className="text-sm text-gray-400 mb-8">Effective 15 November 2026</p>
+          <p className="text-sm text-gray-400 mb-8">Effective 26 November 2026</p>
 
           <p className="mb-4">
             This policy covers the NSE Academy website ({SITE_HOST}) and the NSE Academy mobile app
@@ -98,7 +98,8 @@ export default function PrivacyPage() {
               and price alerts you turned on.
             </li>
             <li>
-              To send the evening market digest and learning emails. The digest is off until you switch it on, and every
+              To send the evening market digest and learning emails. The evening digest is on for every account; you can
+              switch it off in your account settings or with the unsubscribe link in each email, and it stays off. Every
               email has an unsubscribe link.
             </li>
             <li>To keep the service secure, prevent abuse and fix faults.</li>

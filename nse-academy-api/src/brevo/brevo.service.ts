@@ -84,6 +84,9 @@ export interface BrevoTransactionalEmailInput {
   ignoreSuppression?: boolean;
 }
 
+/** `blocked` means we chose not to send (suppressed or undeliverable address); otherwise the attempt failed. */
+export type SendResult = { sent: true } | { sent: false; blocked: boolean; reason: string };
+
 @Injectable()
 export class BrevoService {
   private readonly log = new Logger(BrevoService.name);
@@ -170,19 +173,28 @@ export class BrevoService {
     }
   }
 
+  /** Why mail to this address would be held back (bounced, unsubscribed, no mail server, ...), or null if it would go. */
+  async blockReason(email: string): Promise<string | null> {
+    if (!this.suppression) return null;
+    const v = await this.suppression.verdict(email);
+    return v.send ? null : (v.reason ?? 'blocked');
+  }
+
   /**
    * Send a transactional email. Uses BREVO_SENDER_EMAIL/NAME as the from
-   * address unless overridden.
+   * address unless overridden. It does not throw: the result says whether the
+   * message was really handed to Brevo, so a caller that counts or marks sends
+   * can tell the difference.
    */
   async sendTransactional(
     input: BrevoTransactionalEmailInput,
-  ): Promise<void> {
-    if (this.warnIfDisabled()) return;
-    if (!input.ignoreSuppression && this.suppression) {
-      const v = await this.suppression.verdict(input.to.email);
-      if (!v.send) {
-        this.log.warn(`Not sending "${(input.subject ?? '').slice(0, 60)}" to ${input.to.email}: ${v.reason}`);
-        return;
+  ): Promise<SendResult> {
+    if (this.warnIfDisabled()) return { sent: false, blocked: false, reason: 'email is not configured' };
+    if (!input.ignoreSuppression) {
+      const reason = await this.blockReason(input.to.email);
+      if (reason) {
+        this.log.warn(`Not sending "${(input.subject ?? '').slice(0, 60)}" to ${input.to.email}: ${reason}`);
+        return { sent: false, blocked: true, reason };
       }
     }
     const sender = input.sender ?? {
@@ -207,12 +219,14 @@ export class BrevoService {
     if (input.replyTo) body.replyTo = input.replyTo;
     try {
       await this.request('POST', '/smtp/email', body);
+      return { sent: true };
     } catch (err) {
       this.log.error(
         `Brevo sendTransactional failed for ${input.to.email}: ${
           (err as Error).message
         }`,
       );
+      return { sent: false, blocked: false, reason: (err as Error).message };
     }
   }
 

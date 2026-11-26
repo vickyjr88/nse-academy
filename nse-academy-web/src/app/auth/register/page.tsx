@@ -234,7 +234,10 @@ function RegisterForm() {
               {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
-          <p className="mt-4 text-center text-xs text-gray-400">
+          <p className="mt-4 text-center text-xs text-gray-500">
+            We&apos;ll email you a short market summary on trading evenings. You can switch it off any time.
+          </p>
+          <p className="mt-2 text-center text-xs text-gray-400">
             By signing up you agree to our <Link href="/terms" className="underline hover:text-gray-600">Terms of Service</Link> and <Link href="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>.
           </p>
         </div>

@@ -35,8 +35,10 @@ model User {
   lastActiveAt        DateTime?
   // Daily portfolio-watch email (Premium). The in-app notification is always created.
   portfolioWatchEnabled Boolean          @default(true)
-  // Evening market digest email. Opt-in (off until the member turns it on); digestLastSentOn (Nairobi YYYY-MM-DD) stops a rerun sending twice.
-  digestEnabled       Boolean              @default(false)
+  // Evening market digest email. On for every member until they switch it off; digestOptedOutAt records that they did,
+  // so no bulk change may turn it back on. digestLastSentOn (Nairobi YYYY-MM-DD) stops a rerun sending twice.
+  digestEnabled       Boolean              @default(true)
+  digestOptedOutAt    DateTime?
   digestLastSentOn    String?
   allocationTargets   AllocationTarget[]
   portfolioReviews    PortfolioReview[]

@@ -6,9 +6,16 @@ import { listPublicBrokers } from "@/lib/brokers";
 
 export const metadata: Metadata = {
   title: "Compare NSE Broker Fees in Kenya - Stockbrokers & CDS Agents | NSE Academy",
+  description: "Compare brokerage fees across licensed NSE stockbrokers and CDS agents in Kenya, including flat-rate trading platforms like Ziidi Trader.",
   alternates: { canonical: "/brokers-compare" },
-  description:
-    "Compare brokerage fees across licensed NSE stockbrokers and CDS agents in Kenya, including flat-rate trading platforms like Ziidi Trader.",
+  openGraph: {
+    title: "Compare NSE Broker Fees in Kenya",
+    description: "Compare brokerage fees across licensed NSE stockbrokers and CDS agents in Kenya, including flat-rate trading platforms like Ziidi Trader.",
+    url: "/brokers-compare",
+    type: "website",
+    siteName: "NSE Academy",
+  },
+  twitter: { card: "summary_large_image", title: "Compare NSE Broker Fees in Kenya | NSE Academy" },
 };
 
 const AIB_AXYS_REFERRAL_URL =

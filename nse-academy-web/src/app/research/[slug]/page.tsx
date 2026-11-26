@@ -12,7 +12,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const n = await getResearchNote(slug);
   if (!n) return { title: "Research note not found - NSE Academy" };
-  return { title: `${n.title} - NSE Academy`, description: n.summary, alternates: { canonical: `/research/${n.slug}` } };
+  const kind = n.kind === "FOCUS_LIST" ? "Monthly focus list" : "Company brief";
+  const url = `/research/${n.slug}`;
+  return {
+    title: `${n.title} - NSE Academy`,
+    description: n.summary,
+    alternates: { canonical: url },
+    openGraph: { title: n.title, description: n.summary, url, type: "article", siteName: "NSE Academy" },
+    twitter: { card: "summary_large_image", title: `${kind}: ${n.title}`, description: n.summary },
+  };
 }
 
 const kes = (n: number) => (n >= 1e9 ? `KSh ${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `KSh ${(n / 1e6).toFixed(1)}M` : `KSh ${Math.round(n).toLocaleString("en-KE")}`);

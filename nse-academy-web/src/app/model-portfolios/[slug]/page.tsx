@@ -14,10 +14,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const found = await getModelPortfolio(slug);
   if (!found) return { title: "Model portfolio not found - NSE Academy" };
+  const { model: m } = found;
+  const url = `/model-portfolios/${m.slug}`;
+  const riskLabel = m.riskProfile ? (RISK_LABELS[m.riskProfile] ?? m.riskProfile) : null;
+  const title = riskLabel ? `${m.name} (${riskLabel}) - NSE Model Portfolio` : `${m.name} - NSE Model Portfolio`;
   return {
-    title: `${found.model.name} - NSE Model Portfolio`,
-    description: found.model.summary,
-    alternates: { canonical: `/model-portfolios/${found.model.slug}` },
+    title,
+    description: m.summary,
+    alternates: { canonical: url },
+    openGraph: { title, description: m.summary, url, type: "website", siteName: "NSE Academy" },
+    twitter: { card: "summary_large_image", title, description: m.summary },
   };
 }
 

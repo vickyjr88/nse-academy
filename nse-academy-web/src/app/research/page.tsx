@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: "NSE Research - Monthly Focus List and Company Briefs",
   description: "Each month, the NSE stocks that stood out on three fixed screens, plus company briefs, with the numbers shown and a named reviewer. Educational, not advice.",
   alternates: { canonical: "/research" },
+  openGraph: {
+    title: "NSE Research - Monthly Focus List and Company Briefs",
+    description: "Each month, the NSE stocks that stood out on three fixed screens, plus company briefs, with the numbers shown and a named reviewer.",
+    url: "/research",
+    type: "website",
+    siteName: "NSE Academy",
+  },
+  twitter: { card: "summary_large_image", title: "NSE Research - Focus Lists and Company Briefs" },
 };
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" }) : "");

@@ -12,6 +12,14 @@ export const metadata: Metadata = {
   title: "NSE Model Portfolios - Examples of Diversified Kenyan Stock Portfolios",
   description: "Illustrative NSE model portfolios, reviewed by a named professional and tracked on real closing prices. Study how they are built, then compare them with your own holdings.",
   alternates: { canonical: "/model-portfolios" },
+  openGraph: {
+    title: "NSE Model Portfolios - Examples of Diversified Kenyan Stock Portfolios",
+    description: "Illustrative NSE model portfolios, reviewed by a named professional and tracked on real closing prices.",
+    url: "/model-portfolios",
+    type: "website",
+    siteName: "NSE Academy",
+  },
+  twitter: { card: "summary_large_image", title: "NSE Model Portfolios - Diversified Kenyan Stock Portfolios" },
 };
 
 export default async function ModelPortfoliosPage() {

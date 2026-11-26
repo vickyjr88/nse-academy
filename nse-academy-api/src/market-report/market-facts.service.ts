@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceRow, boundsForYmd, parseNumber } from '../reports/report-helpers';
 import { DayValue, MarketFacts, buildFacts } from './market-facts';
+import { SessionState, loadSessionState } from '../market-data/price-history';
 
 const HISTORY_DAYS = 45; // calendar days of earlier sessions to build the 20-session baseline from
 const SECTOR_TTL_MS = 6 * 60 * 60 * 1000;
@@ -26,6 +27,11 @@ export class MarketFactsService {
       from "StockPrice"
       where "timestamp" < ${before} and "timestamp" >= ${from}`);
     return row?.d ?? null;
+  }
+
+  /** Whether the day holds new trading, only repeats the day before, or has no prices at all. */
+  sessionState(sessionYmd: string): Promise<SessionState> {
+    return loadSessionState(this.prisma, sessionYmd);
   }
 
   async build(sessionYmd: string): Promise<MarketFacts> {

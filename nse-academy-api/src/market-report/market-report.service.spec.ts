@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { MarketReportService, resolveCardUrls } from './market-report.service';
 import { buildFacts } from './market-facts';
 import { URL_PLACEHOLDER, templateNarrative } from './narrative';
@@ -44,7 +44,7 @@ function make(existing: unknown = null) {
       update: jest.fn(async ({ data }) => row(data)),
     },
   };
-  const factsSvc = { build: jest.fn().mockResolvedValue(facts), latestSessionYmd: jest.fn().mockResolvedValue('2026-11-04') };
+  const factsSvc = { build: jest.fn().mockResolvedValue(facts), latestSessionYmd: jest.fn().mockResolvedValue('2026-11-04'), sessionState: jest.fn().mockResolvedValue('new') };
   const narratives = {
     write: jest.fn().mockResolvedValue({ narrative: nar, aiGenerated: true, model: 'free/m:free' }),
     validate: jest.fn((c: unknown) => (c === 'bad' ? { narrative: null, problems: ['nope'] } : { narrative: nar, problems: [] })),
@@ -82,6 +82,20 @@ describe('MarketReportService.generate', () => {
     const r = await service.generate({ date: '2026-11-04', force: true });
     expect(narratives.write).toHaveBeenCalledTimes(1);
     expect(r.created).toBe(false);
+  });
+
+  it('holds the report when prices only repeat the previous day (holiday / stale feed)', async () => {
+    const { service, factsSvc, prisma } = make();
+    factsSvc.sessionState.mockResolvedValue('repeat');
+    await expect(service.generate({ date: '2026-11-04' })).rejects.toThrow(ConflictException);
+    expect(prisma.marketReport.upsert).not.toHaveBeenCalled();
+  });
+
+  it('publishes despite a repeat when force is set', async () => {
+    const { service, factsSvc } = make();
+    factsSvc.sessionState.mockResolvedValue('repeat');
+    const r = await service.generate({ date: '2026-11-04', force: true });
+    expect(r.created).toBe(true);
   });
 
   it('uses an editor-supplied narrative instead of calling the AI, once it verifies, crediting the author', async () => {

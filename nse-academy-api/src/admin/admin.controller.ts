@@ -289,7 +289,7 @@ export class AdminController {
   }
 
   @Get('stock-prices/:ticker/history')
-  @ApiOperation({ summary: 'Price history for a single ticker over the last 30 days' })
+  @ApiOperation({ summary: 'Daily price history for a single ticker, everything we hold' })
   getStockPriceHistory(@Param('ticker') ticker: string) {
     return this.admin.getStockPriceHistory(ticker);
   }

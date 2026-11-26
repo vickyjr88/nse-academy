@@ -8,9 +8,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
 import axios from 'axios';
 import { DEFAULT_MAX_PER_HOUR, WINDOW_MS, parseRateLimit, pollDecision } from './poll-guard';
-import { loadDailyCloses } from './price-history';
+import { loadDailyCloses, loadSessionState } from './price-history';
 import { buildHeatmap } from './heatmap';
 import { cleanName } from '../market-report/market-facts';
+import { quoteTimestamp } from './session-clock';
+import { eatDayBounds } from '../reports/report-helpers';
 import { parseNumber } from '../reports/report-helpers';
 import { resolveFeedTicker } from './feed-ticker';
 
@@ -65,6 +67,28 @@ export class MarketDataService {
     await this.pollNow();
   }
 
+  /**
+   * The provider usually updates once, about 15:45, but some days not until after the close of polling. While today's
+   * prices are still yesterday's, keep checking every half hour, and once more just before the 21:00 report.
+   */
+  @Cron('0 0,30 16-20 * * 1-5', { timeZone: 'Africa/Nairobi' })
+  async handleEveningCheck() {
+    await this.pollIfPricesAreOld();
+  }
+
+  @Cron('0 50 20 * * 1-5', { timeZone: 'Africa/Nairobi' })
+  async handleCheckBeforeReport() {
+    await this.pollIfPricesAreOld();
+  }
+
+  private async pollIfPricesAreOld() {
+    const today = eatDayBounds(new Date(), 0).ymd;
+    if ((await loadSessionState(this.prisma, today)) === 'new') return;
+    const decision = pollDecision(await this.recentRequests(), Date.now(), this.maxPerHour());
+    if (!decision.ok) return;
+    await this.pollNow();
+  }
+
   /** The admin's manual sync: ignores the even spacing but not the provider's limit. */
   async syncManually(): Promise<{ polled: boolean; message: string }> {
     const decision = pollDecision(await this.recentRequests(), Date.now(), this.maxPerHour(), false);
@@ -99,7 +123,8 @@ export class MarketDataService {
 
       if (response.data?.success && Array.isArray(response.data.data)) {
         const stocks = response.data.data;
-        const timestamp = new Date();
+        // Read before the open, these are the previous session's closing prices and are filed under that day.
+        const timestamp = quoteTimestamp(new Date());
 
         // A row with no usable ticker cannot be priced or charted: name it if we know it, otherwise leave it out.
         const named = stocks.flatMap((s) => {

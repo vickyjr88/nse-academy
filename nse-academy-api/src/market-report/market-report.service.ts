@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Optional } from '@nestjs/common';
 import { JobMonitorService } from '../monitoring/job-monitor.service';
 import { tracked } from '../monitoring/track';
@@ -52,6 +52,8 @@ export interface PublicMarketReport {
   aiGenerated: boolean;
   aiModel: string | null;
   publishedAt: string | null;
+  /** Shown on the page when the report has been put right after publication. */
+  correction: string | null;
 }
 
 export interface PublicMarketReportSummary {
@@ -75,6 +77,8 @@ export interface GenerateOptions {
   narrative?: unknown;
   /** Label recorded as the author of `narrative`, e.g. the model that drafted it. */
   narrativeAuthor?: string;
+  /** A note for readers saying what was wrong before. Kept through later rebuilds until replaced; '' removes it. */
+  correction?: string;
   /** Email the admin the share pack. */
   notify?: boolean;
 }
@@ -121,6 +125,11 @@ export class MarketReportService {
     const existing = await this.prisma.marketReport.findUnique({ where: { sessionDate: ymd } });
     if (existing && !opts.force) return { report: existing, created: false };
 
+    // A holiday, or a feed that has not updated, leaves yesterday's numbers under today. Never publish those as today's.
+    if (!opts.force && (await this.facts.sessionState(ymd)) === 'repeat') {
+      throw new ConflictException(`Prices for ${ymd} only repeat the day before (a holiday, or the price feed has not updated), so the report was held`);
+    }
+
     const facts = await this.facts.build(ymd);
 
     let narrative: Narrative;
@@ -145,9 +154,10 @@ export class MarketReportService {
       problems = result.problems;
     }
 
+    const correction = (opts.correction ?? (existing?.story as { correction?: string } | undefined)?.correction ?? '').trim();
     const data = {
       facts: facts as unknown as Prisma.InputJsonValue,
-      story: { headline: narrative.headline, summary: narrative.summary, story: narrative.story, lessons: narrative.lessons } as unknown as Prisma.InputJsonValue,
+      story: { headline: narrative.headline, summary: narrative.summary, story: narrative.story, lessons: narrative.lessons, ...(correction ? { correction } : {}) } as unknown as Prisma.InputJsonValue,
       social: narrative.social as unknown as Prisma.InputJsonValue,
       aiGenerated,
       aiModel,
@@ -208,7 +218,7 @@ export class MarketReportService {
 
   private toPublic(row: MarketReport): PublicMarketReport {
     const facts = row.facts as unknown as MarketFacts;
-    const story = row.story as unknown as { headline: string; summary: string; story: string[]; lessons: Lesson[] };
+    const story = row.story as unknown as { headline: string; summary: string; story: string[]; lessons: Lesson[]; correction?: string };
     const social = row.social as unknown as Narrative['social'];
     const url = `${this.siteUrl()}/market-report/${row.sessionDate}`;
     const filled = fillUrl({ ...story, social }, url).social;
@@ -226,6 +236,7 @@ export class MarketReportService {
       aiGenerated: row.aiGenerated,
       aiModel: row.aiModel,
       publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
+      correction: story.correction ?? null,
     };
   }
 

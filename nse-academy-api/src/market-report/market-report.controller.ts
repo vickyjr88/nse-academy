@@ -38,15 +38,19 @@ export class PublicMarketReportsController {
 export class AdminMarketReportsController {
   constructor(private reports: MarketReportService) {}
 
-  /** Body: { date?, force?, notify?, narrative?, narrativeAuthor? } */
+  /** Body: { date?, force?, notify?, narrative?, narrativeAuthor?, correction? } */
   @Post('generate')
-  async generate(@Body() body: { date?: string; force?: boolean; notify?: boolean; narrative?: unknown; narrativeAuthor?: string }) {
+  async generate(@Body() body: { date?: string; force?: boolean; notify?: boolean; narrative?: unknown; narrativeAuthor?: string; correction?: string }) {
+    if (body?.correction !== undefined && (typeof body.correction !== 'string' || body.correction.length > 500)) {
+      throw new BadRequestException('correction must be text of 500 characters or fewer');
+    }
     const { report, created, note, problems } = await this.reports.generate({
       date: body?.date,
       force: !!body?.force,
       notify: !!body?.notify,
       narrative: body?.narrative,
       narrativeAuthor: body?.narrativeAuthor,
+      correction: body?.correction,
     });
     return { sessionDate: report.sessionDate, status: report.status, created, aiGenerated: report.aiGenerated, aiModel: report.aiModel, note, problems };
   }

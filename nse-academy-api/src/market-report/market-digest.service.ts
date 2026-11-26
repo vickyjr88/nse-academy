@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,6 +7,7 @@ import { JobMonitorService } from '../monitoring/job-monitor.service';
 import { tracked } from '../monitoring/track';
 import { loadDailyCloses } from '../market-data/price-history';
 import { eatDayBounds } from '../reports/report-helpers';
+import { previousWeekday } from '../market-data/session-clock';
 import { MarketReportService } from './market-report.service';
 import { DigestReport, buildDigestPortfolio, digestToken, renderDigest, verifyDigestToken } from './digest';
 import { publicSiteUrl } from '../site-url';
@@ -60,6 +61,26 @@ export class MarketDigestService {
   async handleDaily() {
     const out = await tracked(this.monitor, 'market-digest', () => this.runAll(), summarizeRun);
     this.logger.log(`Market digest: ${summarizeRun(out)}`);
+  }
+
+  /**
+   * 09:20 on weekdays. If the last report was held because its prices had not arrived, they come with the first
+   * reading of the morning: publish the report then, and send its digest.
+   */
+  @Cron('20 9 * * 1-5', { timeZone: 'Africa/Nairobi' })
+  async handleMorningCatchUp(now = new Date()) {
+    const session = previousWeekday(now);
+    if (await this.prisma.marketReport.findUnique({ where: { sessionDate: session }, select: { id: true } })) return;
+    try {
+      const { created } = await this.reports.generate({ date: session, notify: true });
+      if (!created) return;
+    } catch (err) {
+      // Still nothing new (a holiday), or no prices for that day: there is nothing to send.
+      if (err instanceof ConflictException || err instanceof NotFoundException) return;
+      throw err;
+    }
+    const out = await tracked(this.monitor, 'market-digest', () => this.runAll(now, { session }), summarizeRun);
+    this.logger.log(`Late market digest for ${session}: ${summarizeRun(out)}`);
   }
 
   private toDigest(r: Awaited<ReturnType<MarketReportService['getLatestPublic']>>): DigestReport {

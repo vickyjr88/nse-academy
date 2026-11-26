@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { parseNumber } from '../reports/report-helpers';
 
 export interface DailyClose {
   /** Nairobi calendar date, YYYY-MM-DD. */
@@ -69,4 +70,104 @@ export async function loadDailyBars(prisma: PrismaService, tickers: string[] | n
     map.set(r.ticker, list);
   }
   return map;
+}
+
+export interface DailyPoint {
+  /** Nairobi calendar date, YYYY-MM-DD. */
+  date: string;
+  price: number;
+  /** The feed's own change on the day, in percent. */
+  changePct: number;
+  /** Shares traded that day. */
+  volume: number;
+}
+
+export interface DaySnapshot {
+  d: string;
+  price: number;
+  volume: string;
+  change: string;
+}
+
+/**
+ * One ticker's last snapshot of each day (oldest first) as chart points. A day that repeats the one before it exactly
+ * (price, volume and change) is the feed not refreshing, on a holiday or a late update, so it is left out and counted
+ * rather than drawn as a flat session that traded the same number of shares again.
+ */
+export function toDailyPoints(rows: DaySnapshot[]): { points: DailyPoint[]; repeatedDays: number } {
+  const points: DailyPoint[] = [];
+  let previous: DaySnapshot | null = null;
+  let repeatedDays = 0;
+  for (const r of rows) {
+    if (!(r.price > 0)) continue;
+    if (previous && r.price === previous.price && r.volume === previous.volume && r.change === previous.change) {
+      repeatedDays++;
+      continue;
+    }
+    previous = r;
+    points.push({ date: r.d, price: Number(r.price), changePct: parseNumber(r.change), volume: parseVolume(r.volume) });
+  }
+  return { points, repeatedDays };
+}
+
+/** The last snapshot of every day we hold for one ticker, oldest first. */
+export async function loadDaySnapshots(prisma: PrismaService, ticker: string): Promise<(DaySnapshot & { name: string })[]> {
+  return prisma.$queryRaw<(DaySnapshot & { name: string })[]>`
+    SELECT DISTINCT ON (d) d, name, price, volume, change FROM (
+      SELECT to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d,
+             name, price, volume, change, timestamp
+      FROM "StockPrice"
+      WHERE ticker = ${ticker} AND price > 0
+    ) x
+    ORDER BY d, timestamp DESC`;
+}
+
+export interface TickerClose {
+  ticker: string;
+  price: number;
+  volume: string;
+  change: string;
+}
+
+/** On a normal day well under a fifth of the market is unchanged in price, volume and change; a repeat is nearly all of it. */
+const REPEAT_SHARE = 0.9;
+const MIN_COMPARED = 10;
+
+/**
+ * Is `day` only the previous day's numbers again? That is what a holiday looks like, and a feed that has not updated
+ * yet. A report built from it would present old trading as new.
+ */
+export function repeatsPreviousDay(day: TickerClose[], previous: TickerClose[]): boolean {
+  const before = new Map(previous.map((r) => [r.ticker, r]));
+  let compared = 0;
+  let same = 0;
+  for (const r of day) {
+    const p = before.get(r.ticker);
+    if (!p) continue;
+    compared++;
+    if (p.price === r.price && p.volume === r.volume && p.change === r.change) same++;
+  }
+  return compared >= MIN_COMPARED && same / compared > REPEAT_SHARE;
+}
+
+export type SessionState = 'new' | 'repeat' | 'missing';
+
+/** What we hold for a Nairobi day: nothing, a repeat of the day before, or new trading. */
+export async function loadSessionState(prisma: PrismaService, ymd: string): Promise<SessionState> {
+  const rows = await prisma.$queryRaw<(TickerClose & { d: string })[]>`
+    WITH bars AS (
+      SELECT ticker, price, volume, change, timestamp,
+             to_char((timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Africa/Nairobi', 'YYYY-MM-DD') AS d
+      FROM "StockPrice"
+      WHERE price > 0 AND ticker <> ''
+        AND timestamp > (${ymd}::date - 15)::timestamp AND timestamp < (${ymd}::date + 2)::timestamp
+    ), days AS (
+      SELECT DISTINCT d FROM bars WHERE d <= ${ymd} ORDER BY d DESC LIMIT 2
+    )
+    SELECT DISTINCT ON (ticker, d) ticker, d, price, volume, change FROM bars
+    WHERE d IN (SELECT d FROM days)
+    ORDER BY ticker, d, timestamp DESC`;
+  const day = rows.filter((r) => r.d === ymd);
+  if (day.length === 0) return 'missing';
+  return repeatsPreviousDay(day, rows.filter((r) => r.d !== ymd)) ? 'repeat' : 'new';
 }

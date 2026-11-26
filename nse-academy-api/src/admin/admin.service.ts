@@ -13,6 +13,8 @@ import { UpsertSubscriptionDto } from './dto/upsert-subscription.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpsertLicenseDto } from './dto/upsert-license.dto';
 import { publicSiteUrl } from '../site-url';
+import { loadDaySnapshots, toDailyPoints } from '../market-data/price-history';
+import { cleanName } from '../market-report/market-facts';
 
 type MonthRow = { month: string };
 type GrowthRow = MonthRow & { count: bigint };
@@ -757,14 +759,13 @@ export class AdminService {
     return { data: prices };
   }
 
+  /** Every trading day we hold for a stock, one point each, so the admin can look at any period. */
   async getStockPriceHistory(ticker: string) {
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const history = await this.prisma.stockPrice.findMany({
-      where: { ticker: { equals: ticker, mode: 'insensitive' }, timestamp: { gte: since } },
-      orderBy: { timestamp: 'asc' },
-    });
-    if (history.length === 0) throw new NotFoundException('No price history found for this ticker');
-    return { ticker: ticker.toUpperCase(), data: history };
+    const symbol = ticker.trim().toUpperCase();
+    const rows = await loadDaySnapshots(this.prisma, symbol);
+    const { points, repeatedDays } = toDailyPoints(rows);
+    if (points.length === 0) throw new NotFoundException('No price history found for this ticker');
+    return { ticker: symbol, name: cleanName(rows[rows.length - 1].name), data: points, repeatedDays };
   }
 
   async upsertSubscription(userId: string, dto: UpsertSubscriptionDto) {
